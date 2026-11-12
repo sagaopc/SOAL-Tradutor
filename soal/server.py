@@ -22,7 +22,7 @@ from . import janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.5.3"
+VERSION = "0.5.4"
 
 
 class App:
@@ -479,6 +479,23 @@ def make_handler(app: App):
     return Handler
 
 
+class _Server(ThreadingHTTPServer):
+    """Servidor que nao divide a porta com outro programa.
+
+    O padrao do Python liga SO_REUSEADDR, e no Windows isso deixa um segundo programa abrir a
+    mesma porta de um que ja' esta' rodando: a janela nova acabava falando com a versao antiga
+    ainda aberta em segundo plano. Aqui a porta e' exclusiva; se estiver ocupada, usa a seguinte."""
+    allow_reuse_address = False
+    daemon_threads = True
+
+    def server_bind(self):
+        import socket
+        excl = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+        if excl is not None:
+            self.socket.setsockopt(socket.SOL_SOCKET, excl, 1)
+        super().server_bind()
+
+
 def serve(port: int = 8787, open_browser: bool = True, reopen_last: bool = True, window: bool = True):
     """window=True abre numa janela propria (Edge/Chrome no modo aplicativo) e encerra quando
     ela fecha. Sem Edge/Chrome, ou com window=False, abre no navegador padrao."""
@@ -486,7 +503,7 @@ def serve(port: int = 8787, open_browser: bool = True, reopen_last: bool = True,
     httpd = None
     for p in range(port, port + 20):
         try:
-            httpd = ThreadingHTTPServer(("127.0.0.1", p), make_handler(app))
+            httpd = _Server(("127.0.0.1", p), make_handler(app))
             port = p
             break
         except OSError:
