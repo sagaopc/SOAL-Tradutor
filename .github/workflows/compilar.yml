@@ -1,11 +1,19 @@
-# Compila o SOAL Tradutor.exe (Windows) e publica a release quando uma tag v* é enviada.
-# Em "Run workflow" (manual), só compila e deixa os arquivos para baixar na execução.
+# Compila o SOAL Tradutor.exe (Windows) e publica a release.
+# - Actions > Compilar > Run workflow, informando a versão (ex.: 0.5.0): compila, cria a tag
+#   v<versão> e publica a release com as notas de docs/notas/v<versão>.md.
+# - Run workflow com a versão em branco: só compila (arquivos ficam na execução, para teste).
+# - Enviar uma tag v* também compila e publica.
 name: Compilar
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versão para publicar (ex.: 0.5.0). Deixe em branco para só compilar."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -45,8 +53,15 @@ jobs:
       - name: Montar os pacotes
         shell: pwsh
         run: |
-          $v = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME.TrimStart("v") } else { "teste" }
+          $entrada = "${{ github.event.inputs.versao }}".Trim().TrimStart("v")
+          if ($env:GITHUB_REF_TYPE -eq "tag") { $v = $env:GITHUB_REF_NAME.TrimStart("v"); $pub = "sim" }
+          elseif ($entrada) {
+            if ($entrada -notmatch '^\d+\.\d+\.\d+$') { throw "versão inválida: $entrada (use o formato 0.5.0)" }
+            $v = $entrada; $pub = "sim"
+          }
+          else { $v = "teste"; $pub = "nao" }
           "VERSAO=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "PUBLICAR=$pub" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           New-Item -ItemType Directory -Force pacote/SOAL-Tradutor | Out-Null
           Copy-Item "dist\SOAL Tradutor.exe", LEIA-ME.md, CREDITOS.md, LICENSE -Destination pacote/SOAL-Tradutor
           Compress-Archive -Path pacote/SOAL-Tradutor -DestinationPath "SOAL-Tradutor-$v-windows.zip"
@@ -64,11 +79,12 @@ jobs:
             SHA256SUMS.txt
 
       - name: Publicar a release
-        if: github.ref_type == 'tag'
+        if: env.PUBLICAR == 'sim'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $notas = "docs/notas/$env:GITHUB_REF_NAME.md"
+          $tag = "v$env:VERSAO"
+          $notas = "docs/notas/$tag.md"
           if (-not (Test-Path $notas)) { throw "faltam as notas da versão em $notas" }
-          gh release create $env:GITHUB_REF_NAME "SOAL-Tradutor-$env:VERSAO-windows.zip" "SOAL-Tradutor-$env:VERSAO.zip" SHA256SUMS.txt --title "SOAL Tradutor $env:VERSAO" --notes-file $notas
+          gh release create $tag "SOAL-Tradutor-$env:VERSAO-windows.zip" "SOAL-Tradutor-$env:VERSAO.zip" SHA256SUMS.txt --target $env:GITHUB_SHA --title "SOAL Tradutor $env:VERSAO" --notes-file $notas
