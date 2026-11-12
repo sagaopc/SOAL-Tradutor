@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOAL Tradutor</title>
+<style>
+:root{
+  --sky:#E4EDF4; --paper:#FBFCFD; --panel:#F1F6FA; --ink:#16283A; --muted:#566B7E; --line:#C7D5E0;
+  --sea:#1B6687; --sea-ink:#fff; --brass:#A8781C; --alert:#B03A2A; --ok:#2C7A57; --box:#12304A; --box-ink:#F3F7FA;
+  --ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  --mono:"Cascadia Mono","Consolas","DejaVu Sans Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --sky:#0D1A26; --paper:#132433; --panel:#0F1F2D; --ink:#DDE8F1; --muted:#8DA2B5; --line:#24394C;
+  --sea:#58B0D4; --sea-ink:#06202E; --brass:#D9A84A; --alert:#F08A78; --ok:#63C79A; --box:#0A2238; --box-ink:#F3F7FA;
+}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:15px/1.45 var(--ui);color:var(--ink);background:var(--sky);display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:6px 12px}
+button:hover{border-color:var(--sea)}
+button.primary{background:var(--sea);color:var(--sea-ink);border-color:var(--sea);font-weight:600}
+button.quiet{border-color:transparent;background:none;padding:4px 8px;color:var(--muted)}
+button.quiet:hover{color:var(--ink);background:var(--panel)}
+button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--sea);outline-offset:1px}
+input[type=text],input[type=number],input[type=search],select{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:6px 10px}
+.hidden{display:none!important}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+
+/* barra superior */
+header.bar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--paper);border-bottom:1px solid var(--line);flex:none}
+.brand{font-size:17px;font-weight:700;white-space:nowrap}
+.brand small{font-weight:400;color:var(--muted);margin-left:6px;font-size:12px}
+#search{flex:1;max-width:460px;min-width:140px}
+.meter{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;white-space:nowrap;margin-left:auto}
+.track{width:140px;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.track i{display:block;height:100%;background:var(--brass);width:0}
+#saved{font-size:12px;color:var(--muted);min-width:64px;text-align:right}
+
+/* corpo em tres colunas */
+main{flex:1;display:grid;grid-template-columns:236px minmax(0,1fr) 372px;min-height:0}
+aside.files{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:8px 0 30px}
+.cat{padding:12px 16px 4px;font-size:12.5px;color:var(--muted);font-weight:600;display:flex;justify-content:space-between}
+.file{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:6px 16px;cursor:pointer;border-left:3px solid transparent}
+.file:hover{background:var(--paper)}
+.file.on{background:var(--paper);border-left-color:var(--sea)}
+.file .nm{font-family:var(--mono);font-size:13px}
+.file .ct{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.file .pb{grid-column:1/3;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.file .pb i{display:block;height:100%;background:var(--brass)}
+.file.full .pb i{background:var(--ok)}
+.filesTools{padding:6px 16px 4px;display:flex;gap:6px}
+.filesTools select{flex:1;padding:4px 6px;font-size:13px}
+
+section.work{overflow:auto;min-height:0;background:var(--sky)}
+.workHead{position:sticky;top:0;z-index:5;background:var(--sky);padding:12px 22px 10px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.workHead h2{font-size:19px;font-family:var(--mono)}
+.workHead .sub{color:var(--muted);font-size:13px}
+.seg{margin-left:auto;display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--paper);padding:5px 11px;font-size:13px}
+.seg button.on{background:var(--sea);color:var(--sea-ink)}
+#rows{padding:6px 22px 80px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 18px;padding:12px 0 12px 12px;border-bottom:1px solid var(--line);border-left:3px solid transparent;margin-left:-12px}
+.row.cont{border-left-color:var(--line)}
+.row.focus{border-left-color:var(--brass);background:color-mix(in srgb,var(--paper) 55%,transparent)}
+.meta{grid-column:1/3;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.who{font-weight:600;overflow-wrap:anywhere}
+.who .to{color:var(--sea);font-weight:600;margin-left:8px}
+.who .to::before{content:"\2192\00a0";color:var(--muted);font-weight:400}
+.secname{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:11.5px;padding:1px 7px;border-radius:9px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.tag.warn{color:var(--alert);border-color:var(--alert)}
+.tag.rev{color:var(--brass);border-color:var(--brass)}
+.orig,.tr textarea{font-family:var(--mono);font-size:13px;line-height:1.5;white-space:pre;overflow-x:auto}
+.orig{margin:0;padding:7px 0}
+.tr textarea{width:100%;resize:none;border:1px solid var(--line);border-radius:6px;background-color:var(--paper);padding:6px 9px;min-height:36px;overflow-y:hidden;display:block;background-image:linear-gradient(to right,transparent calc(var(--cols,48)*1ch + 9px),var(--line) calc(var(--cols,48)*1ch + 9px),var(--line) calc(var(--cols,48)*1ch + 10px),transparent calc(var(--cols,48)*1ch + 10px));background-attachment:local}
+.tr textarea:focus{border-color:var(--sea);outline:none;box-shadow:0 0 0 2px color-mix(in srgb,var(--sea) 25%,transparent)}
+.tr textarea.auto{border-style:dashed}
+.under{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:4px;min-height:22px}
+.under .cols{font-family:var(--mono)}
+.under .cols b{color:var(--alert)}
+.under .sp{margin-left:auto;display:flex;gap:2px}
+.empty{padding:60px 22px;color:var(--muted);max-width:520px}
+.hit{padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.hit:hover .o{color:var(--sea)}
+.hit .f{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.hit .o,.hit .t{white-space:pre-wrap;font-family:var(--mono);font-size:13px}
+.hit .t{color:var(--muted)}
+
+/* painel da previa */
+aside.side{border-left:1px solid var(--line);background:var(--paper);overflow:auto;padding:16px}
+aside.side h3{font-size:14px;margin:0 0 8px}
+.dialog{background:var(--box);border-radius:10px;padding:26px 12px 12px;position:relative;margin-bottom:8px;border:2px solid color-mix(in srgb,var(--brass) 70%,var(--box))}
+.dialog .speaker{position:absolute;top:-2px;left:12px;transform:translateY(-50%);background:var(--brass);color:#1b1205;font-weight:700;font-size:12.5px;padding:1px 10px;border-radius:9px;max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dialog .scroll{overflow-x:auto}
+.dialog canvas{display:block;width:100%;height:auto;image-rendering:auto}
+.note{font-size:12.5px;color:var(--muted);margin:4px 0 14px}
+.issues{margin:0 0 14px;padding:0;list-style:none;font-size:13px}
+.issues li{color:var(--alert);padding:2px 0}
+.kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--panel)}
+dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin:0}
+dl.facts dt{color:var(--muted)} dl.facts dd{margin:0;overflow-wrap:anywhere}
+
+/* tela inicial */
+#welcome{flex:1;overflow:auto;display:grid;place-items:start center;padding:6vh 24px}
+.welcome{max-width:720px;width:100%}
+.welcome h1{font-size:34px;line-height:1.15;margin-bottom:10px}
+.welcome p.lead{font-size:17px;color:var(--muted);margin:0 0 26px;max-width:60ch}
+.pick{display:flex;gap:8px;margin:8px 0 6px}
+.pick input{flex:1;font-family:var(--mono);font-size:13.5px}
+.steps{margin:26px 0 0;padding-left:22px;color:var(--muted);max-width:62ch}
+.steps li{margin:6px 0}
+.steps b{color:var(--ink)}
+.recent{margin-top:22px;font-size:14px}
+.recent a{color:var(--sea);cursor:pointer;font-family:var(--mono);font-size:13px;display:block;padding:2px 0}
+.err{color:var(--alert);margin:8px 0;min-height:20px}
+#warn{flex:none;padding:8px 16px;background:color-mix(in srgb,var(--alert) 12%,var(--paper));border-bottom:1px solid var(--alert);font-size:13.5px}
+
+/* janelas */
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);padding:0;width:min(760px,94vw);max-height:88vh}
+dialog::backdrop{background:rgba(10,25,40,.45)}
+dialog .dh{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+dialog .dh h2{font-size:17px;flex:1}
+dialog .db{padding:16px 18px;overflow:auto;max-height:calc(88vh - 120px)}
+dialog .df{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+table.grid{border-collapse:collapse;width:100%;font-size:14px}
+table.grid th{text-align:left;font-weight:600;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);position:sticky;top:-16px;background:var(--paper)}
+table.grid td{padding:4px 8px;border-bottom:1px solid var(--line)}
+table.grid input{width:100%}
+.field{display:grid;grid-template-columns:220px 1fr;gap:10px;align-items:center;margin:10px 0}
+.field small{grid-column:2;color:var(--muted);margin-top:-6px}
+.glyphs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.gcell{border:1px solid var(--line);border-radius:6px;padding:6px;text-align:center;background:var(--box)}
+.gcell canvas{width:24px;height:48px;display:block;margin:0 auto 4px;image-rendering:pixelated}
+.gcell select{font-size:12px;padding:1px 2px;width:54px}
+.gcell span{color:var(--box-ink);font-size:12px;display:block}
+.progress{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin:10px 0}
+.progress i{display:block;height:100%;background:var(--brass);width:0;transition:width .2s}
+.report li{margin:4px 0}
+#busy{position:fixed;inset:0;background:color-mix(in srgb,var(--sky) 88%,transparent);display:grid;place-items:center;z-index:50}
+#busy .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:22px 26px;width:min(420px,90vw)}
+@media (max-width:1150px){main{grid-template-columns:220px minmax(0,1fr)} aside.side{display:none}}
+@media (max-width:760px){main{grid-template-columns:1fr} aside.files{display:none} .row{grid-template-columns:1fr} .meta{grid-column:1}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="bar hidden" id="bar">
+  <div class="brand">SOAL Tradutor<small id="ver"></small></div>
+  <input type="search" id="search" placeholder="Buscar em todos os textos (original ou tradução)" aria-label="Buscar em todos os textos">
+  <div class="meter" title="Falas traduzidas no jogo inteiro"><span id="meterTxt"></span><div class="track"><i id="meterBar"></i></div></div>
+  <span id="saved"></span>
+  <button id="btnNames">Nomes</button>
+  <button id="btnSheet">Planilha</button>
+  <button id="btnSettings">Ajustes</button>
+  <button class="primary" id="btnBuild">Gravar no jogo</button>
+</header>
+
+<div id="warn" class="hidden" role="alert"></div>
+
+<div id="welcome" class="hidden">
+  <div class="welcome">
+    <h1>Traduza os diálogos de Skies of Arcadia Legends</h1>
+    <p class="lead">Aponte para a pasta onde a ISO foi extraída. O programa lê todos os diálogos, guarda uma cópia dos arquivos originais e deixa você traduzir sem limite de tamanho por fala.</p>
+    <label for="gamePath"><b>Pasta do jogo extraído</b></label>
+    <div class="pick">
+      <input type="text" id="gamePath" placeholder="Ex.: F:\Downloads\Skies of arcadia legends" spellcheck="false">
+      <button id="btnPick">Escolher pasta</button>
+      <button class="primary" id="btnOpen">Abrir</button>
+    </div>
+    <div class="err" id="openErr"></div>
+    <div class="recent hidden" id="rcFound"><b>Recomp encontrado neste computador</b><a id="rcOpen"></a><span class="note" id="rcNote"></span></div>
+    <div class="recent hidden" id="recent"><b>Projetos recentes</b><div id="recentList"></div></div>
+    <ol class="steps">
+      <li><b>Extraia a ISO.</b> No Dolphin: clique direito no jogo, Propriedades, Sistema de arquivos, clique direito em “Disco”, Extrair disco inteiro.</li>
+      <li><b>Abra a pasta aqui.</b> É a pasta que contém <span class="kbd">files</span> e <span class="kbd">sys</span>.</li>
+      <li><b>Traduza.</b> Tudo é salvo sozinho numa pasta de projeto ao lado da pasta do jogo.</li>
+      <li><b>Grave no jogo.</b> Os arquivos traduzidos substituem os da pasta extraída; os originais ficam guardados no projeto.</li>
+      <li><b>Teste.</b> No Dolphin, abra o arquivo <span class="kbd">sys/main.dol</span> da pasta extraída. No recomp (port nativo), basta iniciar o jogo: a tradução é gravada direto no jogo importado.</li>
+    </ol>
+  </div>
+</div>
+
+<main id="main" class="hidden">
+  <aside class="files">
+    <div class="filesTools">
+      <select id="fileFilter" aria-label="Filtrar arquivos">
+        <option value="all">Todos os arquivos</option>
+        <option value="todo">Com falas por traduzir</option>
+        <option value="started">Já começados</option>
+        <option value="done">Completos</option>
+      </select>
+    </div>
+    <div id="fileList"></div>
+  </aside>
+  <section class="work" id="work">
+    <div class="workHead" id="workHead"></div>
+    <div id="rows"></div>
+  </section>
+  <aside class="side" id="side">
+    <h3>Como fica na caixa de diálogo</h3>
+    <div class="dialog"><span class="speaker" id="pvWho"></span><div class="scroll"><canvas id="pvCanvas" width="576" height="84"></canvas></div></div>
+    <p class="note" id="pvNote"></p>
+    <ul class="issues" id="pvIssues"></ul>
+    <h3>Original</h3>
+    <div class="dialog"><span class="speaker" id="pvWhoO"></span><div class="scroll"><canvas id="pvCanvasO" width="576" height="84"></canvas></div></div>
+    <dl class="facts" id="pvFacts"></dl>
+    <p class="note" style="margin-top:18px"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> próxima fala · <span class="kbd">Alt</span>+<span class="kbd">C</span> copiar o original · <span class="kbd">Alt</span>+<span class="kbd">R</span> marcar para revisar</p>
+  </aside>
+</main>
+
+<div id="busy" class="hidden"><div class="card"><b id="busyLabel">Trabalhando</b><div class="progress"><i id="busyBar"></i></div><span class="note" id="busyNote"></span></div></div>
+
+<dialog id="dlgNames"><div class="dh"><h2>Nomes dos personagens</h2><input type="search" id="nameFilter" placeholder="Filtrar"></div>
+  <div class="db"><p class="note">O nome traduzido aqui é usado em todas as falas daquele personagem. Deixe em branco para manter o original.</p>
+  <table class="grid"><thead><tr><th>Original</th><th>Falas</th><th>Tradução</th></tr></thead><tbody id="nameRows"></tbody></table></div>
+  <div class="df"><button data-close>Fechar</button></div></dialog>
+
+<dialog id="dlgSheet"><div class="dh"><h2>Planilha</h2></div>
+  <div class="db">
+    <p>Exporte todos os textos para um arquivo CSV (abre no Excel, LibreOffice e Planilhas Google), traduza a coluna <b>traducao</b> e importe de volta. As colunas <b>arquivo</b> e <b>chave</b> identificam cada fala e não devem ser alteradas.</p>
+    <p><a id="lnkExport" href="/api/export.csv"><button type="button">Exportar CSV</button></a></p>
+    <p><input type="file" id="csvFile" accept=".csv,text/csv"> <button id="btnImport">Importar CSV</button></p>
+    <p class="note" id="sheetMsg"></p>
+  </div>
+  <div class="df"><button data-close>Fechar</button></div></dialog>
+
+<dialog id="dlgSettings"><div class="dh"><h2>Ajustes</h2></div>
+  <div class="db">
+    <div class="field"><label for="stCols">Colunas por linha</label><input type="number" id="stCols" min="10" max="80"><small>A linha mais longa do jogo original tem 48 colunas.</small></div>
+    <div class="field"><label for="stLines">Linhas por caixa</label><input type="number" id="stLines" min="1" max="8"><small>O original nunca passa de 3.</small></div>
+    <div class="field"><label for="stAuto">Falas repetidas</label><label><input type="checkbox" id="stAuto"> Preencher sozinho as falas idênticas ainda não traduzidas</label></div>
+    <div class="field"><label for="stAcc">Letras acentuadas</label>
+      <select id="stAcc"><option value="font">Desenhar na fonte do jogo</option><option value="strip">Gravar sem acento</option></select>
+      <small>A fonte da versão americana não tem acentos. Na primeira opção, cada letra acentuada toma o lugar de um símbolo que os diálogos não usam. Só há 15 lugares; as letras que ficarem de fora são gravadas sem acento.</small></div>
+    <div id="accBox"><b>Qual símbolo cada letra ocupa</b><div class="glyphs" id="accGrid"></div></div>
+    <div class="field" style="margin-top:18px"><label for="stKeep">Save states do recomp</label><label><input type="checkbox" id="stKeep"> Manter os save states entre uma gravação e outra (experimental)</label>
+      <small>Só vale para o recomp. Os arquivos traduzidos são completados com zeros até múltiplos de 32 KB, para que o tamanho deles quase nunca mude de uma gravação para a outra. Ainda não foi testado dentro do jogo.</small></div>
+    <div class="field" style="margin-top:18px"><label>Pasta do projeto</label><span class="secname" id="stDir"></span></div>
+    <div class="field"><label>Pasta do jogo</label><span class="secname" id="stGame"></span></div>
+  </div>
+  <div class="df"><button id="btnCloseProject" class="quiet" style="margin-right:auto">Fechar projeto</button><button data-close>Cancelar</button><button class="primary" id="btnSaveSettings">Salvar ajustes</button></div></dialog>
+
+<dialog id="dlgBuild"><div class="dh"><h2>Gravar no jogo</h2></div>
+  <div class="db" id="buildBody"></div>
+  <div class="df" id="buildFoot"></div></dialog>
+
+<script>
+"use strict";
+const $ = (s, r=document) => r.querySelector(s);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const S = { project:null, file:null, entries:[], filter:"all", focus:null, glyphs:null, rendered:0, view:[], searchMode:false };
+const pending = new Map();
+
+async function api(path, body, raw) {
+  const opt = body === undefined ? {} : { method:"POST", headers:{"X-SOAL":"1"}, body: raw ? body : JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({ error:"Resposta inesperada do programa." }));
+  if (!r.ok || j.error) throw new Error(j.error || ("Erro " + r.status));
+  return j;
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------------------------------------------------------------- inicio */
+async function boot() {
+  const st = await api("/api/state");
+  $("#ver").textContent = "v" + st.version;
+  if (st.job.running) await waitJob();
+  await refreshState();
+}
+async function refreshState() {
+  const st = await api("/api/state");
+  S.project = st.project;
+  $("#bar").classList.toggle("hidden", !st.project);
+  $("#main").classList.toggle("hidden", !st.project);
+  $("#welcome").classList.toggle("hidden", !!st.project);
+  S.recomp = st.recomp;
+  if (!st.project) {
+    $("#warn").classList.add("hidden");
+    const rc = st.recomp;
+    $("#rcFound").classList.toggle("hidden", !rc);
+    if (rc) {
+      const a = $("#rcOpen"); a.textContent = rc.game_root;
+      if (rc.supported) { a.onclick = () => openProject({ game_root: rc.game_root }); $("#rcNote").textContent = "Clique para traduzir direto o jogo importado no recomp."; }
+      else { a.onclick = null; $("#rcNote").textContent = "O jogo importado é a versão " + rc.region + "; por enquanto só a americana é traduzida."; }
+    }
+    const rec = st.recent || [];
+    $("#recent").classList.toggle("hidden", !rec.length);
+    const box = $("#recentList"); box.textContent = "";
+    for (const r of rec) { const a = el("a", "", r.game || r.dir); a.onclick = () => openProject({ project_dir:r.dir }); box.append(a); }
+    return;
+  }
+  const no = st.project.not_original || [], w = $("#warn");
+  w.classList.toggle("hidden", !no.length);
+  if (no.length) w.textContent = no.length + (no.length === 1 ? " arquivo desta pasta não é" : " arquivos desta pasta não são") + " o original do disco americano (" + no.slice(0, 4).join(", ") + (no.length > 4 ? "…" : "") + "). A pasta já tinha uma tradução ou um romhack gravado, e o programa vai tratar esse conteúdo como texto original. Para traduzir a partir do jogo original, reextraia o disco e abra a pasta de novo.";
+  if (!S.glyphs) { try { S.glyphs = await api("/api/glyphs"); } catch (e) { S.glyphs = { ok:false, glyphs:{} }; } }
+  renderMeter(); renderFiles();
+  if (!S.file) { const fs = S.project.summary.files, order = S.project.summary.categories.map(c => c[0]); let first = null; for (const c of order) { first = fs.find(f => f.cat === c && f.total > f.done); if (first) break; } first = first || fs[0]; if (first) openFile(first.name); }
+}
+async function waitJob(onTick) {
+  $("#busy").classList.remove("hidden");
+  let j;
+  for (;;) {
+    j = await api("/api/job");
+    $("#busyLabel").textContent = j.label || "Trabalhando";
+    $("#busyBar").style.width = (j.total ? Math.round(100 * j.cur / j.total) : 5) + "%";
+    $("#busyNote").textContent = j.total ? (j.cur + " de " + j.total) : "";
+    if (onTick) onTick(j);
+    if (!j.running) break;
+    await sleep(250);
+  }
+  $("#busy").classList.add("hidden");
+  if (j.error) throw new Error(j.error);
+  return j.result;
+}
+async function openProject(body) {
+  $("#openErr").textContent = "";
+  try { await api("/api/open", body); await waitJob(); S.file = null; S.glyphs = null; await refreshState(); }
+  catch (e) { $("#busy").classList.add("hidden"); $("#openErr").textContent = e.message; }
+}
+$("#btnOpen").onclick = () => openProject({ game_root: $("#gamePath").value });
+$("#gamePath").onkeydown = e => { if (e.key === "Enter") $("#btnOpen").click(); };
+$("#btnPick").onclick = async () => {
+  $("#btnPick").disabled = true;
+  try { const r = await api("/api/pick", {}); if (r.path) $("#gamePath").value = r.path; else $("#openErr").textContent = "Nenhuma pasta escolhida. Você também pode colar o caminho no campo."; }
+  catch (e) { $("#openErr").textContent = e.message; }
+  $("#btnPick").disabled = false;
+};
+
+/* ------------------------------------------------------- lista de arquivos */
+function renderMeter() {
+  const s = S.project.summary, pct = s.total ? 100 * s.done / s.total : 0;
+  $("#meterTxt").textContent = s.done.toLocaleString("pt-BR") + " de " + s.total.toLocaleString("pt-BR") + " falas (" + pct.toLocaleString("pt-BR", { maximumFractionDigits: pct < 10 ? 1 : 0 }) + "%)";
+  document.documentElement.style.setProperty("--cols", S.project.settings.cols);
+  $("#meterBar").style.width = pct + "%";
+}
+function renderFiles() {
+  const box = $("#fileList"); box.textContent = "";
+  const flt = $("#fileFilter").value, sum = S.project.summary;
+  for (const [cat, label] of sum.categories) {
+    const all = sum.files.filter(f => f.cat === cat);
+    const fs = all.filter(f => flt === "all" || (flt === "todo" && f.done < f.total) || (flt === "started" && f.done > 0 && f.done < f.total) || (flt === "done" && f.total > 0 && f.done >= f.total));
+    if (!fs.length) continue;
+    const t = all.reduce((a, f) => a + f.total, 0), d = all.reduce((a, f) => a + f.done, 0);
+    const h = el("div", "cat"); h.append(el("span", "", label), el("span", "", t ? Math.floor(100 * d / t) + "%" : ""));
+    box.append(h);
+    for (const f of fs) {
+      const row = el("div", "file" + (f.name === S.file ? " on" : "") + (f.total && f.done >= f.total ? " full" : ""));
+      row.dataset.name = f.name; row.tabIndex = 0;
+      const pb = el("div", "pb"), bar = el("i"); bar.style.width = (f.total ? 100 * f.done / f.total : 0) + "%"; pb.append(bar);
+      row.append(el("span", "nm", f.name.replace(/\.sct$/i, "")), el("span", "ct", f.done + "/" + f.total), pb);
+      row.onclick = () => openFile(f.name);
+      row.onkeydown = e => { if (e.key === "Enter") openFile(f.name); };
+      box.append(row);
+    }
+  }
+}
+$("#fileFilter").onchange = renderFiles;
+function bumpFile(name, delta) {
+  const f = S.project.summary.files.find(x => x.name === name); if (!f) return;
+  f.done += delta; S.project.summary.done += delta; renderMeter();
+  const row = document.querySelector('.file[data-name="' + CSS.escape(name) + '"]');
+  if (row) { row.querySelector(".ct").textContent = f.done + "/" + f.total; row.querySelector(".pb i").style.width = (f.total ? 100 * f.done / f.total : 0) + "%"; row.classList.toggle("full", f.total > 0 && f.done >= f.total); }
+}
+
+/* ----------------------------------------------------------- texto e colunas */
+const strip = ch => { const d = ch.normalize("NFD"); return (d.length > 1 && d.charCodeAt(0) < 127) ? d[0] : null; };
+function charCols(ch) {
+  const st = S.project.settings;
+  if (ch.charCodeAt(0) < 127 || ch === "“" || ch === "”" || ch === "‘" || ch === "’" || ch === "–" || ch === "—" || ch === "\u00a0") return 1;
+  if (st.accents === "font" && st.charmap[ch]) return 1;
+  if (strip(ch)) return 1;
+  return 2;
+}
+function lineCols(line) { let w = 0; for (const ch of line.replace(/\\[ech]/g, "")) w += charCols(ch); return w; }
+function issuesOf(t) {
+  const st = S.project.settings, out = [];
+  if (!t) return out;
+  for (const page of t.split("\\c")) {
+    const ls = page.split("\n");
+    if (ls.length > st.lines) out.push(ls.length + " linhas nesta caixa; o jogo mostra " + st.lines + ".");
+    ls.forEach((l, i) => { const w = lineCols(l); if (w > st.cols) out.push("Linha " + (i + 1) + " tem " + w + " colunas; o limite é " + st.cols + "."); });
+  }
+  const lost = new Set();
+  for (const ch of t) { if (ch.charCodeAt(0) > 126 && !(st.accents === "font" && st.charmap[ch]) && strip(ch)) lost.add(ch); }
+  if (lost.size && st.accents === "font") out.push("Sem lugar na fonte, vai sem acento: " + [...lost].join(" "));
+  return out;
+}
+
+/* ----------------------------------------------------------- previa na fonte do jogo */
+function glyphFor(ch) {
+  const g = S.glyphs, st = S.project.settings;
+  if (!g || !g.ok) return null;
+  if (ch === '"') return g.glyphs["“"];
+  if (ch === "[") return g.glyphs["“"]; if (ch === "]") return g.glyphs["”"];
+  if (ch === "‘" || ch === "’") return g.glyphs["'"]; if (ch === "–" || ch === "—") return g.glyphs["-"];
+  if (g.glyphs[ch]) return g.glyphs[ch];
+  if (st.accents === "font" && st.charmap[ch] && g.accents && g.accents[ch]) return g.accents[ch];
+  const b = strip(ch); if (b && g.glyphs[b]) return g.glyphs[b];
+  return undefined;
+}
+function drawBox(canvas, body) {
+  const st = S.project.settings, cols = st.cols, LH = 28;
+  const page = (body || "").split("\\c")[0].replace(/\\[eh]/g, "");
+  const lines = page.split("\n"), nl = Math.max(st.lines, lines.length);
+  const widest = Math.max(cols, ...lines.map(lineCols)), W = Math.min(widest, cols + 24) * 12;
+  canvas.width = W; canvas.height = nl * LH; canvas.style.width = (100 * W / (cols * 12)) + "%";
+  const ctx = canvas.getContext("2d"), img = ctx.createImageData(W, nl * LH), d = img.data;
+  const put = (x, y, v, r, gC, b) => { if (x < 0 || x >= W) return; const o = (y * W + x) * 4; d[o] = r; d[o + 1] = gC; d[o + 2] = b; d[o + 3] = Math.max(d[o + 3], v * 17); };
+  lines.forEach((line, li) => {
+    let col = 0, quoteOpen = false;
+    for (let ch of line) {
+      if (ch === '"') { quoteOpen = !quoteOpen; ch = quoteOpen ? "“" : "”"; }
+      const over = col >= cols || li >= st.lines, R = over ? 255 : 243, G = over ? 120 : 247, B = over ? 100 : 250;
+      const y0 = li * LH + 2, x0 = col * 12;
+      if (ch === " " || ch === "\u00a0") { col += 1; continue; }
+      if (ch === "…") { for (const dx of [3, 11, 19]) for (let yy = 18; yy < 21; yy++) for (let xx = 0; xx < 3; xx++) put(x0 + dx + xx, y0 + yy, 15, R, G, B); col += 2; continue; }
+      const gl = glyphFor(ch);
+      if (gl) { for (let y = 0; y < 24; y++) for (let x = 0; x < 12; x++) { const v = parseInt(gl[y * 12 + x], 16); if (v) put(x0 + x, y0 + y, v, R, G, B); } col += 1; }
+      else { const w = charCols(ch) * 12; for (let y = 4; y < 22; y++) for (let x = 2; x < w - 2; x++) if (y === 4 || y === 21 || x === 2 || x === w - 3) put(x0 + x, y0 + y, 12, 255, 120, 100); col += w / 12; }
+    }
+  });
+  ctx.putImageData(img, 0, 0);
+  if (W > cols * 12) { ctx.fillStyle = "rgba(255,120,100,.8)"; ctx.fillRect(cols * 12, 0, 1, nl * LH); }
+}
+function showPreview(e) {
+  if (!e) return;
+  const names = S.names || {};
+  const who = e.head && e.br ? e.head : "";
+  $("#pvWhoO").textContent = who; $("#pvWhoO").classList.toggle("hidden", !who);
+  const whoT = who ? (S.nameMap && S.nameMap[who]) || who : "";
+  $("#pvWho").textContent = whoT; $("#pvWho").classList.toggle("hidden", !whoT);
+  drawBox($("#pvCanvasO"), e.body);
+  drawBox($("#pvCanvas"), e.t || "");
+  const iss = issuesOf(e.t); const ul = $("#pvIssues"); ul.textContent = "";
+  for (const i of iss) ul.append(el("li", "", i));
+  $("#pvNote").textContent = !e.t ? "Ainda sem tradução: o jogo continua mostrando o original nesta fala." : (S.glyphs && S.glyphs.ok ? "Desenhado com a fonte do próprio jogo. O que passar do limite aparece em vermelho." : "Fonte do jogo não encontrada; a prévia mostra só os limites.");
+  const f = $("#pvFacts"); f.textContent = "";
+  const add = (k, v) => { f.append(el("dt", "", k), el("dd", "", v)); };
+  add("Seção", e.i >= 0 ? e.sec + " (nº " + e.i + ")" : "texto do rodapé do arquivo; cada \\c separa uma opção");
+  add("Termina com", e.end === "c" ? "\\c: a fala continua na próxima caixa" : e.end === "e" ? "\\e: fim da fala" : "sem código de fim");
+  if (e.dup > 1) add("Repetições", "este mesmo texto aparece " + e.dup + " vezes no jogo");
+}
+
+/* ------------------------------------------------------------- falas do arquivo */
+async function openFile(name, focusKey) {
+  await flushAll();
+  S.searchMode = false; $("#search").value = "";
+  const data = await api("/api/file?name=" + encodeURIComponent(name));
+  if (!S.nameMap) await loadNames();
+  S.file = name; S.entries = data.entries; S.focus = null; S.fileError = data.error;
+  document.querySelectorAll(".file.on").forEach(n => n.classList.remove("on"));
+  const row = document.querySelector('.file[data-name="' + CSS.escape(name) + '"]'); if (row) { row.classList.add("on"); row.scrollIntoView({ block:"nearest" }); }
+  renderWork(focusKey);
+}
+async function loadNames() { const r = await api("/api/names"); S.nameList = r.names; S.nameMap = {}; for (const n of r.names) if (n.t) S.nameMap[n.name] = n.t; }
+function visibleEntries() {
+  return S.entries.filter(e => {
+    if (S.filter === "todo") return !e.t && !e.dbg && e.body.trim();
+    if (S.filter === "rev") return e.st === "rev" || e.auto;
+    if (S.filter === "warn") return e.t && issuesOf(e.t).length;
+    return true;
+  });
+}
+function renderWork(focusKey) {
+  const head = $("#workHead"); head.textContent = "";
+  const f = S.project.summary.files.find(x => x.name === S.file);
+  const cat = (S.project.summary.categories.find(c => c[0] === f.cat) || [0, ""])[1];
+  head.append(el("h2", "", S.file.replace(/\.sct$/i, "")), el("span", "sub", cat + ", " + S.entries.length + " textos"));
+  const seg = el("div", "seg");
+  for (const [k, lab] of [["all", "Todas"], ["todo", "Faltam"], ["rev", "Revisar"], ["warn", "Com aviso"]]) {
+    const b = el("button", S.filter === k ? "on" : "", lab); b.onclick = () => { S.filter = k; renderWork(); }; seg.append(b);
+  }
+  head.append(seg);
+  const rows = $("#rows"); rows.textContent = ""; S.rendered = 0; S.view = visibleEntries();
+  if (S.fileError) rows.append(el("p", "err", "Este arquivo teve um problema na leitura: " + S.fileError));
+  if (!S.view.length) { rows.append(el("div", "empty", S.entries.length ? "Nenhuma fala neste filtro. Escolha “Todas” para ver o arquivo inteiro." : "Este arquivo não tem diálogos.")); return; }
+  let upto = 120;
+  if (focusKey) { const i = S.view.findIndex(e => e.k === focusKey); if (i >= 0) upto = Math.max(upto, i + 40); }
+  renderMore(upto);
+  $("#work").scrollTop = 0;
+  if (focusKey) { const n = document.querySelector('.row[data-k="' + CSS.escape(focusKey) + '"] textarea'); if (n) { n.focus(); n.closest(".row").scrollIntoView({ block:"center" }); } }
+  else showPreview(S.view[0]);
+}
+function renderMore(n) {
+  const rows = $("#rows"), end = Math.min(S.view.length, S.rendered + n);
+  const frag = document.createDocumentFragment();
+  for (let i = S.rendered; i < end; i++) frag.append(rowFor(S.view[i]));
+  rows.append(frag); S.rendered = end;
+}
+$("#work").addEventListener("scroll", () => { const w = $("#work"); if (!S.searchMode && S.rendered < S.view.length && w.scrollTop + w.clientHeight > w.scrollHeight - 900) renderMore(120); });
+
+function rowFor(e) {
+  const row = el("div", "row" + (e.cont ? " cont" : "")); row.dataset.k = e.k;
+  const meta = el("div", "meta");
+  if (e.head != null && e.head !== "" && e.br) { const w = el("div", "who", e.head); const t = S.nameMap[e.head]; if (t) w.append(el("span", "to", t)); meta.append(w); }
+  meta.append(el("div", "secname", e.i < 0 ? "opções de menu" : e.sec));
+  const tags = el("div", "tags"); meta.append(tags);
+  const orig = el("pre", "orig", e.body);
+  const tr = el("div", "tr"), ta = el("textarea"); ta.value = e.t || ""; ta.spellcheck = true; ta.lang = "pt-BR"; ta.rows = 1;
+  ta.placeholder = e.dbg ? "Texto de teste dos desenvolvedores; não precisa traduzir" : "Tradução";
+  const under = el("div", "under"), cols = el("span", "cols"), sp = el("span", "sp");
+  const bCopy = el("button", "quiet", "Copiar original"), bRev = el("button", "quiet", "Revisar depois");
+  sp.append(bCopy, bRev); under.append(cols, sp); tr.append(ta, under);
+  row.append(meta, orig, tr);
+  const paint = () => {
+    tags.textContent = "";
+    if (e.end === "c") tags.append(el("span", "tag", "continua"));
+    if (e.cont) tags.append(el("span", "tag", "continuação"));
+    if (e.dup > 1) tags.append(el("span", "tag", "repete " + e.dup + "×"));
+    if (e.dbg) tags.append(el("span", "tag", "teste"));
+    if (e.auto) tags.append(el("span", "tag rev", "preenchida sozinha"));
+    if (e.st === "rev") tags.append(el("span", "tag rev", "revisar"));
+    ta.classList.toggle("auto", !!e.auto);
+    cols.textContent = "";
+    if (ta.value) { const lim = S.project.settings.cols; ta.value.split("\n").forEach((l, i) => { const w = lineCols(l); if (i) cols.append(" · "); cols.append(w > lim ? el("b", "", String(w)) : String(w)); }); cols.append(" de " + lim + " colunas"); if (issuesOf(ta.value).length) tags.append(el("span", "tag warn", "aviso")); }
+    bRev.textContent = e.st === "rev" ? "Tirar marca" : "Revisar depois";
+    ta.style.height = "auto"; ta.style.height = Math.max(36, ta.scrollHeight + 2) + "px";
+  };
+  row._paint = paint; row._entry = e;
+  ta.addEventListener("input", () => { const had = !!e.t; e.t = ta.value; e.auto = false; if (had !== !!e.t && !e.dbg && e.body.trim()) bumpFile(S.file, e.t ? 1 : -1); paint(); showPreview(e); queueSave(e); });
+  ta.addEventListener("focus", () => { document.querySelectorAll(".row.focus").forEach(n => n.classList.remove("focus")); row.classList.add("focus"); S.focus = e; showPreview(e); });
+  ta.addEventListener("keydown", ev => {
+    if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); const nx = row.nextElementSibling; const t = nx && nx.querySelector("textarea"); if (t) { t.focus(); nx.scrollIntoView({ block:"center", behavior:"smooth" }); } }
+    else if (ev.altKey && ev.key.toLowerCase() === "c") { ev.preventDefault(); bCopy.click(); }
+    else if (ev.altKey && ev.key.toLowerCase() === "r") { ev.preventDefault(); bRev.click(); }
+  });
+  bCopy.onclick = () => { ta.value = e.body; ta.dispatchEvent(new Event("input")); ta.focus(); };
+  bRev.onclick = async () => { e.st = e.st === "rev" ? "" : "rev"; paint(); try { await api("/api/status", { file:S.file, k:e.k, st:e.st }); } catch (err) { setSaved(err.message, true); } };
+  requestAnimationFrame(paint);
+  return row;
+}
+
+/* ---------------------------------------------------------------- salvar */
+function setSaved(msg, bad) { const s = $("#saved"); s.textContent = msg; s.style.color = bad ? "var(--alert)" : ""; }
+function queueSave(e) {
+  const key = S.file + "|" + e.k, old = pending.get(key); if (old) clearTimeout(old.timer);
+  const job = { file:S.file, e, timer:setTimeout(() => doSave(key), 500) };
+  pending.set(key, job); setSaved("Salvando…");
+}
+async function doSave(key) {
+  const job = pending.get(key); if (!job) return; pending.delete(key); clearTimeout(job.timer);
+  try {
+    const r = await api("/api/save", { file:job.file, k:job.e.k, t:job.e.t });
+    for (const [f, k] of r.filled || []) {
+      if (f === S.file) { const o = S.entries.find(x => x.k === k); if (o) { const had = !!o.t; o.t = job.e.t; o.auto = true; if (!had && !o.dbg) bumpFile(f, 1); const n = document.querySelector('.row[data-k="' + CSS.escape(k) + '"]'); if (n) { n.querySelector("textarea").value = o.t; n._paint(); } } }
+      else if (!r._counted) { /* contado abaixo */ }
+    }
+    const other = (r.filled || []).filter(x => x[0] !== S.file).length;
+    if (other) { const st = await api("/api/state"); S.project.summary = st.project.summary; renderMeter(); renderFiles(); }
+    if (!pending.size) setSaved("Salvo" + ((r.filled || []).length ? " (+" + r.filled.length + " iguais)" : ""));
+  } catch (err) { setSaved("Não salvou: " + err.message, true); }
+}
+async function flushAll() { for (const k of [...pending.keys()]) await doSave(k); }
+window.addEventListener("beforeunload", () => { for (const [k, job] of pending) navigator.sendBeacon && fetch("/api/save", { method:"POST", keepalive:true, headers:{ "X-SOAL":"1" }, body:JSON.stringify({ file:job.file, k:job.e.k, t:job.e.t }) }); });
+
+/* ----------------------------------------------------------------- busca */
+let searchTimer = null;
+$("#search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 250); });
+async function runSearch() {
+  const q = $("#search").value.trim();
+  if (!q) { if (S.searchMode && S.file) { S.searchMode = false; renderWork(); } return; }
+  await flushAll();
+  const r = await api("/api/search?q=" + encodeURIComponent(q));
+  S.searchMode = true;
+  const head = $("#workHead"); head.textContent = "";
+  head.append(el("h2", "", "Busca"), el("span", "sub", r.results.length + (r.results.length >= 400 ? " ou mais" : "") + " resultados para “" + q + "”"));
+  const rows = $("#rows"); rows.textContent = "";
+  if (!r.results.length) rows.append(el("div", "empty", "Nada encontrado. A busca olha o original, a tradução, o nome de quem fala e o nome da seção."));
+  for (const h of r.results) {
+    const d = el("div", "hit"); d.tabIndex = 0;
+    d.append(el("div", "f", h.file.replace(/\.sct$/i, "") + " / " + h.k + (h.head ? " / " + h.head : "")), el("div", "o", h.body));
+    if (h.t) d.append(el("div", "t", h.t));
+    d.onclick = () => { S.filter = "all"; openFile(h.file, h.k); };
+    d.onkeydown = e => { if (e.key === "Enter") d.click(); };
+    rows.append(d);
+  }
+  $("#work").scrollTop = 0;
+}
+
+/* ----------------------------------------------------------------- janelas */
+document.querySelectorAll("dialog [data-close]").forEach(b => b.onclick = () => b.closest("dialog").close());
+
+$("#btnNames").onclick = async () => { await loadNames(); $("#nameFilter").value = ""; renderNames(); $("#dlgNames").showModal(); };
+$("#nameFilter").oninput = renderNames;
+function renderNames() {
+  const q = $("#nameFilter").value.toLowerCase(), tb = $("#nameRows"); tb.textContent = "";
+  for (const n of S.nameList) {
+    if (q && !(n.name.toLowerCase().includes(q) || (n.t || "").toLowerCase().includes(q))) continue;
+    const tr = el("tr"), inp = el("input"); inp.type = "text"; inp.value = n.t || ""; inp.placeholder = n.name;
+    inp.onchange = async () => { n.t = inp.value.trim(); if (n.t && n.t !== n.name) S.nameMap[n.name] = n.t; else delete S.nameMap[n.name]; await api("/api/name", { name:n.name, t:n.t }); setSaved("Salvo"); };
+    const td = el("td"); td.append(inp); tr.append(el("td", "", n.name), el("td", "", String(n.count)), td); tb.append(tr);
+  }
+}
+$("#dlgNames").addEventListener("close", () => { if (S.file && !S.searchMode) renderWork(); });
+
+$("#btnSheet").onclick = async () => { await flushAll(); $("#sheetMsg").textContent = ""; $("#dlgSheet").showModal(); };
+$("#btnImport").onclick = async () => {
+  const f = $("#csvFile").files[0]; if (!f) { $("#sheetMsg").textContent = "Escolha o arquivo CSV primeiro."; return; }
+  try { const r = await api("/api/import", await f.arrayBuffer(), true); $("#sheetMsg").textContent = r.applied + " falas atualizadas" + (r.skipped ? ", " + r.skipped + " linhas ignoradas (arquivo ou chave desconhecidos)" : "") + "."; const cur = S.file; await refreshState(); if (cur) openFile(cur); }
+  catch (e) { $("#sheetMsg").textContent = e.message; }
+};
+
+function glyphCanvas(hex) { const c = el("canvas"); c.width = 12; c.height = 24; if (hex) { const ctx = c.getContext("2d"), img = ctx.createImageData(12, 24); for (let i = 0; i < 288; i++) { const v = parseInt(hex[i], 16); img.data[i * 4] = 243; img.data[i * 4 + 1] = 247; img.data[i * 4 + 2] = 250; img.data[i * 4 + 3] = v * 17; } ctx.putImageData(img, 0, 0); } return c; }
+const ACCENT_CHOICES = "áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇüñ";
+$("#btnSettings").onclick = () => {
+  const st = S.project.settings;
+  $("#stCols").value = st.cols; $("#stLines").value = st.lines; $("#stAuto").checked = !!st.autofill; $("#stAcc").value = st.accents; $("#stKeep").checked = !!st.keep_states;
+  $("#stDir").textContent = S.project.dir; $("#stGame").textContent = S.project.game_root;
+  const grid = $("#accGrid"); grid.textContent = "";
+  for (const sym of S.project.free_slots) {
+    const cell = el("div", "gcell"), sel = el("select"); sel.dataset.sym = sym;
+    sel.append(new Option("livre", ""));
+    for (const ch of ACCENT_CHOICES) sel.append(new Option(ch, ch));
+    const cur = Object.keys(st.charmap).find(k => st.charmap[k] === sym) || ""; sel.value = cur;
+    const cv = el("div"); const draw = () => { cv.textContent = ""; cv.append(glyphCanvas(sel.value && S.glyphs.accents ? S.glyphs.accents[sel.value] : (S.glyphs.glyphs || {})[sym])); };
+    sel.onchange = () => { if (sel.value) grid.querySelectorAll("select").forEach(o => { if (o !== sel && o.value === sel.value) { o.value = ""; o.onchangeDraw(); } }); draw(); };
+    sel.onchangeDraw = draw; draw();
+    cell.append(cv, el("span", "", "no lugar de " + sym), sel); grid.append(cell);
+  }
+  $("#accBox").classList.toggle("hidden", $("#stAcc").value !== "font");
+  $("#dlgSettings").showModal();
+};
+$("#stAcc").onchange = () => $("#accBox").classList.toggle("hidden", $("#stAcc").value !== "font");
+$("#btnSaveSettings").onclick = async () => {
+  const cm = {}; $("#accGrid").querySelectorAll("select").forEach(s => { if (s.value) cm[s.value] = s.dataset.sym; });
+  try { const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) renderWork(); }
+  catch (e) { alertInline(e.message); }
+};
+$("#btnCloseProject").onclick = async () => { await flushAll(); await api("/api/close", {}); S.file = null; S.glyphs = null; S.nameMap = null; $("#dlgSettings").close(); refreshState(); };
+function alertInline(msg) { setSaved(msg, true); }
+
+$("#btnBuild").onclick = async () => {
+  await flushAll();
+  const st = await api("/api/state"); S.project = Object.assign(S.project, { recomp_root: st.project.recomp_root, use_recomp: st.project.use_recomp, is_recomp: st.project.is_recomp, targets: st.project.targets }); S.recomp = st.recomp;
+  const body = $("#buildBody"), foot = $("#buildFoot"); body.textContent = ""; foot.textContent = "";
+  const p = el("p"); p.append("Os arquivos traduzidos vão substituir os destas pastas:"); body.append(p);
+  const main = el("p"); main.append(el("span", "secname", S.project.game_root), el("span", "note", S.project.is_recomp ? "  (jogo importado no recomp)" : "  (pasta extraída)")); body.append(main);
+  let chk = null;
+  if (!S.project.is_recomp) {
+    const box = el("p");
+    if (S.project.recomp_root) {
+      const lab = el("label"); chk = el("input"); chk.type = "checkbox"; chk.checked = S.project.use_recomp;
+      lab.append(chk, " Gravar também no recomp: "); lab.append(el("span", "secname", S.project.recomp_root)); box.append(lab);
+    } else {
+      box.append(el("span", "note", "Para gravar também no recomp (port nativo), cole aqui a pasta de dados dele ou a pasta do programa: "));
+      const inp = el("input"); inp.type = "text"; inp.style.width = "100%"; inp.placeholder = "Ex.: C:\\Users\\voce\\AppData\\Local\\Skies of Arcadia Legends";
+      const b = el("button", "", "Usar esta pasta"); const msg = el("span", "err");
+      b.onclick = async () => { try { await api("/api/recomp", { root: inp.value, use: true }); $("#dlgBuild").close(); $("#btnBuild").click(); } catch (e) { msg.textContent = " " + e.message; } };
+      box.append(inp, b, msg);
+    }
+    body.append(box);
+  }
+  const usesRecomp = () => S.project.is_recomp || (chk && chk.checked);
+  const rcNote = el("p", "note"); body.append(rcNote);
+  const paintNote = () => { rcNote.textContent = usesRecomp() ? "No recomp, a tabela de arquivos (sys/fst.bin) é atualizada junto. O launcher passa a mostrar o jogo como “modified” e guarda os save states da tradução numa pasta própria; os save states feitos antes não aparecem enquanto a tradução estiver gravada. Os saves normais do jogo (cartão de memória) continuam valendo." + (S.recomp && S.recomp.states ? " Há " + S.recomp.states + " save states hoje." : "") + " Feche o jogo antes de gravar." : ""; };
+  if (chk) chk.onchange = paintNote; paintNote();
+  body.append(el("p", "note", "Os originais continuam guardados no projeto e podem ser devolvidos quando quiser. Falas sem tradução ficam em inglês."));
+  if (S.project.settings.accents === "font") body.append(el("p", "note", S.project.has_font ? "A fonte do jogo (FontData) também é regravada, com as letras acentuadas no lugar dos símbolos escolhidos nos Ajustes." : "Não achei o arquivo de fonte do jogo, então os acentos não serão desenhados."));
+  const bRestore = el("button", "quiet", "Devolver os originais"), bCancel = el("button", "", "Cancelar"), bGo = el("button", "primary", "Gravar no jogo");
+  bRestore.style.marginRight = "auto";
+  bCancel.onclick = () => $("#dlgBuild").close();
+  const saveChoice = async () => { if (chk) await api("/api/recomp", { use: chk.checked }); };
+  bRestore.onclick = async () => { try { await saveChoice(); const r = await api("/api/restore", {}); body.textContent = ""; body.append(el("p", "", "Arquivos originais devolvidos:")); const ul = el("ul", "report"); for (const t of r.targets) ul.append(el("li", "", t.root + " (" + t.files + " arquivos)")); body.append(ul); foot.textContent = ""; const c = el("button", "", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c); } catch (e) { body.append(el("p", "err", e.message)); } };
+  bGo.onclick = async () => {
+    try { await saveChoice(); $("#dlgBuild").close(); await api("/api/build", {}); const r = await waitJob(); showReport(r); }
+    catch (e) { $("#busy").classList.add("hidden"); showReport(null, e.message); }
+  };
+  foot.append(bRestore, bCancel, bGo);
+  $("#dlgBuild").showModal();
+};
+const pl = (n, um, varios) => n.toLocaleString("pt-BR") + " " + (n === 1 ? um : varios);
+function showReport(r, err) {
+  const body = $("#buildBody"), foot = $("#buildFoot"); body.textContent = ""; foot.textContent = "";
+  if (err) body.append(el("p", "err", "Não gravou: " + err));
+  else {
+    body.append(el("p", "", "Gravado. " + pl(r.entries, "fala traduzida entrou", "falas traduzidas entraram") + " no jogo."));
+    for (const t of r.targets) {
+      body.append(el("p", "secname", t.root));
+      const ul = el("ul", "report");
+      ul.append(el("li", "", pl(t.written, "arquivo regravado", "arquivos regravados") + ", " + pl(t.unchanged, "já estava em dia", "já estavam em dia") + ", " + pl(t.restored, "voltou ao original", "voltaram ao original") + "."));
+      if (t.kept) ul.append(el("li", "", t.kept + " arquivos desta pasta eram diferentes do original; uma cópia deles foi guardada no projeto, em copias_do_destino."));
+      if (t.font) ul.append(el("li", "", "Fonte: " + t.font + "."));
+      if (t.fst) ul.append(el("li", "", "Recomp: " + t.fst + "." + (t.states ? " Os " + t.states + " save states existentes ficam guardados, mas só os feitos com esta gravação aparecem no jogo." : "")));
+      body.append(ul);
+    }
+    const ul = el("ul", "report");
+    const lost = Object.entries(r.stripped || {}); if (lost.length) ul.append(el("li", "", "Gravadas sem acento por falta de lugar na fonte: " + lost.map(x => x[0] + " (" + x[1] + "×)").join(", ") + "."));
+    const miss = Object.entries(r.missing || {}); if (miss.length) ul.append(el("li", "", "Caracteres que o jogo não tem, trocados por “?”: " + miss.map(x => x[0] + " (" + x[1] + "×)").join(", ") + "."));
+    if (r.long.length) ul.append(el("li", "", r.long.length + " falas passam do tamanho da caixa. Use o filtro “Com aviso” em cada arquivo. Exemplos: " + r.long.slice(0, 5).map(x => x.file.replace(/\.sct$/i, "") + "/" + x.k).join(", ") + "."));
+    for (const e of r.errors) ul.append(el("li", "err", e.file + ": " + e.error));
+    body.append(ul, el("p", "note", r.targets.some(t => t.recomp) ? "Abra o recomp e inicie o jogo para conferir. Se o launcher pedir o disco de novo (numa atualização, por exemplo), ele reextrai tudo: é só gravar a tradução outra vez." : "Agora abra o jogo pela pasta extraída no Dolphin para conferir."));
+  }
+  const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);
+  $("#dlgBuild").showModal();
+}
+
+boot().catch(e => { document.body.append(el("p", "err", "Não consegui falar com o programa: " + e.message)); });
+</script>
+</body>
+</html>
