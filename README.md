@@ -17,7 +17,8 @@ Baixe o `SOAL-Tradutor-x.y.zip` mais recente em **[Releases](../../releases)**.
 
 1. Instale o **Python 3.8 ou mais novo** ([python.org](https://www.python.org/downloads/), marcando
    "Add python.exe to PATH"). Não precisa de mais nada.
-2. Descompacte o zip e dê dois cliques em **`SOAL Tradutor.bat`** (ou rode `python run.py`).
+2. Descompacte o zip e dê dois cliques em **`SOAL Tradutor.pyw`**. O programa abre numa janela
+   própria (usa o motor do Edge que já vem no Windows); para sair, feche a janela.
 3. Escolha a pasta do jogo extraído (a que contém `files` e `sys`) ou, se o recomp estiver
    instalado, clique no jogo dele que aparece na tela inicial.
 4. Traduza. Tudo é salvo sozinho.
@@ -53,7 +54,7 @@ tamanho. Com o disco americano: 258 arquivos, 25.347 textos e 78.937 referência
 
 ## Estado
 
-Versão 0.4, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
+Versão 0.5, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
 arquivos do jogo; o jogo traduzido ainda precisa ser testado rodando, principalmente as letras
 acentuadas. Relatos são bem-vindos em [Issues](../../issues).
 

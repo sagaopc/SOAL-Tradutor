@@ -18,11 +18,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import mt, recomp, text
+from . import janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 
 
 class App:
@@ -34,6 +34,7 @@ class App:
         self.job_lock = threading.Lock()
         self.config = self._load_config()
         self._glyph_cache = None
+        self.last_ping = 0.0
         threading.Thread(target=self._autosave, daemon=True).start()
 
     # --------------------------------------------------------------- config
@@ -203,8 +204,16 @@ def pick_folder() -> Optional[str]:
     """Abre a janela de escolher pasta do sistema (num processo separado, por causa do tkinter)."""
     code = ("import tkinter,tkinter.filedialog as f;r=tkinter.Tk();r.withdraw();"
             "r.attributes('-topmost',True);print(f.askdirectory(title='Pasta do jogo extraido') or '')")
+    exe = sys.executable
+    flags = 0
+    if sys.platform.startswith("win"):
+        w = os.path.join(os.path.dirname(exe), "pythonw.exe")
+        if os.path.exists(w):
+            exe = w
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
-        res = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=600)
+        res = subprocess.run([exe, "-c", code], capture_output=True, text=True, timeout=600,
+                             stdin=subprocess.DEVNULL, creationflags=flags)
         path = res.stdout.strip()
         return os.path.normpath(path) if path else None
     except (OSError, subprocess.SubprocessError):
@@ -254,6 +263,9 @@ def make_handler(app: App):
                     return self._json(app.state())
                 if u.path == "/api/job":
                     return self._json(app.job)
+                if u.path == "/api/ping":
+                    app.last_ping = time.time()
+                    return self._json({"ok": True})
                 if u.path == "/api/file":
                     return self._json(app.need().file_entries(q.get("name", [""])[0]))
                 if u.path == "/api/search":
@@ -402,7 +414,9 @@ def make_handler(app: App):
     return Handler
 
 
-def serve(port: int = 8787, open_browser: bool = True, reopen_last: bool = True):
+def serve(port: int = 8787, open_browser: bool = True, reopen_last: bool = True, window: bool = True):
+    """window=True abre numa janela propria (Edge/Chrome no modo aplicativo) e encerra quando
+    ela fecha. Sem Edge/Chrome, ou com window=False, abre no navegador padrao."""
     app = App()
     httpd = None
     for p in range(port, port + 20):
@@ -423,15 +437,36 @@ def serve(port: int = 8787, open_browser: bool = True, reopen_last: bool = True)
             except pj.ProjectError:
                 pass
     print("SOAL Tradutor", VERSION)
-    print("Interface em", url, "(deixe esta janela aberta; feche-a para encerrar)")
-    if open_browser:
+    th = threading.Thread(target=httpd.serve_forever, daemon=True)
+    th.start()
+    proc = None
+    started = time.time()
+    if open_browser and window:
+        proc = janela.open_window(url)
+        if proc is None:
+            print("Edge/Chrome nao encontrado: abrindo no navegador padrao.")
+    if open_browser and proc is None:
         import webbrowser
-        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+        webbrowser.open(url)
+    print("Interface em", url)
     try:
-        httpd.serve_forever()
+        while True:
+            time.sleep(1.0)
+            if proc is not None and proc.poll() is not None:
+                if time.time() - started > 3:
+                    break                        # a janela foi fechada
+                proc = None                      # o Edge passou a janela para outro processo
+            if proc is None and open_browser and window and app.last_ping:
+                # sem processo para acompanhar: encerra quando a pagina para de dar sinal
+                if time.time() - app.last_ping > 150 and not app.job.get("running"):
+                    break
     except KeyboardInterrupt:
         pass
     finally:
         if app.project is not None:
-            app.project.save()
+            try:
+                app.project.save()
+            except OSError:
+                pass
+        httpd.shutdown()
         httpd.server_close()

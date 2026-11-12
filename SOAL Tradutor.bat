@@ -1,14 +1,14 @@
 @echo off
-title SOAL Tradutor
 cd /d "%~dp0"
-where py >nul 2>nul
+where pyw >nul 2>nul
 if %errorlevel%==0 (
-  py -3 run.py %*
-) else (
-  python run.py %*
+  start "" pyw -3 "SOAL Tradutor.pyw"
+  exit /b
 )
-if errorlevel 1 (
-  echo.
-  echo Nao foi possivel iniciar. Instale o Python 3 em https://www.python.org/downloads/ ^(marque "Add python.exe to PATH"^) e tente de novo.
-  pause
+where pythonw >nul 2>nul
+if %errorlevel%==0 (
+  start "" pythonw "SOAL Tradutor.pyw"
+  exit /b
 )
+echo Nao encontrei o Python. Instale o Python 3 em https://www.python.org/downloads/ ^(marque "Add python.exe to PATH"^) e tente de novo.
+pause

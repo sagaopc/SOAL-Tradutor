@@ -1,4 +1,4 @@
-# SOAL Tradutor 0.4
+# SOAL Tradutor 0.5
 
 Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versão americana).
 Lê os textos direto dos arquivos `.sct` do jogo, mostra tudo organizado numa interface no
@@ -10,8 +10,9 @@ navegador e grava a tradução de volta, sem limite de tamanho por fala.
    Não precisa instalar mais nada.
 2. Extraia a ISO. No Dolphin: clique direito no jogo, Propriedades, Sistema de arquivos,
    clique direito em "Disco", Extrair disco inteiro. O GCRebuilder também serve.
-3. Dê dois cliques em **`SOAL Tradutor.bat`** (ou rode `python run.py`). A interface abre no
-   navegador. Deixe a janela preta aberta enquanto usa.
+3. Dê dois cliques em **`SOAL Tradutor.pyw`** (ou em `SOAL Tradutor.bat`). O programa abre numa
+   janela própria, sem abas, sem barra de endereço e sem janela preta de console. Para sair, é só
+   fechar a janela: o projeto é salvo antes.
 4. Escolha a pasta extraída (a que contém `files` e `sys`). Na primeira vez o programa leva
    uns 10 a 20 segundos lendo os 258 arquivos.
 5. Traduza. Tudo é salvo sozinho.
@@ -48,6 +49,19 @@ O que muda no recomp:
   a tradução some: basta clicar em "Gravar no jogo" outra vez.
 - "Devolver os originais" desfaz tudo, inclusive o `fst.bin`.
 - O `main.dol` não é tocado.
+
+## Janela própria
+
+A janela usa o motor do Microsoft Edge, que já vem no Windows 10 e 11 (ou o do Google Chrome, se o
+Edge não existir), num perfil separado: não mistura com o seu navegador, favoritos ou senhas. Não é
+preciso instalar nada além do Python.
+
+- Sem Edge nem Chrome, o programa abre no navegador padrão.
+- **`SOAL Tradutor (navegador).bat`** abre no navegador padrão de propósito, com a janela de console
+  aberta (útil para ver mensagens de erro).
+- Se algo der errado ao abrir, aparece um aviso e os detalhes ficam em `.soal_tradutor.log`, na sua
+  pasta de usuário.
+- Arquivos exportados (planilha CSV) vão para a pasta Downloads.
 
 ## O que fica onde
 

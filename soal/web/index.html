@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SOAL Tradutor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231B6687'/%3E%3Cpath d='M30 10 L30 44 L12 44 Z' fill='%23F3F7FA'/%3E%3Cpath d='M34 16 Q52 30 34 44 Z' fill='%23D9A84A'/%3E%3Cpath d='M10 48 H54 L48 56 H16 Z' fill='%23F3F7FA'/%3E%3C/svg%3E">
 <style>
 :root{
   --sky:#E4EDF4; --paper:#FBFCFD; --panel:#F1F6FA; --ink:#16283A; --muted:#566B7E; --line:#C7D5E0;
@@ -789,6 +790,8 @@ function showReport(r, err) {
   $("#dlgBuild").showModal();
 }
 
+setInterval(() => { fetch("/api/ping").catch(() => {}); }, 10000);
+fetch("/api/ping").catch(() => {});
 boot().catch(e => { document.body.append(el("p", "err", "Não consegui falar com o programa: " + e.message)); });
 </script>
 </body>
