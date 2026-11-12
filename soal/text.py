@@ -202,3 +202,48 @@ def has_japanese(s: str) -> bool:
         if 0x3040 <= o <= 0x30FF or 0x4E00 <= o <= 0x9FFF or 0xFF61 <= o <= 0xFF9F:
             return True
     return False
+
+
+def _wrap_width(s: str, charmap: Optional[Dict[str, int]]) -> int:
+    # um \c no meio da fala e' um valor que o jogo preenche (numero, nome): reserva 8 colunas
+    return columns(s.replace("\\c", "XXXXXXXX"), charmap)
+
+
+def is_menu(original: str) -> bool:
+    """Lista de opcoes: cada linha e' uma escolha entre aspas."""
+    lines = original.split("\n")
+    return len(lines) > 1 and all(l.strip().startswith(("“", '"')) for l in lines)
+
+
+def wrap(body: str, cols: int, max_lines: int, charmap: Optional[Dict[str, int]] = None) -> Tuple[str, bool]:
+    """Ajusta as quebras de linha para caber na caixa de dialogo.
+
+    Cada pagina (separada por \\e) que ja' cabe fica como o tradutor escreveu. Se alguma
+    linha passa de `cols` colunas ou a pagina passa de `max_lines` linhas, a pagina e'
+    refeita juntando as linhas e quebrando nas palavras. Devolve (texto, mudou)."""
+    parts = body.split("\\e")
+    changed = False
+    out = []
+    for page in parts:
+        lines = page.split("\n")
+        fits = len(lines) <= max_lines and all(_wrap_width(l, charmap) <= cols for l in lines)
+        if fits:
+            out.append(page)
+            continue
+        words = " ".join(l.strip() for l in lines).split()
+        new: List[str] = []
+        cur = ""
+        for w in words:
+            cand = w if not cur else cur + " " + w
+            if not cur or _wrap_width(cand, charmap) <= cols:
+                cur = cand
+            else:
+                new.append(cur)
+                cur = w
+        if cur:
+            new.append(cur)
+        rebuilt = "\n".join(new)
+        if rebuilt != page:
+            changed = True
+        out.append(rebuilt)
+    return "\\e".join(out), changed

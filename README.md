@@ -35,7 +35,8 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
 - Prévia desenhada com a **fonte do próprio jogo**, com o limite da caixa de diálogo marcado.
 - Falas repetidas preenchidas sozinhas, nomes de personagens traduzidos uma vez só, busca global e
   filtros.
-- Exportar e importar planilha CSV.
+- Exportar e importar planilha CSV, com uma linha por fala diferente; na importação as repetições
+  são preenchidas e as linhas longas são quebradas sozinhas.
 - Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos.
 - Guarda os originais e permite devolvê-los a qualquer momento.
 
@@ -49,7 +50,7 @@ tamanho. Com o disco americano: 258 arquivos, 25.347 textos e 78.937 referência
 
 ## Estado
 
-Versão 0.2, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
+Versão 0.3, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
 arquivos do jogo; o jogo traduzido ainda precisa ser testado rodando, principalmente as letras
 acentuadas. Relatos são bem-vindos em [Issues](../../issues).
 

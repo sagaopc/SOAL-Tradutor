@@ -223,8 +223,10 @@ table.grid input{width:100%}
 
 <dialog id="dlgSheet"><div class="dh"><h2>Planilha</h2></div>
   <div class="db">
-    <p>Exporte todos os textos para um arquivo CSV (abre no Excel, LibreOffice e Planilhas Google), traduza a coluna <b>traducao</b> e importe de volta. As colunas <b>arquivo</b> e <b>chave</b> identificam cada fala e não devem ser alteradas.</p>
-    <p><a id="lnkExport" href="/api/export.csv"><button type="button">Exportar CSV</button></a></p>
+    <p>Exporte os textos para um arquivo CSV (abre no Excel, LibreOffice e Planilhas Google), preencha a coluna <b>traducao</b> e importe de volta. As colunas <b>arquivo</b> e <b>chave</b> identificam cada fala e não podem ser alteradas.</p>
+    <p><a href="/api/export_unicas.csv"><button type="button" class="primary">Exportar falas para traduzir</button></a> Uma linha por fala diferente, com quem fala, a fala anterior e o limite de tamanho. As falas repetidas são preenchidas sozinhas na importação.</p>
+    <p><a id="lnkExport" href="/api/export.csv"><button type="button">Exportar todas as falas</button></a> Uma linha para cada ocorrência, inclusive as repetidas.</p>
+    <p class="note">Ao importar, as linhas que passam do tamanho da caixa são quebradas de novo automaticamente. Nos menus de escolha, mantenha uma opção por linha.</p>
     <p><input type="file" id="csvFile" accept=".csv,text/csv"> <button id="btnImport">Importar CSV</button></p>
     <p class="note" id="sheetMsg"></p>
   </div>
@@ -602,7 +604,7 @@ $("#dlgNames").addEventListener("close", () => { if (S.file && !S.searchMode) re
 $("#btnSheet").onclick = async () => { await flushAll(); $("#sheetMsg").textContent = ""; $("#dlgSheet").showModal(); };
 $("#btnImport").onclick = async () => {
   const f = $("#csvFile").files[0]; if (!f) { $("#sheetMsg").textContent = "Escolha o arquivo CSV primeiro."; return; }
-  try { const r = await api("/api/import", await f.arrayBuffer(), true); $("#sheetMsg").textContent = r.applied + " falas atualizadas" + (r.skipped ? ", " + r.skipped + " linhas ignoradas (arquivo ou chave desconhecidos)" : "") + "."; const cur = S.file; await refreshState(); if (cur) openFile(cur); }
+  try { const r = await api("/api/import", await f.arrayBuffer(), true); $("#sheetMsg").textContent = r.applied + " falas atualizadas, " + r.filled + " repetições preenchidas" + (r.wrapped ? ", " + r.wrapped + " falas com as linhas quebradas de novo" : "") + (r.skipped ? ", " + r.skipped + " linhas ignoradas (arquivo ou chave desconhecidos)" : "") + "."; const cur = S.file; await refreshState(); if (cur) openFile(cur); }
   catch (e) { $("#sheetMsg").textContent = e.message; }
 };
 

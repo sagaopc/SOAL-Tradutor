@@ -459,6 +459,33 @@ class Project:
                 w.writerow([f["name"], e["k"], e.get("head") or "", e["body"], t.get("t", ""), t.get("st", "")])
         return (chr(0xFEFF) + buf.getvalue()).encode("utf-8")
 
+    def export_unique_csv(self) -> bytes:
+        """Uma linha por fala unica (as repetidas sao preenchidas sozinhas na importacao)."""
+        cols = int(self.settings.get("cols", 48))
+        maxl = int(self.settings.get("lines", 3))
+        buf = io.StringIO()
+        w = csv.writer(buf, delimiter=";", lineterminator="\r\n")
+        w.writerow(["arquivo", "chave", "personagem", "tipo", "repeticoes", "fala_anterior",
+                    "original", "traducao", "situacao"])
+        seen = set()
+        for f in self.files:
+            tr = self.tr.get(f["name"], {})
+            prev = ""
+            for e in f["entries"]:
+                if e.get("raw") or e.get("dbg") or not e["body"].strip():
+                    continue
+                body = e["body"]
+                who = e.get("head") if e.get("br") else ""
+                if body not in seen:
+                    seen.add(body)
+                    t = tr.get(e["k"], {})
+                    kind = ("menu: mantenha uma opcao por linha" if text.is_menu(body)
+                            else f"fala: ate {maxl} linhas de {cols} colunas")
+                    w.writerow([f["name"], e["k"], who or "", kind, len(self.same.get(body, ())) or 1,
+                                prev, body, t.get("t", ""), t.get("st", "")])
+                prev = ((who + ": ") if who else "") + body.replace("\n", " ")
+        return (chr(0xFEFF) + buf.getvalue()).encode("utf-8")
+
     def import_csv(self, data: bytes) -> dict:
         txt = data.decode("utf-8-sig", "replace")
         first = txt.split("\n", 1)[0]
@@ -470,29 +497,47 @@ class Project:
         except ValueError:
             raise ProjectError("A planilha precisa das colunas 'arquivo', 'chave' e 'traducao'.")
         cs = head.index("situacao") if "situacao" in head else -1
-        applied = skipped = 0
+        cols = int(self.settings.get("cols", 48))
+        maxl = int(self.settings.get("lines", 3))
+        cm = self.charmap_codes()
+        applied = skipped = filled = wrapped = 0
         with self.lock:
             for row in rd:
                 if len(row) <= max(ci, ck, ct):
                     continue
                 f = self.by_name.get(row[ci].strip())
-                if f is None or row[ck] not in f["_idx"]:
+                key = row[ck].strip()
+                if f is None or key not in f["_idx"]:
                     skipped += 1
                     continue
-                val = row[ct].replace("\r\n", "\n").replace("\r", "\n")
+                e = f["_idx"][key]
+                val = row[ct].replace("\r\n", "\n").replace("\r", "\n").strip("\n")
+                if val and not text.is_menu(e["body"]):
+                    val, ch = text.wrap(val, cols, maxl, cm)
+                    wrapped += ch
                 st = row[cs].strip() if cs >= 0 and len(row) > cs else None
                 ft = self.tr.setdefault(f["name"], {})
-                cur = ft.get(row[ck], {})
-                if val == cur.get("t", "") and (st is None or st == cur.get("st", "")):
-                    continue
-                if not val and not st:
-                    ft.pop(row[ck], None)
-                else:
-                    ft[row[ck]] = {"t": val, "st": st if st is not None else cur.get("st", "")}
-                applied += 1
+                cur = ft.get(key, {})
+                if val != cur.get("t", "") or (st is not None and st != cur.get("st", "")):
+                    if not val and not st:
+                        ft.pop(key, None)
+                    else:
+                        ft[key] = {"t": val, "st": st if st is not None else cur.get("st", "")}
+                    applied += 1
+                # falas identicas em outros lugares: preenche as que ainda nao tem traducao propria
+                if val:
+                    for of, ok in self.same.get(e["body"], ()):
+                        if of == f["name"] and ok == key:
+                            continue
+                        oft = self.tr.setdefault(of, {})
+                        o = oft.get(ok)
+                        if o is None or not o.get("t") or o.get("auto"):
+                            if not o or o.get("t") != val:
+                                oft[ok] = {"t": val, "auto": True, "st": (o or {}).get("st", "")}
+                                filled += 1
             self.touch()
         self.save()
-        return {"applied": applied, "skipped": skipped}
+        return {"applied": applied, "skipped": skipped, "filled": filled, "wrapped": wrapped}
 
     # ------------------------------------------------------------ destinos
     def targets(self) -> List[dict]:

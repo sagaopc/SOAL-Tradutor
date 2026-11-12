@@ -1,4 +1,4 @@
-# SOAL Tradutor 0.2
+# SOAL Tradutor 0.3
 
 Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versão americana).
 Lê os textos direto dos arquivos `.sct` do jogo, mostra tudo organizado numa interface no
@@ -76,7 +76,10 @@ gravada.
 - Falas idênticas (mais da metade do jogo se repete) são preenchidas sozinhas e ficam marcadas para revisão.
 - Nomes de personagens traduzidos uma vez só, na janela "Nomes".
 - Busca em todos os textos, filtros "Faltam", "Revisar" e "Com aviso".
-- Exportar e importar planilha CSV (Excel, LibreOffice, Planilhas Google).
+- Exportar e importar planilha CSV (Excel, LibreOffice, Planilhas Google). "Exportar falas para
+  traduzir" gera uma linha por fala diferente (11.358 no jogo todo), com quem fala, a fala anterior
+  e o limite de tamanho; na importação, as falas repetidas são preenchidas sozinhas e as linhas que
+  passam do tamanho da caixa são quebradas de novo.
 - Atalhos: Ctrl+Enter próxima fala, Alt+C copia o original, Alt+R marca para revisar.
 
 ## Acentos

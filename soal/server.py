@@ -22,7 +22,7 @@ from . import recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 
 class App:
@@ -246,6 +246,10 @@ def make_handler(app: App):
                     return self._json({"names": app.need().name_list()})
                 if u.path == "/api/glyphs":
                     return self._json(app.glyphs())
+                if u.path == "/api/export_unicas.csv":
+                    data = app.need().export_unique_csv()
+                    return self._send(200, data, "text/csv; charset=utf-8",
+                                      {"Content-Disposition": 'attachment; filename="soal_textos_para_traduzir.csv"'})
                 if u.path == "/api/export.csv":
                     data = app.need().export_csv()
                     return self._send(200, data, "text/csv; charset=utf-8",
