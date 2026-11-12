@@ -24,6 +24,7 @@ import os
 import re
 import ssl
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Dict, List, Optional, Tuple
 
@@ -44,6 +45,10 @@ DEFAULTS = {
     "model": "",
     "timeout": 90,
 }
+
+# Servidor no proprio PC ou na rede de casa (Ollama, LM Studio): o modelo pode demorar para
+# carregar e para responder, entao o tempo de espera sem receber nada e' maior.
+LOCAL_TIMEOUT = 300
 
 CODE_RE = re.compile(r"\\[a-z]")
 
@@ -99,12 +104,51 @@ def glossary_for(text: str, extra: Optional[List[List[str]]] = None) -> List[Lis
 
 
 # ------------------------------------------------------------------ http
+def _is_local(url: str) -> bool:
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    if host in ("localhost", "::1") or host.endswith(".local") or host.startswith("127."):
+        return True
+    if host.startswith("10.") or host.startswith("192.168."):
+        return True
+    m = re.match(r"172\.(\d+)\.", host)
+    return bool(m and 16 <= int(m.group(1)) <= 31)
+
+
+def _read_stream(r) -> dict:
+    """Le uma resposta em pedacos (server-sent events) de /chat/completions."""
+    content, reasoning, finish = [], 0, None
+    for raw in r:
+        line = raw.decode("utf-8", "replace").strip()
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            break
+        try:
+            ev = json.loads(data)
+        except ValueError:
+            continue
+        if ev.get("error"):
+            raise MTError("o servidor respondeu com erro: " + json.dumps(ev["error"], ensure_ascii=False)[:200])
+        for ch in ev.get("choices") or []:
+            d = ch.get("delta") or {}
+            if d.get("content"):
+                content.append(d["content"])
+            for k in ("reasoning_content", "reasoning"):
+                if isinstance(d.get(k), str):
+                    reasoning += len(d[k])
+            finish = ch.get("finish_reason") or finish
+    return {"content": "".join(content), "reasoning_chars": reasoning, "finish": finish}
+
+
 def _post(url: str, payload: dict, headers: Dict[str, str], timeout: int) -> dict:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="POST",
                                  headers={"Content-Type": "application/json", **headers})
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=ssl.create_default_context()) as r:
+            if "event-stream" in (r.headers.get("Content-Type") or ""):
+                return {"_stream": _read_stream(r)}
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")[:300]
@@ -118,7 +162,9 @@ def _post(url: str, payload: dict, headers: Dict[str, str], timeout: int) -> dic
     except urllib.error.URLError as e:
         raise MTError(f"não consegui falar com o serviço ({e.reason}). Confira o endereço e a internet.")
     except (TimeoutError, OSError) as e:
-        raise MTError(f"o serviço demorou demais ou caiu ({e}).")
+        extra = (" O servidor ficou {} s sem mandar nada: confira se o modelo está carregado e se cabe "
+                 "na memória da placa de vídeo.".format(timeout)) if _is_local(url) else ""
+        raise MTError(f"o serviço demorou demais ou caiu ({e}).{extra}")
     except ValueError:
         raise MTError("o serviço respondeu algo que não é JSON.")
 
@@ -162,6 +208,9 @@ def build_prompt(text: str, who: Optional[str], prev: Optional[str], menu: bool,
 
 
 def _clean_llm(out: str) -> str:
+    # modelos que "pensam" em voz alta: descarta o raciocinio
+    out = re.sub(r"(?s)<(think|thinking|reasoning)>.*?</\1>", "", out)
+    out = re.sub(r"(?s)^.*?</(think|thinking)>", "", out) if re.search(r"</(think|thinking)>", out) else out
     out = out.strip()
     out = re.sub(r"^```[a-z]*\n?|\n?```$", "", out).strip()
     for p in ("Tradução:", "Traducao:", "Tradução", "Translation:"):
@@ -265,14 +314,50 @@ class Translator:
         headers = {}
         if (self.cfg.get("key") or "").strip():
             headers["Authorization"] = "Bearer " + self.cfg["key"].strip()
-        payload = {"model": model, "temperature": 0.3, "stream": False,
+        local = _is_local(base)
+        payload = {"model": model, "temperature": 0.3, "max_tokens": 2048,
                    "messages": [{"role": "system", "content": STYLE},
                                 {"role": "user", "content": build_prompt(text, who, prev, menu, extra)}]}
-        r = _post(base + "/chat/completions", payload, headers, self.timeout)
+        if local:
+            # Em pedacos: enquanto o modelo gera, a conexao nao fica parada esperando.
+            payload["stream"] = True
+            # Pede para nao "pensar" antes de responder (Ollama e LM Studio recentes).
+            payload["reasoning_effort"] = "none"
+            payload["think"] = False
+        else:
+            payload["stream"] = False
+        timeout = max(self.timeout, LOCAL_TIMEOUT) if local else self.timeout
+        url = base + "/chat/completions"
         try:
-            return _clean_llm(r["choices"][0]["message"]["content"])
+            r = _post(url, payload, headers, timeout)
+        except MTError as e:
+            # servidor que nao conhece as opcoes de raciocinio: tenta de novo sem elas
+            if local and "HTTP 4" in str(e) and re.search(r"reason|think|effort", str(e), re.I):
+                for k in ("reasoning_effort", "think"):
+                    payload.pop(k, None)
+                r = _post(url, payload, headers, timeout)
+            else:
+                raise
+        if "_stream" in r:
+            st = r["_stream"]
+            out = _clean_llm(st["content"])
+            if not out:
+                if st["reasoning_chars"]:
+                    raise MTError("o modelo gastou a resposta inteira \"pensando\" e não traduziu. Desligue o "
+                                  "raciocínio (thinking) do modelo no LM Studio/Ollama ou use outro modelo.")
+                raise MTError("o servidor respondeu vazio. Confira o nome do modelo em Ajustes.")
+            return out
+        try:
+            msg = r["choices"][0]["message"]
         except (KeyError, IndexError, TypeError):
             raise MTError("resposta inesperada do servidor: " + json.dumps(r)[:200])
+        out = _clean_llm(msg.get("content") or "")
+        if not out and (msg.get("reasoning_content") or msg.get("reasoning")):
+            raise MTError("o modelo gastou a resposta inteira \"pensando\" e não traduziu. Desligue o "
+                          "raciocínio (thinking) do modelo ou use outro modelo.")
+        if not out:
+            raise MTError("o servidor respondeu vazio. Confira o nome do modelo em Ajustes.")
+        return out
 
     # -- Claude ---------------------------------------------------------------
     def _anthropic(self, text: str, who, prev, menu, extra) -> str:

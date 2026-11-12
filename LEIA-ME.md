@@ -118,7 +118,7 @@ Serviços:
 
 | Serviço | O que precisa | Usa contexto e glossário |
 |---|---|---|
-| Ollama ou LM Studio (no seu PC) | o programa instalado e um modelo baixado; endereço `http://localhost:11434/v1` | sim: regras de estilo, glossário, gênero de quem fala e fala anterior |
+| Ollama ou LM Studio (no seu PC) | o programa instalado e um modelo baixado; endereço `http://localhost:11434/v1` (Ollama) ou `http://localhost:1234/v1` (LM Studio, com o servidor ligado em **Model Server**) | sim: regras de estilo, glossário, gênero de quem fala e fala anterior |
 | Claude (API da Anthropic) | chave da API (pago por uso) | sim, igual ao anterior |
 | Outros compatíveis com OpenAI | endereço, modelo e chave do serviço | sim, igual ao anterior |
 | DeepL | chave da API (o plano Free dá 500 mil caracteres por mês) | só quem fala e a fala anterior |
@@ -132,6 +132,11 @@ de traduzir ao pé da letra, usar termos de marujo, acertar o gênero e seguir o
 A chave fica só no seu computador, no arquivo `.soal_tradutor.json` da sua pasta de usuário, e
 nunca vai para o projeto nem para a planilha. Os textos das falas são enviados ao serviço escolhido;
 com Ollama ou LM Studio, nada sai do seu PC.
+
+Com Ollama ou LM Studio, o programa recebe a resposta aos poucos, espera até 5 minutos sem
+resposta (o modelo pode estar carregando) e pede ao modelo para não "pensar" antes de traduzir.
+Se mesmo assim a tradução não vier, desligue o raciocínio (thinking) nas opções do modelo, deixe o
+**GPU Offload** no máximo e use um contexto pequeno (4096), para o modelo caber na placa de vídeo.
 
 ## Acentos
 
