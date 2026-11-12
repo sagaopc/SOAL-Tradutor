@@ -11,14 +11,21 @@ Funciona com o jogo extraído para o **Dolphin** e com o port nativo
 
 ## Download
 
-Baixe o `SOAL-Tradutor-x.y.zip` mais recente em **[Releases](../../releases)**.
+Em **[Releases](../../releases)**:
+
+- **`SOAL-Tradutor-x.y-windows.zip`**: para Windows 10 e 11, sem instalar nada. Abra o
+  `SOAL Tradutor.exe`.
+- `SOAL-Tradutor-x.y.zip`: o código, para qualquer sistema com Python 3.8 ou mais novo.
+
+O `.exe` é compilado pelo GitHub Actions a partir deste código, a cada versão
+(`.github/workflows/compilar.yml`).
 
 ## Começando
 
-1. Instale o **Python 3.8 ou mais novo** ([python.org](https://www.python.org/downloads/), marcando
-   "Add python.exe to PATH"). Não precisa de mais nada.
-2. Descompacte o zip e dê dois cliques em **`SOAL Tradutor.pyw`**. O programa abre numa janela
-   própria (usa o motor do Edge que já vem no Windows); para sair, feche a janela.
+1. No Windows, baixe o zip `-windows`, descompacte e abra o **`SOAL Tradutor.exe`**. Em outros
+   sistemas, instale o **Python 3.8 ou mais novo** e abra o **`SOAL Tradutor.pyw`** do zip do código.
+2. O programa abre numa janela própria (usa o motor do Edge que já vem no Windows); para sair,
+   feche a janela.
 3. Escolha a pasta do jogo extraído (a que contém `files` e `sys`) ou, se o recomp estiver
    instalado, clique no jogo dele que aparece na tela inicial.
 4. Traduza. Tudo é salvo sozinho.

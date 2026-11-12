@@ -201,23 +201,36 @@ class App:
 
 
 def pick_folder() -> Optional[str]:
-    """Abre a janela de escolher pasta do sistema (num processo separado, por causa do tkinter)."""
-    code = ("import tkinter,tkinter.filedialog as f;r=tkinter.Tk();r.withdraw();"
-            "r.attributes('-topmost',True);print(f.askdirectory(title='Pasta do jogo extraido') or '')")
-    exe = sys.executable
-    flags = 0
-    if sys.platform.startswith("win"):
-        w = os.path.join(os.path.dirname(exe), "pythonw.exe")
-        if os.path.exists(w):
-            exe = w
-        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    """Abre a janela de escolher pasta do sistema num processo separado (o tkinter precisa
+    da linha principal do programa). No .exe, o proprio executavel faz esse papel."""
+    import tempfile
+    fd, out = tempfile.mkstemp(prefix="soal_pasta_", suffix=".txt")
+    os.close(fd)
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform.startswith("win") else 0
+    if getattr(sys, "frozen", False):
+        cmd = [sys.executable, "--escolher-pasta", out]
+    else:
+        exe = sys.executable
+        if sys.platform.startswith("win"):
+            w = os.path.join(os.path.dirname(exe), "pythonw.exe")
+            if os.path.exists(w):
+                exe = w
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        cmd = [exe, "-c", "import sys; sys.path.insert(0, sys.argv[1]); from soal import picker; picker.run(sys.argv[2])",
+               root, out]
     try:
-        res = subprocess.run([exe, "-c", code], capture_output=True, text=True, timeout=600,
-                             stdin=subprocess.DEVNULL, creationflags=flags)
-        path = res.stdout.strip()
+        subprocess.run(cmd, timeout=600, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, creationflags=flags)
+        with open(out, encoding="utf-8") as fh:
+            path = fh.read().strip()
         return os.path.normpath(path) if path else None
     except (OSError, subprocess.SubprocessError):
         return None
+    finally:
+        try:
+            os.remove(out)
+        except OSError:
+            pass
 
 
 def make_handler(app: App):

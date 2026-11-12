@@ -6,8 +6,12 @@ navegador e grava a tradução de volta, sem limite de tamanho por fala.
 
 ## Como usar
 
-1. Instale o **Python 3.8 ou mais novo** (python.org; marque "Add python.exe to PATH").
-   Não precisa instalar mais nada.
+1. **Windows sem Python:** baixe o `SOAL-Tradutor-x.y-windows.zip` em Releases, descompacte e abra o
+   **`SOAL Tradutor.exe`**. Na primeira vez o Windows pode avisar "O Windows protegeu o computador"
+   (o `.exe` não tem assinatura digital paga): clique em **Mais informações** e em **Executar assim
+   mesmo**. Pule o passo 3.
+   **Com Python:** instale o **Python 3.8 ou mais novo** (python.org; marque "Add python.exe to
+   PATH"). Não precisa instalar mais nada.
 2. Extraia a ISO. No Dolphin: clique direito no jogo, Propriedades, Sistema de arquivos,
    clique direito em "Disco", Extrair disco inteiro. O GCRebuilder também serve.
 3. Dê dois cliques em **`SOAL Tradutor.pyw`** (ou em `SOAL Tradutor.bat`). O programa abre numa

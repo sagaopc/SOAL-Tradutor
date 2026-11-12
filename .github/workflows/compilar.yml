@@ -1,0 +1,74 @@
+# Compila o SOAL Tradutor.exe (Windows) e publica a release quando uma tag v* é enviada.
+# Em "Run workflow" (manual), só compila e deixa os arquivos para baixar na execução.
+name: Compilar
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar o PyInstaller
+        run: python -m pip install "pyinstaller>=6,<7"
+
+      - name: Conferir o código
+        run: python -m compileall -q soal run.py tools
+
+      - name: Compilar o .exe
+        run: >
+          pyinstaller --noconfirm --clean --onefile --windowed
+          --name "SOAL Tradutor" --icon soal/web/icone.ico --paths .
+          --add-data "soal/web;soal/web" --add-data "soal/data;soal/data"
+          --hidden-import tkinter --hidden-import tkinter.filedialog --hidden-import tkinter.messagebox
+          tools/exe_main.py
+
+      - name: Testar o .exe
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP "verificacao.txt"
+          $p = Start-Process -FilePath "dist\SOAL Tradutor.exe" -ArgumentList "--verificar-instalacao", $out -Wait -PassThru
+          Get-Content $out
+          if ($p.ExitCode -ne 0) { throw "a verificação do .exe falhou" }
+
+      - name: Montar os pacotes
+        shell: pwsh
+        run: |
+          $v = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME.TrimStart("v") } else { "teste" }
+          "VERSAO=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          New-Item -ItemType Directory -Force pacote/SOAL-Tradutor | Out-Null
+          Copy-Item "dist\SOAL Tradutor.exe", LEIA-ME.md, CREDITOS.md, LICENSE -Destination pacote/SOAL-Tradutor
+          Compress-Archive -Path pacote/SOAL-Tradutor -DestinationPath "SOAL-Tradutor-$v-windows.zip"
+          git archive --format=zip --prefix=SOAL-Tradutor/ -o "SOAL-Tradutor-$v.zip" HEAD
+          Get-ChildItem SOAL-Tradutor-*.zip | ForEach-Object {
+            "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Out-File -FilePath SHA256SUMS.txt -Encoding ascii
+          Get-Content SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SOAL-Tradutor-${{ env.VERSAO }}
+          path: |
+            SOAL-Tradutor-*.zip
+            SHA256SUMS.txt
+
+      - name: Publicar a release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notas = "docs/notas/$env:GITHUB_REF_NAME.md"
+          if (-not (Test-Path $notas)) { throw "faltam as notas da versão em $notas" }
+          gh release create $env:GITHUB_REF_NAME "SOAL-Tradutor-$env:VERSAO-windows.zip" "SOAL-Tradutor-$env:VERSAO.zip" SHA256SUMS.txt --title "SOAL Tradutor $env:VERSAO" --notes-file $notas
