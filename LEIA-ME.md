@@ -1,4 +1,4 @@
-# SOAL Tradutor 0.3
+# SOAL Tradutor 0.4
 
 Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versão americana).
 Lê os textos direto dos arquivos `.sct` do jogo, mostra tudo organizado numa interface no
@@ -81,6 +81,39 @@ gravada.
   e o limite de tamanho; na importação, as falas repetidas são preenchidas sozinhas e as linhas que
   passam do tamanho da caixa são quebradas de novo.
 - Atalhos: Ctrl+Enter próxima fala, Alt+C copia o original, Alt+R marca para revisar.
+
+## Tradução automática (opcional)
+
+Para as falas que você considera fáceis, o programa pode pedir uma tradução a um serviço que você
+escolhe em **Ajustes > Tradução automática**. Nada é traduzido sozinho: você usa quando quiser.
+
+- **Traduzir automático** em cada fala (ou **Alt+T**) traduz só aquela fala.
+- **Traduzir automático as N que faltam**, no topo do arquivo, traduz as falas vazias daquele
+  arquivo. Dá para parar no meio. Falas iguais já traduzidas são reaproveitadas.
+- Tudo que vem da tradução automática fica marcado como "tradução automática" e aparece no filtro
+  **Revisar**. Ao editar a fala, a marca sai.
+- As quebras de linha são refeitas para caber na caixa, os códigos do jogo (`\c`, `\e`) são
+  preservados e, nos menus, cada opção continua numa linha. Se o serviço estragar um código, a fala
+  não é preenchida e o programa avisa.
+
+Serviços:
+
+| Serviço | O que precisa | Usa contexto e glossário |
+|---|---|---|
+| Ollama ou LM Studio (no seu PC) | o programa instalado e um modelo baixado; endereço `http://localhost:11434/v1` | sim: regras de estilo, glossário, gênero de quem fala e fala anterior |
+| Claude (API da Anthropic) | chave da API (pago por uso) | sim, igual ao anterior |
+| Outros compatíveis com OpenAI | endereço, modelo e chave do serviço | sim, igual ao anterior |
+| DeepL | chave da API (o plano Free dá 500 mil caracteres por mês) | só quem fala e a fala anterior |
+| Google Cloud Translation | chave da API | não |
+| LibreTranslate | endereço de um servidor | não |
+
+Os serviços de modelo de linguagem recebem as regras do projeto: adaptar expressões e gírias em vez
+de traduzir ao pé da letra, usar termos de marujo, acertar o gênero e seguir o glossário em
+`soal/data/glossario_ptbr.json` (você pode editar) e os nomes da janela **Nomes**.
+
+A chave fica só no seu computador, no arquivo `.soal_tradutor.json` da sua pasta de usuário, e
+nunca vai para o projeto nem para a planilha. Os textos das falas são enviados ao serviço escolhido;
+com Ollama ou LM Studio, nada sai do seu PC.
 
 ## Acentos
 

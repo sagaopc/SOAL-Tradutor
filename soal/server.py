@@ -18,11 +18,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import recomp, text
+from . import mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 
 class App:
@@ -30,6 +30,7 @@ class App:
         self.project: Optional[pj.Project] = None
         self.job = {"running": False, "label": "", "cur": 0, "total": 0, "error": None,
                     "result": None, "kind": ""}
+        self.cancel = False
         self.job_lock = threading.Lock()
         self.config = self._load_config()
         self._glyph_cache = None
@@ -79,11 +80,12 @@ class App:
                 raise pj.ProjectError("Ja' existe uma tarefa em andamento.")
             self.job.update(running=True, label="Preparando", cur=0, total=0, error=None,
                             result=None, kind=kind)
+            self.cancel = False
 
         def run():
             try:
                 self.job["result"] = fn()
-            except (pj.ProjectError, OSError) as exc:
+            except (pj.ProjectError, OSError, mt.MTError) as exc:
                 self.job["error"] = str(exc)
             except Exception as exc:  # erro inesperado: mostra na tela em vez de sumir
                 traceback.print_exc()
@@ -114,6 +116,20 @@ class App:
     def build(self):
         p = self.need()
         self.start_job("build", lambda: p.build(progress=self._progress))
+
+    # ------------------------------------------------------- traducao automatica
+    def mt_cfg(self) -> dict:
+        c = self.config.get("mt")
+        return c if isinstance(c, dict) else {}
+
+    def translator(self) -> "mt.Translator":
+        return mt.Translator(self.mt_cfg())
+
+    def mt_file(self, fname: str):
+        p = self.need()
+        tr = self.translator()
+        self.start_job("mt", lambda: p.mt_file(tr, fname, progress=self._progress,
+                                               cancelled=lambda: self.cancel))
 
     def need(self) -> pj.Project:
         if self.project is None:
@@ -244,6 +260,8 @@ def make_handler(app: App):
                     return self._json({"results": app.need().search(q.get("q", [""])[0])})
                 if u.path == "/api/names":
                     return self._json({"names": app.need().name_list()})
+                if u.path == "/api/mt":
+                    return self._json(mt.public_config(app.mt_cfg()))
                 if u.path == "/api/glyphs":
                     return self._json(app.glyphs())
                 if u.path == "/api/export_unicas.csv":
@@ -317,6 +335,39 @@ def make_handler(app: App):
                         p.touch()
                     p.save()
                     return self._json({"settings": p.settings})
+                if u.path == "/api/mt/config":
+                    cur = dict(app.mt_cfg())
+                    prov = data.get("provider", "")
+                    if prov and prov not in mt.PROVIDERS:
+                        raise pj.ProjectError("serviço desconhecido")
+                    if prov != cur.get("provider"):
+                        cur["key"] = ""          # chave de outro servico nao serve
+                    cur["provider"] = prov
+                    for k in ("url", "model"):
+                        if k in data:
+                            cur[k] = str(data[k]).strip()
+                    if data.get("key"):
+                        cur["key"] = str(data["key"]).strip()
+                    if data.get("clear_key"):
+                        cur["key"] = ""
+                    app.config["mt"] = cur
+                    app._save_config()
+                    return self._json(mt.public_config(cur))
+                if u.path == "/api/mt/test":
+                    t = app.translator().translate("Hey, Fina! How are you feeling?\nLooks like it's going to be a piece of cake.",
+                                                   "Vyse", None, False)
+                    return self._json({"t": t})
+                if u.path == "/api/mt/one":
+                    p = app.need()
+                    t = p.mt_suggest(app.translator(), data["file"], data["k"])
+                    r = p.set_translation(data["file"], data["k"], t, "mt")
+                    return self._json({"t": t, "filled": r["filled"]})
+                if u.path == "/api/mt/file":
+                    app.mt_file(data["file"])
+                    return self._json({"ok": True})
+                if u.path == "/api/job/cancel":
+                    app.cancel = True
+                    return self._json({"ok": True})
                 if u.path == "/api/recomp":
                     root = (data.get("root") or "").strip().strip('"')
                     if root:
@@ -341,8 +392,8 @@ def make_handler(app: App):
                     app.project = None
                     return self._json({"ok": True})
                 return self._send(404, b"not found", "text/plain")
-            except (pj.ProjectError, KeyError, ValueError) as exc:
-                msg = str(exc) if isinstance(exc, pj.ProjectError) else f"Pedido invalido ({exc})"
+            except (pj.ProjectError, mt.MTError, KeyError, ValueError) as exc:
+                msg = str(exc) if isinstance(exc, (pj.ProjectError, mt.MTError)) else f"Pedido invalido ({exc})"
                 return self._json({"error": msg}, 400)
             except Exception as exc:
                 traceback.print_exc()

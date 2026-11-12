@@ -75,6 +75,11 @@ section.work{overflow:auto;min-height:0;background:var(--sky)}
 .tag{font-size:11.5px;padding:1px 7px;border-radius:9px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
 .tag.warn{color:var(--alert);border-color:var(--alert)}
 .tag.rev{color:var(--brass);border-color:var(--brass)}
+.tag.mt{color:var(--sea);border-color:var(--sea)}
+.tr textarea.mt{border-color:var(--sea);border-style:dashed}
+.mtbox{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:18px}
+.mtbox .field{margin:8px 0}
+#busyCancel{margin-top:10px}
 .orig,.tr textarea{font-family:var(--mono);font-size:13px;line-height:1.5;white-space:pre;overflow-x:auto}
 .orig{margin:0;padding:7px 0}
 .tr textarea{width:100%;resize:none;border:1px solid var(--line);border-radius:6px;background-color:var(--paper);padding:6px 9px;min-height:36px;overflow-y:hidden;display:block;background-image:linear-gradient(to right,transparent calc(var(--cols,48)*1ch + 9px),var(--line) calc(var(--cols,48)*1ch + 9px),var(--line) calc(var(--cols,48)*1ch + 10px),transparent calc(var(--cols,48)*1ch + 10px));background-attachment:local}
@@ -210,11 +215,11 @@ table.grid input{width:100%}
     <h3>Original</h3>
     <div class="dialog"><span class="speaker" id="pvWhoO"></span><div class="scroll"><canvas id="pvCanvasO" width="576" height="84"></canvas></div></div>
     <dl class="facts" id="pvFacts"></dl>
-    <p class="note" style="margin-top:18px"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> próxima fala · <span class="kbd">Alt</span>+<span class="kbd">C</span> copiar o original · <span class="kbd">Alt</span>+<span class="kbd">R</span> marcar para revisar</p>
+    <p class="note" style="margin-top:18px"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> próxima fala · <span class="kbd">Alt</span>+<span class="kbd">C</span> copiar o original · <span class="kbd">Alt</span>+<span class="kbd">R</span> marcar para revisar · <span class="kbd">Alt</span>+<span class="kbd">T</span> tradução automática</p>
   </aside>
 </main>
 
-<div id="busy" class="hidden"><div class="card"><b id="busyLabel">Trabalhando</b><div class="progress"><i id="busyBar"></i></div><span class="note" id="busyNote"></span></div></div>
+<div id="busy" class="hidden"><div class="card"><b id="busyLabel">Trabalhando</b><div class="progress"><i id="busyBar"></i></div><span class="note" id="busyNote"></span><div><button id="busyCancel" class="hidden">Parar</button></div></div></div>
 
 <dialog id="dlgNames"><div class="dh"><h2>Nomes dos personagens</h2><input type="search" id="nameFilter" placeholder="Filtrar"></div>
   <div class="db"><p class="note">O nome traduzido aqui é usado em todas as falas daquele personagem. Deixe em branco para manter o original.</p>
@@ -243,6 +248,15 @@ table.grid input{width:100%}
     <div id="accBox"><b>Qual símbolo cada letra ocupa</b><div class="glyphs" id="accGrid"></div></div>
     <div class="field" style="margin-top:18px"><label for="stKeep">Save states do recomp</label><label><input type="checkbox" id="stKeep"> Manter os save states entre uma gravação e outra (experimental)</label>
       <small>Só vale para o recomp. Os arquivos traduzidos são completados com zeros até múltiplos de 32 KB, para que o tamanho deles quase nunca mude de uma gravação para a outra. Ainda não foi testado dentro do jogo.</small></div>
+    <div class="mtbox"><b>Tradução automática</b>
+      <p class="note">Usada pelos botões “Traduzir automático”. Você escolhe o serviço e decide quais falas traduzir; as falas traduzidas assim ficam marcadas para revisar. A chave fica só neste computador, fora do projeto.</p>
+      <div class="field"><label for="mtProv">Serviço</label><select id="mtProv"><option value="">Nenhum</option></select></div>
+      <p class="note" id="mtHelp"></p>
+      <div class="field" id="mtKeyRow"><label for="mtKey">Chave da API</label><input type="password" id="mtKey" autocomplete="off" spellcheck="false"></div>
+      <div class="field" id="mtUrlRow"><label for="mtUrl">Endereço do servidor</label><input type="text" id="mtUrl" spellcheck="false"></div>
+      <div class="field" id="mtModelRow"><label for="mtModel">Modelo</label><input type="text" id="mtModel" spellcheck="false"></div>
+      <p><button id="btnMtTest" type="button">Salvar e testar</button> <span class="note" id="mtTestMsg"></span></p>
+    </div>
     <div class="field" style="margin-top:18px"><label>Pasta do projeto</label><span class="secname" id="stDir"></span></div>
     <div class="field"><label>Pasta do jogo</label><span class="secname" id="stGame"></span></div>
   </div>
@@ -300,6 +314,7 @@ async function refreshState() {
   const no = st.project.not_original || [], w = $("#warn");
   w.classList.toggle("hidden", !no.length);
   if (no.length) w.textContent = no.length + (no.length === 1 ? " arquivo desta pasta não é" : " arquivos desta pasta não são") + " o original do disco americano (" + no.slice(0, 4).join(", ") + (no.length > 4 ? "…" : "") + "). A pasta já tinha uma tradução ou um romhack gravado, e o programa vai tratar esse conteúdo como texto original. Para traduzir a partir do jogo original, reextraia o disco e abra a pasta de novo.";
+  if (!S.mt) await loadMt();
   if (!S.glyphs) { try { S.glyphs = await api("/api/glyphs"); } catch (e) { S.glyphs = { ok:false, glyphs:{} }; } }
   renderMeter(); renderFiles();
   if (!S.file) { const fs = S.project.summary.files, order = S.project.summary.categories.map(c => c[0]); let first = null; for (const c of order) { first = fs.find(f => f.cat === c && f.total > f.done); if (first) break; } first = first || fs[0]; if (first) openFile(first.name); }
@@ -312,6 +327,7 @@ async function waitJob(onTick) {
     $("#busyLabel").textContent = j.label || "Trabalhando";
     $("#busyBar").style.width = (j.total ? Math.round(100 * j.cur / j.total) : 5) + "%";
     $("#busyNote").textContent = j.total ? (j.cur + " de " + j.total) : "";
+    $("#busyCancel").classList.toggle("hidden", j.kind !== "mt");
     if (onTick) onTick(j);
     if (!j.running) break;
     await sleep(250);
@@ -325,6 +341,7 @@ async function openProject(body) {
   try { await api("/api/open", body); await waitJob(); S.file = null; S.glyphs = null; await refreshState(); }
   catch (e) { $("#busy").classList.add("hidden"); $("#openErr").textContent = e.message; }
 }
+$("#busyCancel").onclick = async () => { $("#busyCancel").disabled = true; $("#busyCancel").textContent = "Parando…"; try { await api("/api/job/cancel", {}); } catch (e) {} };
 $("#btnOpen").onclick = () => openProject({ game_root: $("#gamePath").value });
 $("#gamePath").onkeydown = e => { if (e.key === "Enter") $("#btnOpen").click(); };
 $("#btnPick").onclick = async () => {
@@ -464,7 +481,7 @@ async function loadNames() { const r = await api("/api/names"); S.nameList = r.n
 function visibleEntries() {
   return S.entries.filter(e => {
     if (S.filter === "todo") return !e.t && !e.dbg && e.body.trim();
-    if (S.filter === "rev") return e.st === "rev" || e.auto;
+    if (S.filter === "rev") return e.st === "rev" || e.st === "mt" || e.auto;
     if (S.filter === "warn") return e.t && issuesOf(e.t).length;
     return true;
   });
@@ -479,6 +496,8 @@ function renderWork(focusKey) {
     const b = el("button", S.filter === k ? "on" : "", lab); b.onclick = () => { S.filter = k; renderWork(); }; seg.append(b);
   }
   head.append(seg);
+  const missing = S.entries.filter(e => !e.t && !e.dbg && e.body.trim()).length;
+  if (missing) { const bAll = el("button", "", "Traduzir automático as " + missing + " que faltam"); bAll.title = "Usa o serviço escolhido em Ajustes; as falas ficam marcadas para revisar"; bAll.onclick = () => mtFile(missing); head.append(bAll); }
   const rows = $("#rows"); rows.textContent = ""; S.rendered = 0; S.view = visibleEntries();
   if (S.fileError) rows.append(el("p", "err", "Este arquivo teve um problema na leitura: " + S.fileError));
   if (!S.view.length) { rows.append(el("div", "empty", S.entries.length ? "Nenhuma fala neste filtro. Escolha “Todas” para ver o arquivo inteiro." : "Este arquivo não tem diálogos.")); return; }
@@ -507,7 +526,9 @@ function rowFor(e) {
   const tr = el("div", "tr"), ta = el("textarea"); ta.value = e.t || ""; ta.spellcheck = true; ta.lang = "pt-BR"; ta.rows = 1;
   ta.placeholder = e.dbg ? "Texto de teste dos desenvolvedores; não precisa traduzir" : "Tradução";
   const under = el("div", "under"), cols = el("span", "cols"), sp = el("span", "sp");
-  const bCopy = el("button", "quiet", "Copiar original"), bRev = el("button", "quiet", "Revisar depois");
+  const bCopy = el("button", "quiet", "Copiar original"), bRev = el("button", "quiet", "Revisar depois"), bMt = el("button", "quiet", "Traduzir automático");
+  bMt.title = "Alt+T";
+  if (!e.dbg) sp.append(bMt);
   sp.append(bCopy, bRev); under.append(cols, sp); tr.append(ta, under);
   row.append(meta, orig, tr);
   const paint = () => {
@@ -518,20 +539,36 @@ function rowFor(e) {
     if (e.dbg) tags.append(el("span", "tag", "teste"));
     if (e.auto) tags.append(el("span", "tag rev", "preenchida sozinha"));
     if (e.st === "rev") tags.append(el("span", "tag rev", "revisar"));
+    if (e.st === "mt") tags.append(el("span", "tag mt", "tradução automática"));
     ta.classList.toggle("auto", !!e.auto);
+    ta.classList.toggle("mt", e.st === "mt");
     cols.textContent = "";
     if (ta.value) { const lim = S.project.settings.cols; ta.value.split("\n").forEach((l, i) => { const w = lineCols(l); if (i) cols.append(" · "); cols.append(w > lim ? el("b", "", String(w)) : String(w)); }); cols.append(" de " + lim + " colunas"); if (issuesOf(ta.value).length) tags.append(el("span", "tag warn", "aviso")); }
     bRev.textContent = e.st === "rev" ? "Tirar marca" : "Revisar depois";
     ta.style.height = "auto"; ta.style.height = Math.max(36, ta.scrollHeight + 2) + "px";
   };
   row._paint = paint; row._entry = e;
-  ta.addEventListener("input", () => { const had = !!e.t; e.t = ta.value; e.auto = false; if (had !== !!e.t && !e.dbg && e.body.trim()) bumpFile(S.file, e.t ? 1 : -1); paint(); showPreview(e); queueSave(e); });
+  ta.addEventListener("input", () => { const had = !!e.t; e.t = ta.value; e.auto = false; if (e.st === "mt") { e.st = ""; e.clearSt = true; } if (had !== !!e.t && !e.dbg && e.body.trim()) bumpFile(S.file, e.t ? 1 : -1); paint(); showPreview(e); queueSave(e); });
   ta.addEventListener("focus", () => { document.querySelectorAll(".row.focus").forEach(n => n.classList.remove("focus")); row.classList.add("focus"); S.focus = e; showPreview(e); });
   ta.addEventListener("keydown", ev => {
     if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); const nx = row.nextElementSibling; const t = nx && nx.querySelector("textarea"); if (t) { t.focus(); nx.scrollIntoView({ block:"center", behavior:"smooth" }); } }
     else if (ev.altKey && ev.key.toLowerCase() === "c") { ev.preventDefault(); bCopy.click(); }
     else if (ev.altKey && ev.key.toLowerCase() === "r") { ev.preventDefault(); bRev.click(); }
+    else if (ev.altKey && ev.key.toLowerCase() === "t") { ev.preventDefault(); bMt.click(); }
   });
+  bMt.onclick = async () => {
+    if (!S.mt || !S.mt.provider) { setSaved("Escolha um serviço de tradução automática em Ajustes.", true); $("#btnSettings").click(); return; }
+    bMt.disabled = true; const old = bMt.textContent; bMt.textContent = "Traduzindo…";
+    try {
+      await flushAll();
+      const r = await api("/api/mt/one", { file:S.file, k:e.k });
+      const had = !!e.t; e.t = r.t; e.st = "mt"; e.auto = false; ta.value = r.t;
+      if (!had && !e.dbg && e.body.trim()) bumpFile(S.file, 1);
+      for (const [f, k] of r.filled || []) if (f === S.file) { const o = S.entries.find(x => x.k === k); if (o && !o.t) { o.t = r.t; o.auto = true; o.st = "mt"; bumpFile(f, 1); const n = document.querySelector('.row[data-k="' + CSS.escape(k) + '"]'); if (n) { n.querySelector("textarea").value = o.t; n._paint(); } } }
+      paint(); showPreview(e); setSaved("Traduzido automaticamente: revise");
+    } catch (err) { setSaved(err.message, true); }
+    bMt.disabled = false; bMt.textContent = old;
+  };
   bCopy.onclick = () => { ta.value = e.body; ta.dispatchEvent(new Event("input")); ta.focus(); };
   bRev.onclick = async () => { e.st = e.st === "rev" ? "" : "rev"; paint(); try { await api("/api/status", { file:S.file, k:e.k, st:e.st }); } catch (err) { setSaved(err.message, true); } };
   requestAnimationFrame(paint);
@@ -548,7 +585,8 @@ function queueSave(e) {
 async function doSave(key) {
   const job = pending.get(key); if (!job) return; pending.delete(key); clearTimeout(job.timer);
   try {
-    const r = await api("/api/save", { file:job.file, k:job.e.k, t:job.e.t });
+    const body = { file:job.file, k:job.e.k, t:job.e.t }; if (job.e.clearSt) { body.st = ""; job.e.clearSt = false; }
+    const r = await api("/api/save", body);
     for (const [f, k] of r.filled || []) {
       if (f === S.file) { const o = S.entries.find(x => x.k === k); if (o) { const had = !!o.t; o.t = job.e.t; o.auto = true; if (!had && !o.dbg) bumpFile(f, 1); const n = document.querySelector('.row[data-k="' + CSS.escape(k) + '"]'); if (n) { n.querySelector("textarea").value = o.t; n._paint(); } } }
       else if (!r._counted) { /* contado abaixo */ }
@@ -560,6 +598,20 @@ async function doSave(key) {
 }
 async function flushAll() { for (const k of [...pending.keys()]) await doSave(k); }
 window.addEventListener("beforeunload", () => { for (const [k, job] of pending) navigator.sendBeacon && fetch("/api/save", { method:"POST", keepalive:true, headers:{ "X-SOAL":"1" }, body:JSON.stringify({ file:job.file, k:job.e.k, t:job.e.t }) }); });
+
+async function mtFile(missing) {
+  if (!S.mt || !S.mt.provider) { setSaved("Escolha um serviço de tradução automática em Ajustes.", true); $("#btnSettings").click(); return; }
+  await flushAll();
+  const name = S.mt.providers[S.mt.provider];
+  if (!confirm("Traduzir automaticamente as " + missing + " falas sem tradução de " + S.file.replace(/\.sct$/i, "") + " usando " + name + "?\n\nFalas iguais já traduzidas são reaproveitadas. As novas ficam marcadas como “tradução automática” para você revisar.")) return;
+  try {
+    await api("/api/mt/file", { file:S.file });
+    const r = await waitJob();
+    const cur = S.file; const st = await api("/api/state"); S.project.summary = st.project.summary; renderMeter(); renderFiles(); S.file = null; await openFile(cur);
+    setSaved(r.translated + " traduzidas" + (r.copied ? ", " + r.copied + " reaproveitadas" : "") + (r.cancelled ? " (parado)" : "") + (r.error_count ? ", " + r.error_count + " com erro: " + r.errors[0] : ""), !!r.error_count);
+  } catch (err) { $("#busy").classList.add("hidden"); setSaved(err.message, true); }
+}
+async function loadMt() { try { S.mt = await api("/api/mt"); } catch (e) { S.mt = null; } }
 
 /* ----------------------------------------------------------------- busca */
 let searchTimer = null;
@@ -626,12 +678,47 @@ $("#btnSettings").onclick = () => {
     cell.append(cv, el("span", "", "no lugar de " + sym), sel); grid.append(cell);
   }
   $("#accBox").classList.toggle("hidden", $("#stAcc").value !== "font");
+  const sel = $("#mtProv"); if (sel.options.length < 2 && S.mt) for (const [k, v] of Object.entries(S.mt.providers)) sel.append(new Option(v, k));
+  if (S.mt) { sel.value = S.mt.provider || ""; $("#mtUrl").value = S.mt.url || ""; $("#mtModel").value = S.mt.model || ""; }
+  $("#mtKey").value = ""; $("#mtTestMsg").textContent = ""; paintMt();
   $("#dlgSettings").showModal();
+};
+const MT_HELP = {
+  "": "",
+  deepl: "DeepL: crie uma conta em deepl.com/pro-api. O plano Free traduz 500 mil caracteres por mês sem custo (o jogo inteiro tem cerca de 875 mil). Chaves do plano Free terminam em “:fx”. Recebe quem fala e a fala anterior como contexto, mas não usa o glossário.",
+  google: "Google Cloud Translation: precisa de um projeto no Google Cloud com a API ativada e uma chave de API. Traduz só o texto, sem contexto nem glossário.",
+  libre: "LibreTranslate: gratuito e de código aberto. Informe o endereço de um servidor (por exemplo, um instalado no seu PC). A qualidade é menor. Em “Modelo”, o idioma de destino (pt ou pb).",
+  openai: "Modelos de linguagem no seu PC (Ollama ou LM Studio) ou em serviços compatíveis com OpenAI. Recebem as regras de estilo, o glossário, o gênero de quem fala e a fala anterior. Ollama: endereço http://localhost:11434/v1 e, em Modelo, um nome que aparece em “ollama list”. Chave só se o serviço pedir.",
+  anthropic: "Claude, pela API da Anthropic: crie uma chave em console.anthropic.com (uso pago por volume). Recebe as regras de estilo, o glossário, o gênero de quem fala e a fala anterior. Modelo padrão: claude-sonnet-5-5.",
+};
+const MT_FIELDS = { "": [], deepl: ["key"], google: ["key"], libre: ["url", "model", "key"], openai: ["url", "model", "key"], anthropic: ["key", "model"] };
+const MT_PH = { libre: { url: "https://seu-servidor-libretranslate", model: "pt" }, openai: { url: "http://localhost:11434/v1", model: "nome do modelo" }, anthropic: { model: "claude-sonnet-5-5" }, deepl: {}, google: {}, "": {} };
+function paintMt() {
+  const pv = $("#mtProv").value, f = MT_FIELDS[pv] || [];
+  $("#mtHelp").textContent = MT_HELP[pv] || "";
+  $("#mtKeyRow").classList.toggle("hidden", !f.includes("key"));
+  $("#mtUrlRow").classList.toggle("hidden", !f.includes("url"));
+  $("#mtModelRow").classList.toggle("hidden", !f.includes("model"));
+  const ph = MT_PH[pv] || {};
+  $("#mtUrl").placeholder = ph.url || ""; $("#mtModel").placeholder = ph.model || "";
+  $("#mtKey").placeholder = (S.mt && S.mt.provider === pv && S.mt.has_key) ? "chave salva (" + S.mt.key_hint + "); deixe em branco para manter" : (pv === "openai" || pv === "libre" ? "opcional" : "cole a chave aqui");
+}
+$("#mtProv").onchange = paintMt;
+async function saveMt() {
+  const pv = $("#mtProv").value;
+  S.mt = await api("/api/mt/config", { provider: pv, key: $("#mtKey").value, url: $("#mtUrl").value, model: $("#mtModel").value });
+  $("#mtKey").value = ""; paintMt();
+}
+$("#btnMtTest").onclick = async () => {
+  const m = $("#mtTestMsg"); m.textContent = "Testando…"; m.style.color = "";
+  try { await saveMt(); if (!S.mt.provider) { m.textContent = "Nenhum serviço escolhido."; return; } const r = await api("/api/mt/test", {}); m.textContent = "Funcionou: “" + r.t.replace(/\n/g, " ") + "”"; }
+  catch (e) { m.textContent = e.message; m.style.color = "var(--alert)"; }
 };
 $("#stAcc").onchange = () => $("#accBox").classList.toggle("hidden", $("#stAcc").value !== "font");
 $("#btnSaveSettings").onclick = async () => {
   const cm = {}; $("#accGrid").querySelectorAll("select").forEach(s => { if (s.value) cm[s.value] = s.dataset.sym; });
-  try { const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) renderWork(); }
+  try { if ($("#mtProv").value !== ((S.mt && S.mt.provider) || "") || $("#mtKey").value || $("#mtUrl").value !== ((S.mt && S.mt.url) || "") || $("#mtModel").value !== ((S.mt && S.mt.model) || "")) await saveMt();
+    const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) renderWork(); }
   catch (e) { alertInline(e.message); }
 };
 $("#btnCloseProject").onclick = async () => { await flushAll(); await api("/api/close", {}); S.file = null; S.glyphs = null; S.nameMap = null; $("#dlgSettings").close(); refreshState(); };

@@ -1,0 +1,382 @@
+{
+ "_sobre": "Termos e gêneros usados pela tradução automática com modelos de linguagem. Edite à vontade.",
+ "termos": [
+  [
+   "Pirate Isle",
+   "Ilha Pirata"
+  ],
+  [
+   "Shrine Island",
+   "Ilha do Santuário"
+  ],
+  [
+   "Lookout Island",
+   "Ilha da Vigia"
+  ],
+  [
+   "Valua / Valuan",
+   "Valua / valuano, valuana"
+  ],
+  [
+   "Nasr, Yafutoma, Ixa'taka, Esperanza, Soltis, Rhaknam, Dangral",
+   "mantidos"
+  ],
+  [
+   "Sailors' Guild",
+   "Guilda dos Marujos"
+  ],
+  [
+   "Sailors' Island",
+   "Ilha dos Marujos"
+  ],
+  [
+   "Crescent Isle",
+   "Ilha Crescente"
+  ],
+  [
+   "Grand Fortress",
+   "Grande Fortaleza"
+  ],
+  [
+   "Dark Rift",
+   "Fenda Sombria"
+  ],
+  [
+   "Deep Sky",
+   "Céu Profundo"
+  ],
+  [
+   "South / Mid / North Ocean",
+   "Oceano Sul / Oceano Central / Oceano Norte"
+  ],
+  [
+   "Upper City / Lower City",
+   "Cidade Alta / Cidade Baixa"
+  ],
+  [
+   "Air Pirate(s)",
+   "pirata(s) do ar"
+  ],
+  [
+   "Blue Rogues",
+   "Piratas Azuis"
+  ],
+  [
+   "Black Pirates",
+   "Piratas Negros"
+  ],
+  [
+   "Moon Stone(s)",
+   "Pedra(s) da Lua"
+  ],
+  [
+   "Moon Crystal",
+   "Cristal da Lua"
+  ],
+  [
+   "Silver Civilization",
+   "Civilização de Prata"
+  ],
+  [
+   "Silvite(s)",
+   "silvita(s)"
+  ],
+  [
+   "Gigas",
+   "Gigas (singular e plural)"
+  ],
+  [
+   "Rains of Destruction",
+   "Chuvas da Destruição"
+  ],
+  [
+   "Imperial Armada / the Armada",
+   "Armada Imperial / a Armada"
+  ],
+  [
+   "Admiral",
+   "almirante (a almirante Belleza, o almirante Gregorio)"
+  ],
+  [
+   "Lord Galcian",
+   "Lorde Galcian"
+  ],
+  [
+   "Your Excellency",
+   "Vossa Excelência"
+  ],
+  [
+   "Discovery / Discoveries",
+   "Descoberta(s)"
+  ],
+  [
+   "Elder(s)",
+   "ancião / anciã / anciões, conforme quem é"
+  ],
+  [
+   "league(s)",
+   "légua(s)"
+  ],
+  [
+   "Swashbuckler",
+   "Destemido (o título de reputação dos piratas)"
+  ],
+  [
+   "Silver Moon / Red Moon / Yellow Moon...",
+   "Lua Prateada / Lua Vermelha / Lua Amarela..."
+  ],
+  [
+   "Red Moon Stone (e outras cores)",
+   "Pedra da Lua Vermelha (e outras cores)"
+  ],
+  [
+   "Aye",
+   "Sim / Pode deixar / É isso aí (conforme o tom)"
+  ],
+  [
+   "Aye aye, Captain!",
+   "Às ordens, capitão!"
+  ],
+  [
+   "lad",
+   "rapaz / garoto"
+  ],
+  [
+   "lass, lassie",
+   "moça / mocinha"
+  ],
+  [
+   "mate, matey",
+   "camarada / marujo"
+  ],
+  [
+   "landlubber",
+   "rato de terra firme"
+  ],
+  [
+   "Ahoy!",
+   "Ô de bordo!"
+  ],
+  [
+   "Arrr!",
+   "Arrr!"
+  ],
+  [
+   "Shiver me timbers!",
+   "Raios me partam!"
+  ],
+  [
+   "scurvy dog",
+   "cão sarnento"
+  ],
+  [
+   "booty, loot, plunder",
+   "butim / saque / pilhagem"
+  ],
+  [
+   "grog",
+   "grogue"
+  ],
+  [
+   "rum",
+   "rum"
+  ],
+  [
+   "cutlass",
+   "sabre"
+  ],
+  [
+   "crow's nest",
+   "cesto da gávea"
+  ],
+  [
+   "helm",
+   "leme"
+  ],
+  [
+   "bridge (do navio)",
+   "ponte de comando"
+  ],
+  [
+   "deck",
+   "convés"
+  ],
+  [
+   "First Mate",
+   "imediato"
+  ],
+  [
+   "Vice Captain",
+   "vice-capitão"
+  ],
+  [
+   "wanted / bounty",
+   "procurado / recompensa"
+  ],
+  [
+   "raid",
+   "ataque / abordagem"
+  ],
+  [
+   "Heh",
+   "Hehe / Heh"
+  ],
+  [
+   "Geez",
+   "Credo / Nossa"
+  ],
+  [
+   "Whoa",
+   "Opa / Uau"
+  ],
+  [
+   "Damn",
+   "Droga / Maldição (vilões)"
+  ],
+  [
+   "Oh man",
+   "Ah, cara / Puxa"
+  ],
+  [
+   "Yuck!",
+   "Eca!"
+  ],
+  [
+   "Vyse's Mother",
+   "Mãe do Vyse"
+  ],
+  [
+   "Granny",
+   "Vovó"
+  ],
+  [
+   "no way",
+   "nem pensar / não acredito"
+  ],
+  [
+   "you're history",
+   "você já era"
+  ],
+  [
+   "done for",
+   "estamos perdidos"
+  ],
+  [
+   "long time no see",
+   "quanto tempo!"
+  ],
+  [
+   "broke",
+   "duro, liso (sem dinheiro)"
+  ],
+  [
+   "get lost",
+   "some daqui / cai fora"
+  ],
+  [
+   "count me in",
+   "tô dentro"
+  ],
+  [
+   "what the",
+   "mas o quê…?! / que diabos…?!"
+  ],
+  [
+   "piece of junk",
+   "lata-velha"
+  ],
+  [
+   "lay low",
+   "ficar na moita"
+  ],
+  [
+   "that's the spirit",
+   "é assim que se fala!"
+  ],
+  [
+   "well, well",
+   "ora, ora"
+  ],
+  [
+   "full speed ahead",
+   "a toda velocidade!"
+  ],
+  [
+   "all hands",
+   "todos a postos!"
+  ],
+  [
+   "port side",
+   "bombordo"
+  ],
+  [
+   "starboard",
+   "estibordo"
+  ],
+  [
+   "quarters",
+   "alojamento / cabine"
+  ],
+  [
+   "galley",
+   "cozinha de bordo"
+  ],
+  [
+   "Cap'n",
+   "capitão"
+  ],
+  [
+   "Super Moves",
+   "“Super Moves” (nome do menu, manter em inglês)"
+  ]
+ ],
+ "genero": {
+  "Vyse": "M",
+  "Drachma": "M",
+  "Gilder": "M",
+  "Enrique": "M",
+  "Galcian": "M",
+  "Ramirez": "M",
+  "De Loco": "M",
+  "Gregorio": "M",
+  "Vigoro": "M",
+  "Alfonso": "M",
+  "Dyne": "M",
+  "Gordo": "M",
+  "Osman": "M",
+  "Marco": "M",
+  "Hans": "M",
+  "Izmael": "M",
+  "Domingo": "M",
+  "Robinson": "M",
+  "Don": "M",
+  "Pinta": "M",
+  "Centime": "M",
+  "Jimmy": "M",
+  "Alan": "M",
+  "Ben the Lookout": "M",
+  "Briggs the Vice Captain": "M",
+  "Timmus the Gunner": "M",
+  "Borris the Gunner": "M",
+  "Doc": "M",
+  "Daigo": "M",
+  "Aika": "F",
+  "Fina": "F",
+  "Clara": "F",
+  "Belleza": "F",
+  "Teodora": "F",
+  "Vyse's Mother": "F",
+  "Granny": "F",
+  "Lindsi": "F",
+  "Martha": "F",
+  "Marth": "F",
+  "Barbara": "F",
+  "Jessica": "F",
+  "Polly": "F",
+  "Moegi": "F",
+  "Bellena": "F",
+  "Belle": "F",
+  "Kirala": "F",
+  "Urala": "F"
+ }
+}

@@ -38,6 +38,9 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
 - Exportar e importar planilha CSV, com uma linha por fala diferente; na importação as repetições
   são preenchidas e as linhas longas são quebradas sozinhas.
 - Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos.
+- Tradução automática opcional, fala por fala ou por arquivo, com o serviço que você escolher
+  (Ollama/LM Studio no seu PC, Claude, DeepL, Google ou LibreTranslate). As falas ficam marcadas
+  para revisão.
 - Guarda os originais e permite devolvê-los a qualquer momento.
 
 ## Conferência
@@ -50,7 +53,7 @@ tamanho. Com o disco americano: 258 arquivos, 25.347 textos e 78.937 referência
 
 ## Estado
 
-Versão 0.3, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
+Versão 0.4, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
 arquivos do jogo; o jogo traduzido ainda precisa ser testado rodando, principalmente as letras
 acentuadas. Relatos são bem-vindos em [Issues](../../issues).
 

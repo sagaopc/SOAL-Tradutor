@@ -15,7 +15,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import aklz
 from . import font as fontmod
-from . import recomp, sct, text
+from . import mt, recomp, sct, text
 
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
@@ -370,7 +370,8 @@ class Project:
                     oft = self.tr.setdefault(of, {})
                     o = oft.get(ok)
                     if o is None or not o.get("t") or o.get("auto"):
-                        oft[ok] = {"t": value, "auto": True, "st": (o or {}).get("st", "")}
+                        st2 = "mt" if status == "mt" else (o or {}).get("st", "")
+                        oft[ok] = {"t": value, "auto": True, "st": st2}
                         filled.append([of, ok])
             self.touch()
             return {"filled": filled}
@@ -538,6 +539,82 @@ class Project:
             self.touch()
         self.save()
         return {"applied": applied, "skipped": skipped, "filled": filled, "wrapped": wrapped}
+
+    # ------------------------------------------------------------ traducao automatica
+    def mt_context(self, fname: str, key: str) -> dict:
+        f = self.by_name.get(fname)
+        if f is None or key not in f["_idx"]:
+            raise ProjectError("texto desconhecido")
+        prev = None
+        for e in f["entries"]:
+            if e["k"] == key:
+                break
+            if e.get("raw") or not e["body"].strip():
+                continue
+            who = e.get("head") if e.get("br") else ""
+            prev = ((who + ": ") if who else "") + e["body"].replace("\n", " ")
+        e = f["_idx"][key]
+        return {"body": e["body"], "who": (e.get("head") if e.get("br") else None) or None,
+                "prev": prev, "menu": text.is_menu(e["body"])}
+
+    def _mt_extra_glossary(self) -> List[List[str]]:
+        return [[n, t] for n, t in self.names.items() if t]
+
+    def mt_suggest(self, tr: "mt.Translator", fname: str, key: str) -> str:
+        c = self.mt_context(fname, key)
+        out = tr.translate(c["body"], c["who"], c["prev"], c["menu"], self._mt_extra_glossary())
+        if not c["menu"]:
+            out, _ = text.wrap(out, int(self.settings.get("cols", 48)), int(self.settings.get("lines", 3)),
+                               self.charmap_codes())
+        return out
+
+    def mt_file(self, tr: "mt.Translator", fname: str, progress=None, cancelled=lambda: False) -> dict:
+        """Traduz automaticamente as falas sem traducao de um arquivo (marcadas para revisar)."""
+        f = self.by_name.get(fname)
+        if f is None:
+            raise ProjectError("arquivo desconhecido")
+        todo = []
+        for e in f["entries"]:
+            if e.get("raw") or e.get("dbg") or not e["body"].strip():
+                continue
+            if (self.translated(fname, e["k"]) or {}).get("t"):
+                continue
+            todo.append(e)
+        done = copied = 0
+        errors: List[str] = []
+        n = len(todo)
+        for i, e in enumerate(todo):
+            if cancelled():
+                break
+            if progress:
+                progress(f"Traduzindo {fname} ({i + 1} de {n})", i, n)
+            if (self.translated(fname, e["k"]) or {}).get("t"):
+                copied += 1          # preenchida por uma fala igual traduzida antes
+                continue
+            # a mesma fala ja' traduzida em outro lugar: reaproveita
+            reuse = None
+            for of, ok in self.same.get(e["body"], ()):
+                t = (self.translated(of, ok) or {}).get("t")
+                if t:
+                    reuse = t
+                    break
+            try:
+                val = reuse if reuse is not None else self.mt_suggest(tr, fname, e["k"])
+            except mt.MTError as exc:
+                errors.append(f"{e['k']}: {exc}")
+                if len(errors) >= 3 and done == 0:
+                    break            # o servico nao esta' respondendo: para cedo
+                continue
+            self.set_translation(fname, e["k"], val, "mt")
+            if reuse is not None:
+                copied += 1
+            else:
+                done += 1
+            if done % 10 == 0:
+                self.save()
+        self.save()
+        return {"file": fname, "translated": done, "copied": copied, "total": n,
+                "errors": errors[:10], "error_count": len(errors), "cancelled": cancelled()}
 
     # ------------------------------------------------------------ destinos
     def targets(self) -> List[dict]:
