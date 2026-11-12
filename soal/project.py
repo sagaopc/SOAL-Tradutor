@@ -49,6 +49,15 @@ DEFAULT_SETTINGS = {
 }
 
 
+def _fmt_secs(sec: float) -> str:
+    sec = int(round(sec))
+    if sec < 60:
+        return f"{max(sec, 1)} s"
+    if sec < 3600:
+        return f"{sec // 60} min" + (f" {sec % 60:02d} s" if sec < 600 and sec % 60 else "")
+    return f"{sec // 3600} h {(sec % 3600) // 60:02d} min"
+
+
 class ProjectError(Exception):
     pass
 
@@ -568,8 +577,19 @@ class Project:
                                self.charmap_codes())
         return out
 
-    def mt_file(self, tr: "mt.Translator", fname: str, progress=None, cancelled=lambda: False) -> dict:
-        """Traduz automaticamente as falas sem traducao de um arquivo (marcadas para revisar)."""
+    # Lote: quando parar de insistir num servico que nao responde.
+    MT_MAX_SEM_RESPOSTA = 2      # falas seguidas sem resposta (servidor fora do ar ou travado)
+    MT_MAX_ERROS = 5             # falas seguidas com qualquer erro
+
+    def mt_file(self, tr: "mt.Translator", fname: str, progress=None, cancelled=lambda: False,
+                clock=None) -> dict:
+        """Traduz automaticamente as falas sem traducao de um arquivo (marcadas para revisar).
+
+        Para sozinho se o servico parar de responder (MT_MAX_SEM_RESPOSTA falas seguidas), se
+        der erro em MT_MAX_ERROS falas seguidas ou, na hora, se a chave for recusada ou a cota
+        acabar. O que ja' foi traduzido fica salvo; rodar de novo continua das que faltam."""
+        import time
+        clock = clock or time.monotonic
         f = self.by_name.get(fname)
         if f is None:
             raise ProjectError("arquivo desconhecido")
@@ -583,11 +603,24 @@ class Project:
         done = copied = 0
         errors: List[str] = []
         n = len(todo)
+        no_answer = in_a_row = 0
+        stopped = ""
+        spent = 0.0                  # tempo gasto nas falas mandadas ao servico
+        asked = 0
+        handled = 0
         for i, e in enumerate(todo):
             if cancelled():
                 break
             if progress:
-                progress(f"Traduzindo {fname} ({i + 1} de {n})", i, n)
+                label = f"Traduzindo {fname} ({i + 1} de {n})"
+                if asked:
+                    per = spent / asked
+                    label += f" · {_fmt_secs(per)} por fala"
+                    left = per * (n - i)
+                    if n - i > 1 and left >= 1:
+                        label += f" · faltam cerca de {_fmt_secs(left)}"
+                progress(label, i, n)
+            handled = i + 1
             if (self.translated(fname, e["k"]) or {}).get("t"):
                 copied += 1          # preenchida por uma fala igual traduzida antes
                 continue
@@ -598,23 +631,43 @@ class Project:
                 if t:
                     reuse = t
                     break
+            t0 = clock()
             try:
                 val = reuse if reuse is not None else self.mt_suggest(tr, fname, e["k"])
             except mt.MTError as exc:
+                if reuse is None:
+                    spent += clock() - t0
+                    asked += 1
                 errors.append(f"{e['k']}: {exc}")
-                if len(errors) >= 3 and done == 0:
-                    break            # o servico nao esta' respondendo: para cedo
+                in_a_row += 1
+                kind = getattr(exc, "kind", "")
+                no_answer = no_answer + 1 if kind == "conexao" else 0
+                if kind == "fatal":
+                    stopped = f"o serviço recusou o pedido: {exc}"
+                elif no_answer >= self.MT_MAX_SEM_RESPOSTA:
+                    stopped = (f"o serviço não respondeu em {no_answer} falas seguidas: {exc}")
+                elif in_a_row >= self.MT_MAX_ERROS:
+                    stopped = f"{in_a_row} falas seguidas deram erro. A última: {exc}"
+                if stopped:
+                    break
                 continue
+            if reuse is None:
+                spent += clock() - t0
+                asked += 1
+            no_answer = in_a_row = 0
             self.set_translation(fname, e["k"], val, "mt")
             if reuse is not None:
                 copied += 1
             else:
                 done += 1
-            if done % 10 == 0:
-                self.save()
+                if done % 10 == 0:
+                    self.save()
         self.save()
+        remaining = sum(1 for e in todo if not (self.translated(fname, e["k"]) or {}).get("t"))
         return {"file": fname, "translated": done, "copied": copied, "total": n,
-                "errors": errors[:10], "error_count": len(errors), "cancelled": cancelled()}
+                "errors": errors[-10:], "error_count": len(errors), "cancelled": cancelled(),
+                "stopped": stopped, "remaining": remaining,
+                "per_line": round(spent / asked, 1) if asked else None}
 
     # ------------------------------------------------------------ destinos
     def targets(self) -> List[dict]:

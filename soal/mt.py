@@ -54,7 +54,12 @@ CODE_RE = re.compile(r"\\[a-z]")
 
 
 class MTError(Exception):
-    pass
+    """kind: "conexao" (sem resposta / tempo esgotado), "fatal" (chave recusada, cota ou limite
+    de uso: nao adianta insistir) ou "" (erro so' desta fala)."""
+
+    def __init__(self, msg: str = "", kind: str = ""):
+        super().__init__(msg)
+        self.kind = kind
 
 
 def _load(name: str):
@@ -153,18 +158,18 @@ def _post(url: str, payload: dict, headers: Dict[str, str], timeout: int) -> dic
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")[:300]
         if e.code in (401, 403):
-            raise MTError(f"o serviço recusou a chave (HTTP {e.code}). Confira a chave em Ajustes.")
+            raise MTError(f"o serviço recusou a chave (HTTP {e.code}). Confira a chave em Ajustes.", "fatal")
         if e.code == 429:
-            raise MTError("limite de uso do serviço atingido (HTTP 429). Espere um pouco e tente de novo.")
+            raise MTError("limite de uso do serviço atingido (HTTP 429). Espere um pouco e tente de novo.", "fatal")
         if e.code == 456:
-            raise MTError("a cota de caracteres da sua conta acabou (HTTP 456).")
+            raise MTError("a cota de caracteres da sua conta acabou (HTTP 456).", "fatal")
         raise MTError(f"o serviço respondeu HTTP {e.code}: {body}")
     except urllib.error.URLError as e:
-        raise MTError(f"não consegui falar com o serviço ({e.reason}). Confira o endereço e a internet.")
+        raise MTError(f"não consegui falar com o serviço ({e.reason}). Confira o endereço e a internet.", "conexao")
     except (TimeoutError, OSError) as e:
         extra = (" O servidor ficou {} s sem mandar nada: confira se o modelo está carregado e se cabe "
                  "na memória da placa de vídeo.".format(timeout)) if _is_local(url) else ""
-        raise MTError(f"o serviço demorou demais ou caiu ({e}).{extra}")
+        raise MTError(f"o serviço demorou demais ou caiu ({e}).{extra}", "conexao")
     except ValueError:
         raise MTError("o serviço respondeu algo que não é JSON.")
 
@@ -230,6 +235,8 @@ class Translator:
         if self.provider not in PROVIDERS:
             raise MTError("Escolha um serviço de tradução automática em Ajustes.")
         self.timeout = int(self.cfg.get("timeout") or 90)
+        # um tempo escolhido de proposito vale tambem para servidor local
+        self.timeout_explicit = bool((cfg or {}).get("timeout"))
 
     def translate(self, text: str, who: Optional[str] = None, prev: Optional[str] = None,
                   menu: bool = False, extra_glossary: Optional[List[List[str]]] = None) -> str:
@@ -326,7 +333,7 @@ class Translator:
             payload["think"] = False
         else:
             payload["stream"] = False
-        timeout = max(self.timeout, LOCAL_TIMEOUT) if local else self.timeout
+        timeout = max(self.timeout, LOCAL_TIMEOUT) if local and not self.timeout_explicit else self.timeout
         url = base + "/chat/completions"
         try:
             r = _post(url, payload, headers, timeout)
