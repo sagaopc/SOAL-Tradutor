@@ -76,8 +76,22 @@ Ao abrir a pasta `X`, o programa cria ao lado dela a pasta `X_traducao`:
 | `projeto.json` | suas traduções, nomes de personagens e ajustes (faça backup deste) |
 | `originais/` | cópia dos `.sct` e da fonte originais, feita uma única vez |
 | `textos.json` | textos extraídos (pode apagar; é refeito) |
-
 | `copias_do_destino/` | cópia do `fst.bin` do recomp e de qualquer arquivo do destino que já não fosse o original |
+
+### Mudar a pasta do projeto e guardar cópias
+
+Em **Ajustes → Onde ficam as traduções**:
+
+- **Mover projeto** leva a pasta inteira para outro lugar. O botão **Pasta do tradutor** sugere
+  `projetos\<nome>` dentro da pasta do próprio SOAL Tradutor. A pasta antiga só é apagada depois
+  que a cópia termina. Depois disso, ao escolher a pasta do jogo de novo, o programa abre o projeto
+  no lugar novo; escolher a própria pasta do projeto também funciona. Se o projeto ficar na pasta do
+  tradutor, leve a pasta `projetos` junto quando trocar de versão.
+- **Cópias de segurança em** guarda uma cópia do `projeto.json` com data e hora a cada 10 minutos
+  de trabalho e ao fechar o programa, mantendo as 20 mais recentes e um `projeto.json` igual à
+  última. Use outro disco, um pen drive ou uma pasta sincronizada (Google Drive, OneDrive). Para
+  voltar uma cópia, feche o programa e coloque o arquivo na pasta do projeto com o nome
+  `projeto.json`.
 
 Ao abrir uma pasta, o programa compara os arquivos com as impressões digitais (SHA-1) do disco
 americano original e avisa se algum for diferente, por exemplo quando a pasta já tem uma tradução

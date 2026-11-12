@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import sys
 import re
 import shutil
 import threading
@@ -46,7 +47,22 @@ DEFAULT_SETTINGS = {
     "charmap": DEFAULT_CHARMAP,
     "autofill": True,
     "keep_states": False,    # so' no recomp: tamanhos em blocos de 32 KB (experimental)
+    "backup_dir": "",        # pasta onde guardar copias de seguranca do projeto
 }
+
+BACKUP_EVERY = 600           # segundos entre copias de seguranca enquanto ha' mudancas
+BACKUP_KEEP = 20             # quantas copias com data manter
+
+
+def tool_dir() -> str:
+    """Pasta do proprio SOAL Tradutor (a do .exe, ou a que tem o run.py)."""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def is_project_dir(d: str) -> bool:
+    return bool(d) and os.path.isfile(os.path.join(d, PROJECT_FILE))
 
 
 def _fmt_secs(sec: float) -> str:
@@ -112,6 +128,8 @@ class Project:
         self.same: Dict[str, List[Tuple[str, str]]] = {}   # corpo original -> [(arquivo, chave)]
         self._dirty = False
         self._last_save = 0.0
+        self._last_backup = 0.0
+        self._backup_pending = False
 
     # ------------------------------------------------------------ caminhos
     @property
@@ -230,6 +248,93 @@ class Project:
             _atomic_write(os.path.join(self.dir, PROJECT_FILE), data)
             self._dirty = False
             self._last_save = time.time()
+            self._backup_pending = True
+        if self._backup_pending and time.time() - self._last_backup >= BACKUP_EVERY:
+            try:
+                self.backup()
+            except OSError:
+                pass
+
+    # ------------------------------------------------------------ copias
+    def backup_root(self) -> str:
+        d = (self.settings.get("backup_dir") or "").strip()
+        return os.path.join(d, os.path.basename(self.dir.rstrip("\\/"))) if d else ""
+
+    def backup(self, force: bool = False) -> Optional[str]:
+        """Copia o projeto.json para a pasta de copias, com a data no nome. Mantem as ultimas
+        BACKUP_KEEP e um "projeto.json" sempre igual ao mais recente."""
+        root = self.backup_root()
+        if not root:
+            return None
+        with self.lock:
+            if not self._backup_pending and not force:
+                return None
+            if self._dirty:
+                self.save()
+            src = os.path.join(self.dir, PROJECT_FILE)
+            with open(src, "rb") as fh:
+                data = fh.read()
+            os.makedirs(root, exist_ok=True)
+            name = "projeto " + time.strftime("%Y-%m-%d %H-%M-%S") + ".json"
+            _atomic_write(os.path.join(root, name), data)
+            _atomic_write(os.path.join(root, PROJECT_FILE), data)
+            olds = sorted(f for f in os.listdir(root) if f.startswith("projeto 2") and f.endswith(".json"))
+            for f in olds[:-BACKUP_KEEP]:
+                try:
+                    os.remove(os.path.join(root, f))
+                except OSError:
+                    pass
+            self._last_backup = time.time()
+            self._backup_pending = False
+            return os.path.join(root, name)
+
+    def backup_list(self) -> List[str]:
+        root = self.backup_root()
+        if not root or not os.path.isdir(root):
+            return []
+        return sorted((f for f in os.listdir(root) if f.startswith("projeto 2") and f.endswith(".json")),
+                      reverse=True)
+
+    def move_to(self, new_dir: str, progress=None) -> str:
+        """Move a pasta inteira do projeto (traducoes, originais, copias da gravacao)."""
+        new_dir = os.path.abspath(new_dir.strip().strip('"'))
+        old = self.dir
+        if os.path.normcase(new_dir) == os.path.normcase(old):
+            return old
+        if os.path.normcase(new_dir).startswith(os.path.normcase(old.rstrip("\\/") + os.sep)):
+            raise ProjectError("A pasta nova não pode ficar dentro da pasta atual do projeto.")
+        if os.path.exists(new_dir) and os.listdir(new_dir):
+            raise ProjectError("A pasta escolhida já tem arquivos. Escolha uma pasta vazia ou um nome novo.")
+        gr = os.path.normcase(os.path.abspath(self.meta.get("game_root") or ""))
+        if gr and (os.path.normcase(new_dir) == gr or os.path.normcase(new_dir).startswith(gr + os.sep)):
+            raise ProjectError("Não coloque o projeto dentro da pasta do jogo.")
+        with self.lock:
+            self.save(force=True)
+            names = []
+            for base, _dirs, files in os.walk(old):
+                for f in files:
+                    names.append(os.path.join(base, f))
+            tmp = new_dir + ".copiando"
+            if os.path.exists(tmp):
+                shutil.rmtree(tmp)
+            for i, src in enumerate(names):
+                if progress and i % 20 == 0:
+                    progress("Copiando o projeto para a pasta nova", i, len(names))
+                dst = os.path.join(tmp, os.path.relpath(src, old))
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
+                if os.path.getsize(src) != os.path.getsize(dst):
+                    raise ProjectError("A cópia de " + os.path.relpath(src, old) + " ficou diferente; nada foi movido.")
+            if os.path.exists(new_dir):
+                os.rmdir(new_dir)
+            os.makedirs(os.path.dirname(new_dir) or ".", exist_ok=True)
+            os.replace(tmp, new_dir)
+            self.dir = new_dir
+            # so' apaga a pasta antiga depois que a nova esta' completa
+            if progress:
+                progress("Apagando a pasta antiga", len(names), len(names))
+            shutil.rmtree(old, ignore_errors=True)
+        return new_dir
 
     def touch(self):
         self._dirty = True

@@ -258,7 +258,16 @@ table.grid input{width:100%}
       <div class="field" id="mtModelRow"><label for="mtModel">Modelo</label><input type="text" id="mtModel" spellcheck="false"></div>
       <p><button id="btnMtTest" type="button">Salvar e testar</button> <span class="note" id="mtTestMsg"></span></p>
     </div>
-    <div class="field" style="margin-top:18px"><label>Pasta do projeto</label><span class="secname" id="stDir"></span></div>
+    <div class="mtbox">
+      <b>Onde ficam as traduções</b>
+      <p class="note">Tudo o que você traduz fica na pasta do projeto, separada do jogo; o jogo só muda em “Gravar no jogo”. O arquivo que guarda as traduções é o <code>projeto.json</code>.</p>
+      <div class="field"><label>Pasta do projeto</label><span class="secname" id="stDir"></span></div>
+      <div class="field"><label for="mvDir">Mover para</label><input type="text" id="mvDir" spellcheck="false"></div>
+      <p><button id="btnMvPick" type="button">Escolher pasta…</button> <button id="btnMvTool" type="button">Pasta do tradutor</button> <button id="btnMv" type="button">Mover projeto</button> <span class="note" id="mvMsg"></span></p>
+      <div class="field"><label for="bkDir">Cópias de segurança em</label><input type="text" id="bkDir" spellcheck="false" placeholder="ex.: D:\Backup\SOAL ou uma pasta do Google Drive/OneDrive"></div>
+      <p><button id="btnBkPick" type="button">Escolher pasta…</button> <button id="btnBkSave" type="button">Salvar e copiar agora</button> <span class="note" id="bkMsg"></span></p>
+      <p class="note">Com uma pasta escolhida, o programa guarda uma cópia do <code>projeto.json</code> com data e hora a cada 10 minutos de trabalho e ao fechar, e mantém as 20 mais recentes, além de um <code>projeto.json</code> sempre igual à última. Para voltar uma cópia, feche o programa e coloque o arquivo na pasta do projeto com o nome <code>projeto.json</code>.</p>
+    </div>
     <div class="field"><label>Pasta do jogo</label><span class="secname" id="stGame"></span></div>
   </div>
   <div class="df"><button id="btnCloseProject" class="quiet" style="margin-right:auto">Fechar projeto</button><button data-close>Cancelar</button><button class="primary" id="btnSaveSettings">Salvar ajustes</button></div></dialog>
@@ -617,6 +626,33 @@ async function mtFile(missing) {
     if (r.stopped) alert("A tradução automática parou.\n\nMotivo: " + r.stopped + "\n\n" + r.translated + " traduzidas, " + r.copied + " reaproveitadas, " + r.remaining + " faltando. O que foi traduzido está salvo; clique de novo no botão para continuar das que faltam.");
   } catch (err) { $("#busy").classList.add("hidden"); setSaved(err.message, true); }
 }
+function paintBackups(list) {
+  const m = $("#bkMsg"); m.style.color = "";
+  m.textContent = (list && list.length) ? "Última cópia: " + list[0].replace(/^projeto |\.json$/g, "").replace(/ (\d\d)-(\d\d)-\d\d$/, " às $1:$2") + " (" + list.length + (list.length >= 5 ? " ou mais" : "") + " guardadas)" : ($("#bkDir").value ? "Nenhuma cópia ainda." : "");
+}
+async function pickInto(input) {
+  try { const r = await api("/api/pick", {}); if (r.path) input.value = r.path; return !!r.path; } catch (e) { return false; }
+}
+$("#btnMvPick").onclick = async () => { const name = S.project.dir.replace(/[\\/]+$/, "").split(/[\\/]/).pop(); if (await pickInto($("#mvDir"))) $("#mvDir").value = $("#mvDir").value.replace(/[\\/]+$/, "") + "\\" + name; };
+$("#btnMvTool").onclick = () => { $("#mvDir").value = S.project.tool_dir_suggestion; };
+$("#btnMv").onclick = async () => {
+  const d = $("#mvDir").value.trim(), m = $("#mvMsg"); m.style.color = "";
+  if (!d) { m.textContent = "Escolha a pasta nova primeiro."; return; }
+  if (!confirm("Mover o projeto inteiro para\n" + d + "\n\nA pasta atual é apagada depois que a cópia termina. O jogo não é alterado.")) return;
+  await flushAll();
+  try {
+    await api("/api/project/move", { dir:d }); const r = await waitJob();
+    await refreshState(); $("#stDir").textContent = r.dir; $("#mvDir").value = "";
+    m.textContent = "Projeto movido. Ao abrir o jogo de novo, o programa usa a pasta nova.";
+  } catch (e) { $("#busy").classList.add("hidden"); m.style.color = "var(--alert)"; m.textContent = e.message; }
+};
+$("#btnBkPick").onclick = () => pickInto($("#bkDir"));
+$("#btnBkSave").onclick = async () => {
+  const m = $("#bkMsg");
+  await flushAll();
+  try { const r = await api("/api/backup/dir", { dir:$("#bkDir").value.trim() }); S.project.backup_dir = $("#bkDir").value.trim(); S.project.backups = r.backups; paintBackups(r.backups); if (!S.project.backup_dir) m.textContent = "Cópias de segurança desligadas."; }
+  catch (e) { m.style.color = "var(--alert)"; m.textContent = e.message; }
+};
 async function loadMt() { try { S.mt = await api("/api/mt"); } catch (e) { S.mt = null; } }
 
 /* ----------------------------------------------------------------- busca */
@@ -672,6 +708,7 @@ $("#btnSettings").onclick = () => {
   const st = S.project.settings;
   $("#stCols").value = st.cols; $("#stLines").value = st.lines; $("#stAuto").checked = !!st.autofill; $("#stAcc").value = st.accents; $("#stKeep").checked = !!st.keep_states;
   $("#stDir").textContent = S.project.dir; $("#stGame").textContent = S.project.game_root;
+  $("#mvDir").value = ""; $("#mvMsg").textContent = ""; $("#bkDir").value = S.project.backup_dir || ""; paintBackups(S.project.backups);
   const grid = $("#accGrid"); grid.textContent = "";
   for (const sym of S.project.free_slots) {
     const cell = el("div", "gcell"), sel = el("select"); sel.dataset.sym = sym;

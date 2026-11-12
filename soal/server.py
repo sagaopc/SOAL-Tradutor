@@ -22,7 +22,7 @@ from . import janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.5.2"
+VERSION = "0.5.3"
 
 
 class App:
@@ -97,6 +97,16 @@ class App:
         threading.Thread(target=run, daemon=True).start()
 
     def open_game(self, game_root: str):
+        # a pasta escolhida ja' e' de um projeto (por exemplo, um projeto que foi movido)
+        if pj.is_project_dir(game_root):
+            return self.open_project(game_root)
+        # o projeto deste jogo foi movido para outro lugar: abre ele em vez de criar outro
+        want = os.path.normcase(os.path.abspath(game_root).rstrip("\\/"))
+        for r in self.config.get("recent", []):
+            if (os.path.normcase(os.path.abspath(r.get("game") or "").rstrip("\\/")) == want
+                    and pj.is_project_dir(r.get("dir") or "")):
+                return self.open_project(r["dir"])
+
         def fn():
             p = pj.Project.create_or_open(game_root, progress=self._progress)
             self.project = p
@@ -113,6 +123,17 @@ class App:
             self._remember(p)
             return {"opened": p.dir}
         self.start_job("open", fn)
+
+    def move_project(self, new_dir: str):
+        p = self.need()
+        old = p.dir
+
+        def fn():
+            nd = p.move_to(new_dir, progress=self._progress)
+            self.config["recent"] = [r for r in self.config.get("recent", []) if r.get("dir") != old]
+            self._remember(p)
+            return {"dir": nd}
+        self.start_job("move", fn)
 
     def build(self):
         p = self.need()
@@ -159,6 +180,9 @@ class App:
                 "is_recomp": recomp.is_recomp_game(p.meta.get("game_root") or ""),
                 "recomp_root": p.meta.get("recomp_root"), "use_recomp": bool(p.meta.get("use_recomp")),
                 "targets": [{"root": t["root"], "recomp": t["recomp"]} for t in p.targets()],
+                "tool_dir_suggestion": os.path.join(pj.tool_dir(), "projetos", os.path.basename(p.dir.rstrip("\\/"))),
+                "backup_dir": p.settings.get("backup_dir") or "",
+                "backups": p.backup_list()[:5],
             }
         return out
 
@@ -411,9 +435,37 @@ def make_handler(app: App):
                     return self._json({"ok": True})
                 if u.path == "/api/restore":
                     return self._json(app.need().restore_originals())
+                if u.path == "/api/project/move":
+                    app.move_project(data.get("dir") or "")
+                    return self._json({"ok": True})
+                if u.path == "/api/backup/dir":
+                    pr = app.need()
+                    d = (data.get("dir") or "").strip().strip('"')
+                    if d:
+                        d = os.path.abspath(d)
+                        if os.path.normcase(d).startswith(os.path.normcase(pr.dir.rstrip("\\/") + os.sep)) or \
+                                os.path.normcase(d) == os.path.normcase(pr.dir):
+                            raise pj.ProjectError("A pasta de cópias precisa ficar fora da pasta do projeto.")
+                        os.makedirs(d, exist_ok=True)
+                    with pr.lock:
+                        pr.settings["backup_dir"] = d
+                        pr.touch()
+                    pr.save()
+                    made = pr.backup(force=True) if d else None
+                    return self._json({"ok": True, "made": made, "backups": pr.backup_list()[:5]})
+                if u.path == "/api/backup/now":
+                    pr = app.need()
+                    if not pr.backup_root():
+                        raise pj.ProjectError("Escolha primeiro a pasta das cópias de segurança.")
+                    made = pr.backup(force=True)
+                    return self._json({"ok": True, "made": made, "backups": pr.backup_list()[:5]})
                 if u.path == "/api/close":
                     if app.project is not None:
                         app.project.save()
+                        try:
+                            app.project.backup()
+                        except OSError:
+                            pass
                     app.project = None
                     return self._json({"ok": True})
                 return self._send(404, b"not found", "text/plain")
@@ -479,6 +531,7 @@ def serve(port: int = 8787, open_browser: bool = True, reopen_last: bool = True,
         if app.project is not None:
             try:
                 app.project.save()
+                app.project.backup()
             except OSError:
                 pass
         httpd.shutdown()
