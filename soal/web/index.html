@@ -744,12 +744,20 @@ function paintMt() {
   $("#mtModelRow").classList.toggle("hidden", !f.includes("model"));
   const ph = MT_PH[pv] || {};
   $("#mtUrl").placeholder = ph.url || ""; $("#mtModel").placeholder = ph.model || "";
-  $("#mtKey").placeholder = (S.mt && S.mt.provider === pv && S.mt.has_key) ? "chave salva (" + S.mt.key_hint + "); deixe em branco para manter" : (pv === "openai" || pv === "libre" ? "opcional" : "cole a chave aqui");
+  const sv = (S.mt && S.mt.salvos && S.mt.salvos[pv]) || {};
+  $("#mtKey").placeholder = sv.has_key ? "chave salva (" + sv.key_hint + "); deixe em branco para manter" : (pv === "openai" || pv === "libre" ? "opcional" : "cole a chave aqui");
 }
-$("#mtProv").onchange = paintMt;
+$("#mtProv").onchange = () => {
+  const pv = $("#mtProv").value, sv = (S.mt && S.mt.salvos && S.mt.salvos[pv]) || {};
+  $("#mtUrl").value = sv.url || ""; $("#mtModel").value = sv.model || ""; $("#mtKey").value = ""; $("#mtTestMsg").textContent = "";
+  paintMt();
+};
 async function saveMt() {
   const pv = $("#mtProv").value;
-  S.mt = await api("/api/mt/config", { provider: pv, key: $("#mtKey").value, url: $("#mtUrl").value, model: $("#mtModel").value });
+  const f = MT_FIELDS[pv] || [], body = { provider: pv, key: $("#mtKey").value };
+  if (f.includes("url")) body.url = $("#mtUrl").value;
+  if (f.includes("model")) body.model = $("#mtModel").value;
+  S.mt = await api("/api/mt/config", body);
   $("#mtKey").value = ""; paintMt();
 }
 $("#btnMtTest").onclick = async () => {

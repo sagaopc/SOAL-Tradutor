@@ -383,13 +383,45 @@ class Translator:
             raise MTError("resposta inesperada da Anthropic: " + json.dumps(r)[:200])
 
 
+# Campos que cada servico usa (os mesmos que a tela mostra).
+FIELDS = {"deepl": ("key",), "google": ("key",), "libre": ("url", "model", "key"),
+          "openai": ("url", "model", "key"), "anthropic": ("key", "model")}
+
+
+def effective_config(cfg: dict) -> dict:
+    """So' os campos que o servico escolhido usa. Evita, por exemplo, que o endereco do LM Studio
+    salvo antes seja usado pela DeepL depois da troca de servico."""
+    c = dict(cfg or {})
+    c.pop("salvos", None)
+    used = FIELDS.get(c.get("provider") or "", ())
+    for f in ("key", "url", "model"):
+        if f not in used:
+            c.pop(f, None)
+    return c
+
+
+def _hint(k: str) -> str:
+    return ("…" + k[-4:]) if len(k) >= 8 else ("definida" if k else "")
+
+
 def public_config(cfg: dict) -> dict:
     """Configuracao para mostrar na tela, sem expor a chave."""
     c = dict(DEFAULTS)
-    c.update(cfg or {})
+    c.update(effective_config(cfg))
     k = c.get("key") or ""
     c["key"] = ""
     c["has_key"] = bool(k)
-    c["key_hint"] = ("…" + k[-4:]) if len(k) >= 8 else ("definida" if k else "")
+    c["key_hint"] = _hint(k)
     c["providers"] = PROVIDERS
+    # o que ficou guardado de cada servico, para a tela mostrar ao trocar (sem as chaves)
+    salvos = {}
+    for prov, v in ((cfg or {}).get("salvos") or {}).items():
+        if isinstance(v, dict):
+            salvos[prov] = {"url": v.get("url") or "", "model": v.get("model") or "",
+                            "has_key": bool(v.get("key")), "key_hint": _hint(v.get("key") or "")}
+    cur = (cfg or {}).get("provider")
+    if cur:
+        salvos[cur] = {"url": c.get("url") or "", "model": c.get("model") or "",
+                       "has_key": c["has_key"], "key_hint": c["key_hint"]}
+    c["salvos"] = salvos
     return c

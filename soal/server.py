@@ -22,7 +22,7 @@ from . import janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.5.4"
+VERSION = "0.5.5"
 
 
 class App:
@@ -145,7 +145,7 @@ class App:
         return c if isinstance(c, dict) else {}
 
     def translator(self) -> "mt.Translator":
-        return mt.Translator(self.mt_cfg())
+        return mt.Translator(mt.effective_config(self.mt_cfg()))
 
     def mt_file(self, fname: str):
         p = self.need()
@@ -389,11 +389,20 @@ def make_handler(app: App):
                     prov = data.get("provider", "")
                     if prov and prov not in mt.PROVIDERS:
                         raise pj.ProjectError("serviço desconhecido")
-                    if prov != cur.get("provider"):
-                        cur["key"] = ""          # chave de outro servico nao serve
+                    salvos = cur.get("salvos") if isinstance(cur.get("salvos"), dict) else {}
+                    old = cur.get("provider") or ""
+                    if prov != old:
+                        # guarda chave, endereco e modelo do servico anterior e traz os do novo
+                        if old:
+                            salvos[old] = {f: cur.get(f) or "" for f in ("key", "url", "model")}
+                        back = salvos.get(prov) or {}
+                        for f in ("key", "url", "model"):
+                            cur[f] = back.get(f) or ""
+                    cur["salvos"] = salvos
                     cur["provider"] = prov
+                    used = mt.FIELDS.get(prov, ())
                     for k in ("url", "model"):
-                        if k in data:
+                        if k in data and k in used:
                             cur[k] = str(data[k]).strip()
                     if data.get("key"):
                         cur["key"] = str(data["key"]).strip()
