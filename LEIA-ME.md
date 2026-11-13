@@ -75,6 +75,13 @@ até Soltis. Ajuda a traduzir e revisar seguindo a história. A ordem é aproxim
 lugares e personagens de cada arquivo. Arquivos usados em vários momentos (o Delphinus, a Ilha
 Crescente, o mapa-múndi, batalhas de navio opcionais) ficam em grupos próprios no fim.
 
+O botão **Traduzir automático em ordem…**, logo abaixo, usa o serviço de tradução automática
+escolhido em Ajustes para traduzir as falas que faltam, capítulo por capítulo, na ordem da
+história. Você escolhe de qual capítulo até qual; a janela mostra quantas falas e caracteres serão
+enviados (útil para os limites grátis da DeepL e do Google). Dá para parar a qualquer momento, e
+começar de novo continua das que faltam. Tudo o que for traduzido assim fica marcado como
+"tradução automática" para revisão.
+
 ## O que fica onde
 
 Ao abrir a pasta `X`, o programa cria ao lado dela a pasta `X_traducao`:

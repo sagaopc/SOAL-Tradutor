@@ -790,6 +790,105 @@ class Project:
                 "stopped": stopped, "remaining": remaining,
                 "per_line": round(spent / asked, 1) if asked else None}
 
+    # ------------------------------------------- traducao automatica pela historia
+    def story_groups(self) -> List[list]:
+        """Capitulos da historia com os arquivos que existem neste projeto; o que sobra vai em
+        "Outros" no fim."""
+        names = {n.lower(): n for n in self.by_name}
+        used, out = set(), []
+        for title, files in story_order():
+            fs = [names[f.lower()] for f in files if f.lower() in names]
+            used.update(fs)
+            if fs:
+                out.append([title, fs])
+        rest = sorted(n for n in self.by_name if n not in used)
+        if rest:
+            out.append(["Outros", rest])
+        return out
+
+    def _pending(self, fname: str) -> List[dict]:
+        f = self.by_name[fname]
+        return [e for e in f["entries"]
+                if not (e.get("raw") or e.get("dbg") or not e["body"].strip())
+                and not (self.translated(fname, e["k"]) or {}).get("t")]
+
+    def story_info(self) -> List[dict]:
+        """Por capitulo: falas sem traducao e quantos caracteres o servico vai receber (falas
+        iguais contam uma vez so')."""
+        seen = set()
+        for fn in self.by_name:                      # falas iguais ja' traduzidas nao vao ao servico
+            for e in self.by_name[fn]["entries"]:
+                if (self.translated(fn, e["k"]) or {}).get("t"):
+                    seen.add(e["body"])
+        out = []
+        for title, files in self.story_groups():
+            lines = chars = 0
+            for fn in files:
+                for e in self._pending(fn):
+                    lines += 1
+                    if e["body"] not in seen:
+                        seen.add(e["body"])
+                        chars += len(e["body"])
+            out.append({"title": title, "files": len(files), "lines": lines, "chars": chars})
+        return out
+
+    def mt_story(self, tr: "mt.Translator", first: int, last: int, progress=None,
+                 cancelled=lambda: False, clock=None) -> dict:
+        """Traducao automatica de todos os capitulos de first a last (contando de 0), na ordem
+        da historia. Usa a mesma parada automatica do mt_file e para tudo se um arquivo parar."""
+        import time
+        clock = clock or time.monotonic
+        groups = self.story_groups()
+        first = max(0, int(first))
+        last = min(len(groups) - 1, int(last))
+        todo = [(gi, fn) for gi in range(first, last + 1) for fn in groups[gi][1] if self._pending(fn)]
+        total = sum(len(self._pending(fn)) for _gi, fn in todo)
+        base = 0
+        t0 = clock()
+        res = {"translated": 0, "copied": 0, "error_count": 0, "errors": [], "stopped": "",
+               "cancelled": False, "files": 0, "total": total, "last_file": "", "last_chapter": ""}
+        for gi, fn in todo:
+            if cancelled():
+                break
+            title = groups[gi][0]
+            n_here = len(self._pending(fn))
+
+            def prog(_label, cur, _n, gi=gi, fn=fn, title=title):
+                if not progress:
+                    return
+                done = base + cur
+                label = (f"Capítulo {gi + 1} de {len(groups)}: {title} · "
+                         f"{fn.replace('.sct', '')} · fala {done + 1} de {total}")
+                if done:
+                    per = (clock() - t0) / done
+                    label += f" · {_fmt_secs(per)} por fala"
+                    left = per * (total - done)
+                    if left >= 60:
+                        label += f" · faltam cerca de {_fmt_secs(left)}"
+                progress(label, done, total)
+
+            r = self.mt_file(tr, fn, progress=prog, cancelled=cancelled, clock=clock)
+            base += n_here
+            res["files"] += 1
+            res["translated"] += r["translated"]
+            res["copied"] += r["copied"]
+            res["error_count"] += r["error_count"]
+            res["errors"] = (res["errors"] + r["errors"])[-10:]
+            res["last_file"], res["last_chapter"] = fn, title
+            if r.get("stopped"):
+                res["stopped"] = r["stopped"]
+                break
+            if r.get("cancelled"):
+                break
+        res["cancelled"] = bool(cancelled())
+        res["remaining"] = sum(len(self._pending(fn)) for gi in range(first, last + 1)
+                               for fn in groups[gi][1])
+        res["per_line"] = None
+        done_lines = res["translated"] + res["copied"]
+        if done_lines:
+            res["per_line"] = round((clock() - t0) / done_lines, 1)
+        return res
+
     # ------------------------------------------------------------ destinos
     def targets(self) -> List[dict]:
         """Pastas onde a traducao e' gravada: a do jogo aberto e, se marcado, a do recomp."""

@@ -22,7 +22,7 @@ from . import janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.5.6"
+VERSION = "0.5.7"
 
 
 class App:
@@ -152,6 +152,12 @@ class App:
         tr = self.translator()
         self.start_job("mt", lambda: p.mt_file(tr, fname, progress=self._progress,
                                                cancelled=lambda: self.cancel))
+
+    def mt_story(self, first: int, last: int):
+        p = self.need()
+        tr = self.translator()
+        self.start_job("mt", lambda: p.mt_story(tr, first, last, progress=self._progress,
+                                                cancelled=lambda: self.cancel))
 
     def need(self) -> pj.Project:
         if self.project is None:
@@ -420,6 +426,11 @@ def make_handler(app: App):
                     t = p.mt_suggest(app.translator(), data["file"], data["k"])
                     r = p.set_translation(data["file"], data["k"], t, "mt")
                     return self._json({"t": t, "filled": r["filled"]})
+                if u.path == "/api/mt/story_info":
+                    return self._json({"chapters": app.need().story_info()})
+                if u.path == "/api/mt/story":
+                    app.mt_story(int(data.get("from", 0)), int(data.get("to", 0)))
+                    return self._json({"ok": True})
                 if u.path == "/api/mt/file":
                     app.mt_file(data["file"])
                     return self._json({"ok": True})

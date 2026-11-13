@@ -205,6 +205,7 @@ table.grid input{width:100%}
         <option value="started">Já começados</option>
         <option value="done">Completos</option>
       </select>
+      <button id="btnMtStory" type="button" class="quiet">Traduzir automático em ordem…</button>
     </div>
     <div id="fileList"></div>
   </aside>
@@ -275,6 +276,16 @@ table.grid input{width:100%}
     <div class="field"><label>Pasta do jogo</label><span class="secname" id="stGame"></span></div>
   </div>
   <div class="df"><button id="btnCloseProject" class="quiet" style="margin-right:auto">Fechar projeto</button><button data-close>Cancelar</button><button class="primary" id="btnSaveSettings">Salvar ajustes</button></div></dialog>
+
+<dialog id="dlgStory"><div class="dh"><h2>Traduzir automático na ordem da história</h2></div>
+  <div class="db">
+    <p>Traduz as falas que faltam, capítulo por capítulo, na ordem em que aparecem no jogo, usando o serviço escolhido em Ajustes (<b id="stySvc"></b>). Falas iguais já traduzidas são reaproveitadas, e as novas ficam marcadas como “tradução automática” para você revisar.</p>
+    <div class="field"><label for="styFrom">Do capítulo</label><select id="styFrom"></select></div>
+    <div class="field"><label for="styTo">Até o capítulo</label><select id="styTo"></select></div>
+    <p id="styInfo"></p>
+    <p class="note">Pode parar quando quiser: o que já foi traduzido fica salvo, e começar de novo continua das que faltam. Se o serviço parar de responder, a tradução para sozinha e diz o motivo.</p>
+  </div>
+  <div class="df"><button data-close>Cancelar</button><button class="primary" id="btnStyGo">Começar</button></div></dialog>
 
 <dialog id="dlgBuild"><div class="dh"><h2>Gravar no jogo</h2></div>
   <div class="db" id="buildBody"></div>
@@ -644,6 +655,51 @@ async function mtFile(missing) {
     if (r.stopped) alert("A tradução automática parou.\n\nMotivo: " + r.stopped + "\n\n" + r.translated + " traduzidas, " + r.copied + " reaproveitadas, " + r.remaining + " faltando. O que foi traduzido está salvo; clique de novo no botão para continuar das que faltam.");
   } catch (err) { $("#busy").classList.add("hidden"); setSaved(err.message, true); }
 }
+let STY = null;
+$("#btnMtStory").onclick = async () => {
+  if (!S.mt || !S.mt.provider) { alert("Escolha primeiro um serviço de tradução automática em Ajustes."); return; }
+  await flushAll();
+  STY = (await api("/api/mt/story_info", {})).chapters;
+  const a = $("#styFrom"), b = $("#styTo"); a.textContent = ""; b.textContent = "";
+  STY.forEach((c, i) => {
+    const t = (i + 1) + ". " + c.title + (c.lines ? " (faltam " + c.lines + ")" : " (completo)");
+    a.append(new Option(t, i)); b.append(new Option(t, i));
+  });
+  const firstTodo = STY.findIndex(c => c.lines > 0);
+  a.value = String(firstTodo < 0 ? 0 : firstTodo);
+  const story = STY.filter(c => !/^(Delphinus|Ilha Crescente|Lugares opcionais|Mapa-múndi|Batalhas de navio|Outros)/.test(c.title));
+  b.value = String(Math.max(0, story.length - 1));
+  $("#stySvc").textContent = S.mt.providers[S.mt.provider];
+  paintSty(); $("#dlgStory").showModal();
+};
+function paintSty() {
+  const a = +$("#styFrom").value, b = +$("#styTo").value, info = $("#styInfo");
+  if (b < a) { info.textContent = "O capítulo final vem antes do inicial."; info.style.color = "var(--alert)"; $("#btnStyGo").disabled = true; return; }
+  let lines = 0, chars = 0; for (let i = a; i <= b; i++) { lines += STY[i].lines; chars += STY[i].chars; }
+  const fmt = n => n.toLocaleString("pt-BR");
+  let t = lines ? "Faltam " + fmt(lines) + " falas nesses capítulos, cerca de " + fmt(chars) + " caracteres para o serviço." : "Esses capítulos já estão todos traduzidos.";
+  if (lines && (S.mt.provider === "deepl" || S.mt.provider === "google") && chars > 450000)
+    t += " Atenção: passa do limite grátis de 500 mil caracteres por mês; quando acabar, a tradução para e continua no mês seguinte.";
+  if (lines && S.mt.provider === "anthropic") t += " A API do Claude é paga por uso.";
+  info.textContent = t; info.style.color = ""; $("#btnStyGo").disabled = !lines;
+}
+$("#styFrom").onchange = paintSty; $("#styTo").onchange = paintSty;
+$("#btnStyGo").onclick = async () => {
+  const a = +$("#styFrom").value, b = +$("#styTo").value;
+  $("#dlgStory").close();
+  try {
+    await api("/api/mt/story", { from:a, to:b });
+    const r = await waitJob();
+    const cur = S.file; const st = await api("/api/state"); S.project.summary = st.project.summary; renderMeter(); renderFiles();
+    if (cur) { S.file = null; await openFile(cur); }
+    let msg = r.translated + " traduzidas" + (r.copied ? ", " + r.copied + " reaproveitadas" : "") + " em " + r.files + " arquivos" + (r.per_line ? " (" + String(r.per_line).replace(".", ",") + " s por fala)" : "");
+    if (r.stopped) msg = "Parou em " + r.last_file.replace(/\.sct$/i, "") + ": " + r.stopped + " — " + msg + ". Faltam " + r.remaining + ".";
+    else if (r.cancelled) msg += " (parado; faltam " + r.remaining + ")";
+    else if (r.error_count) msg += ", " + r.error_count + " com erro";
+    setSaved(msg, !!(r.stopped || r.error_count));
+    if (r.stopped) alert("A tradução automática parou em " + r.last_chapter + " (" + r.last_file.replace(/\.sct$/i, "") + ").\n\nMotivo: " + r.stopped + "\n\n" + r.translated + " traduzidas, " + r.copied + " reaproveitadas, " + r.remaining + " faltando. O que foi traduzido está salvo; começar de novo continua das que faltam.");
+  } catch (err) { $("#busy").classList.add("hidden"); setSaved(err.message, true); }
+};
 function paintBackups(list) {
   const m = $("#bkMsg"); m.style.color = "";
   m.textContent = (list && list.length) ? "Última cópia: " + list[0].replace(/^projeto |\.json$/g, "").replace(/ (\d\d)-(\d\d)-\d\d$/, " às $1:$2") + " (" + list.length + (list.length >= 5 ? " ou mais" : "") + " guardadas)" : ($("#bkDir").value ? "Nenhuma cópia ainda." : "");
