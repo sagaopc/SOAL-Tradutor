@@ -23,7 +23,7 @@ from . import iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 
 
 class App:
@@ -206,7 +206,7 @@ class App:
         out = {"version": VERSION, "job": dict(self.job), "recent": self.config.get("recent", []),
                "project": None, "recomp": found}
         if p is not None:
-            if found and found["supported"] and not p.meta.get("recomp_root"):
+            if found and found["supported"] and not p.meta.get("recomp_root") and not p.eu:
                 # lembra onde o recomp esta'; gravar nele continua sendo escolha do usuario
                 p.meta["recomp_root"] = found["game_root"]
                 p.touch()
@@ -215,6 +215,7 @@ class App:
                 "has_font": bool(p.orig_font), "settings": p.settings,
                 "free_slots": pj.FREE_SLOTS, "summary": p.summary(),
                 "not_original": p.meta.get("not_original") or [],
+                "region": p.meta.get("region", "us"), "game_id": p.meta.get("game_id", ""),
                 "is_recomp": recomp.is_recomp_game(p.meta.get("game_root") or ""),
                 "recomp_root": p.meta.get("recomp_root"), "use_recomp": bool(p.meta.get("use_recomp")),
                 "targets": [{"root": t["root"], "recomp": t["recomp"]} for t in p.targets()],
@@ -240,7 +241,10 @@ class App:
 
                 def pack(g):
                     return "".join("%x" % v for row in g for v in row)
-                for code in range(0x21, 0x7F):
+                codes = list(range(0x21, 0x7F))
+                if p.eu:
+                    codes += [c for c in range(0x80, 0x100) if fnt.has_code(c)]
+                for code in codes:
                     ch = chr(code)
                     if code == 0x5B:
                         ch = text.LQUOTE
@@ -248,7 +252,14 @@ class App:
                         ch = text.RQUOTE
                     elif code == 0x5C:
                         continue
-                    out["glyphs"][ch] = pack(fnt.glyph(code))
+                    elif code == text.EU_ELLIPSIS:
+                        ch = text.ELLIPSIS
+                    elif 0x80 <= code < 0xA1:
+                        continue
+                    try:
+                        out["glyphs"][ch] = pack(fnt.glyph(code))
+                    except fontmod.FontError:
+                        continue
                 accents = {}
                 for ch in "áàâãäéèêíìîóòôõö" \
                           "úùûüçñÁÀÂÃÉÊÍÓ" \
@@ -484,6 +495,10 @@ def make_handler(app: App):
                         root = found["game_root"]
                     app.need().set_recomp(root or None, bool(data.get("use")))
                     return self._json({"ok": True})
+                if u.path == "/api/import_project":
+                    pr = app.need()
+                    r = pr.import_project(data.get("dir") or "")
+                    return self._json({"ok": True, "result": r, "summary": pr.summary()})
                 if u.path == "/api/iso":
                     app.make_iso(data.get("path") or "", bool(data.get("build", True)))
                     return self._json({"ok": True})

@@ -21,7 +21,7 @@ from . import mt, recomp, sct, text
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
 ORIG_DIR = "originais"
-CACHE_VERSION = 4
+CACHE_VERSION = 5
 
 CATEGORIES = [
     ("cidades", "Cidades e ilhas"),
@@ -109,6 +109,24 @@ def category_of(name: str) -> str:
     return "outros"
 
 
+REGIONS = {"GEAE8P": "us", "GEAP8P": "eu"}
+
+
+def eu_foreign_sections(names: List[str]) -> set:
+    """Na versao europeia cada fala existe em ingles e em mais tres idiomas. As variantes
+    em frances, alemao e espanhol tem o nome da fala inglesa com F, G ou S logo depois do
+    M (MA0090000 -> MFA0090000, MGA0090000, MSA0090000). So' a inglesa e' traduzida; as
+    outras ficam como estao."""
+    have = set(names)
+    out = set()
+    for n in names:
+        if len(n) > 2 and n[0] == "M" and n[1] in "FGS":
+            base = "M" + n[2:]
+            if base in have and all(("M" + x + n[2:]) in have for x in "FGS"):
+                out.add(n)
+    return out
+
+
 def find_game(root: str) -> Tuple[str, Optional[str]]:
     """Acha a pasta 'field' (com os .sct) e o arquivo de fonte dentro de uma extracao do jogo."""
     root = os.path.abspath(root)
@@ -173,6 +191,10 @@ class Project:
     def names(self) -> Dict[str, str]:
         return self.meta["names"]
 
+    @property
+    def eu(self) -> bool:
+        return self.meta.get("region") == "eu"
+
     # ------------------------------------------------------------ abrir / criar
     @staticmethod
     def default_dir(game_root: str) -> str:
@@ -187,10 +209,10 @@ class Project:
                        progress: Optional[Callable[[str, int, int], None]] = None) -> "Project":
         field, fnt = find_game(game_root)
         gid = recomp.game_id(game_root)
-        if gid and gid != recomp.SUPPORTED_ID:
+        if gid and gid not in REGIONS:
             raise ProjectError(
                 f"Esta pasta e' da versao {recomp.REGION_NAMES.get(gid, gid)} ({gid}). "
-                "Por enquanto o programa so' traduz a versao americana (GEAE8P).")
+                "O programa traduz a versao americana (GEAE8P) e a europeia (GEAP8P).")
         pdir = project_dir or cls.default_dir(game_root)
         p = cls(pdir)
         os.makedirs(p.orig_field, exist_ok=True)
@@ -200,6 +222,14 @@ class Project:
         else:
             p.meta = {"version": 1, "created": time.strftime("%Y-%m-%d %H:%M"),
                       "settings": json.loads(json.dumps(DEFAULT_SETTINGS)), "names": {}, "tr": {}}
+        region = REGIONS.get(gid or "", "us")
+        if p.meta.get("region", region) != region:
+            raise ProjectError("Esse projeto e' de outra versao do jogo; escolha outra pasta de projeto.")
+        p.meta["region"] = region
+        p.meta["game_id"] = gid or ""
+        if region == "eu":
+            # a fonte europeia ja' tem as letras acentuadas
+            p.meta["settings"]["accents"] = "native"
         p.meta["game_root"] = os.path.abspath(game_root)
         p.meta["game_field"] = field
         p.meta["game_font"] = fnt
@@ -231,6 +261,8 @@ class Project:
     def check_originals(self) -> List[str]:
         """Arquivos guardados como originais que nao batem com os do disco americano
         (pasta que ja' tinha traducao gravada, ou romhack)."""
+        if self.eu:
+            return self._check_eu_originals()
         try:
             with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data",
                                    "originais_geae8p.json"), encoding="utf-8") as fh:
@@ -247,6 +279,22 @@ class Project:
             bad.append(os.path.basename(of))
         return bad
 
+    def _check_eu_originals(self) -> List[str]:
+        """Versao europeia: ainda nao ha' lista de referencia dos arquivos originais; so'
+        aponta os que nao dao para ler."""
+        bad = []
+        for f in sorted(os.listdir(self.orig_field)):
+            if not f.lower().endswith(".sct"):
+                continue
+            try:
+                s = sct.load(os.path.join(self.orig_field, f))
+            except (sct.SctError, OSError, ValueError):
+                bad.append(f)
+                continue
+            if s.problems:
+                bad.append(f)
+        return bad
+
     def _load_meta(self):
         with open(os.path.join(self.dir, PROJECT_FILE), encoding="utf-8") as fh:
             self.meta = json.load(fh)
@@ -255,6 +303,7 @@ class Project:
         self.meta["settings"] = st
         self.meta.setdefault("names", {})
         self.meta.setdefault("tr", {})
+        self.meta.setdefault("region", "us")
 
     def save(self, force: bool = False):
         with self.lock:
@@ -389,15 +438,22 @@ class Project:
         seen: Dict[str, int] = {}
         prev_cont = False
         prev_index = -2
-        for sec in s.string_sections():
+        eu = self.eu
+        secs = s.string_sections()
+        skip = eu_foreign_sections([x.name for x in secs]) if eu else set()
+        for sec in secs:
+            if sec.name in skip:
+                continue
             n = seen.get(sec.name, 0)
             seen[sec.name] = n + 1
             key = sec.name if n == 0 else f"{sec.name}~{n}"
             raw = s.text_bytes(sec)
             e = {"k": key, "sec": sec.name, "i": sec.index}
             try:
-                gt = text.decode(raw)
+                gt = text.decode(raw, eu)
                 e.update(head=gt.head, br=gt.brackets, body=gt.body, end=gt.end)
+                if gt.style != "jp":
+                    e["bs"] = gt.style
             except text.TextError:
                 e.update(head=None, br=False, body="", end="", raw=raw.hex())
             e["cont"] = bool(prev_cont and prev_index == sec.index - 1)
@@ -410,8 +466,10 @@ class Project:
             raw = s.footer_bytes(fs)
             e = {"k": f"@rodape{k}", "sec": "rodape", "i": -1, "pos": fs.start, "cont": False}
             try:
-                gt = text.decode(raw)
+                gt = text.decode(raw, eu)
                 e.update(head=gt.head, br=gt.brackets, body=gt.body, end=gt.end)
+                if gt.style != "jp":
+                    e["bs"] = gt.style
             except text.TextError:
                 continue
             if text.has_japanese(e["body"]) or entry["cat"] == "outros":
@@ -556,7 +614,7 @@ class Project:
 
     # ------------------------------------------------------------ conferencia
     def charmap_codes(self) -> Dict[str, int]:
-        if self.settings.get("accents") != "font":
+        if self.eu or self.settings.get("accents") != "font":
             return {}
         return {ch: ord(sym) for ch, sym in (self.settings.get("charmap") or {}).items()
                 if len(ch) == 1 and len(sym) == 1}
@@ -571,7 +629,7 @@ class Project:
             if len(lines) > maxl:
                 issues.append(f"{len(lines)} linhas (a caixa mostra {maxl})")
             for ln in lines:
-                w = text.columns(ln, cm)
+                w = text.columns(ln, cm, self.eu)
                 if w > cols:
                     issues.append(f"linha com {w} colunas (limite {cols})")
         return issues
@@ -644,7 +702,7 @@ class Project:
                 e = f["_idx"][key]
                 val = row[ct].replace("\r\n", "\n").replace("\r", "\n").strip("\n")
                 if val and not text.is_menu(e["body"]):
-                    val, ch = text.wrap(val, cols, maxl, cm)
+                    val, ch = text.wrap(val, cols, maxl, cm, self.eu)
                     wrapped += ch
                 st = row[cs].strip() if cs >= 0 and len(row) > cs else None
                 ft = self.tr.setdefault(f["name"], {})
@@ -669,6 +727,75 @@ class Project:
             self.touch()
         self.save()
         return {"applied": applied, "skipped": skipped, "filled": filled, "wrapped": wrapped}
+
+    # ------------------------------------------------------------ outro projeto
+    def import_project(self, other_dir: str) -> dict:
+        """Traz as traducoes de outro projeto (por exemplo, o da versao americana para o da
+        europeia). As falas sao ligadas pelo arquivo e pelo nome da secao, que sao os mesmos
+        nas duas versoes. Quando o texto original em ingles e' diferente entre as versoes, a
+        traducao vem marcada para revisar. Traducoes que este projeto ja' tem nao sao trocadas."""
+        other_dir = os.path.abspath((other_dir or "").strip().strip('"'))
+        if os.path.normcase(other_dir) == os.path.normcase(self.dir):
+            raise ProjectError("Escolha a pasta de outro projeto.")
+        if not is_project_dir(other_dir):
+            raise ProjectError("Essa pasta nao tem um projeto de traducao (falta o projeto.json).")
+        other = Project.open(other_dir)
+        rep = {"same": 0, "changed": 0, "kept": 0, "missing": 0, "names": 0, "files": 0,
+               "missing_list": [], "changed_list": []}
+        cols = int(self.settings.get("cols", 48))
+        maxl = int(self.settings.get("lines", 3))
+        with self.lock:
+            for fname, items in other.tr.items():
+                f = self.by_name.get(fname)
+                if f is None:
+                    low = {n.lower(): n for n in self.by_name}
+                    f = self.by_name.get(low.get(fname.lower(), ""))
+                of = other.by_name.get(fname)
+                if not items:
+                    continue
+                touched = False
+                for key, t in items.items():
+                    if not t.get("t") or t.get("auto"):
+                        continue
+                    e = f["_idx"].get(key) if f else None
+                    if e is None:
+                        rep["missing"] += 1
+                        if len(rep["missing_list"]) < 200:
+                            rep["missing_list"].append(f"{fname}/{key}")
+                        continue
+                    ft = self.tr.setdefault(f["name"], {})
+                    if (ft.get(key) or {}).get("t") and not ft[key].get("auto"):
+                        rep["kept"] += 1
+                        continue
+                    oe = of["_idx"].get(key) if of else None
+                    val = t["t"]
+                    if not text.is_menu(e["body"]):
+                        val, _ = text.wrap(val, cols, maxl, self.charmap_codes(), self.eu)
+                    st = t.get("st", "")
+                    if oe is not None and oe.get("body") == e["body"]:
+                        rep["same"] += 1
+                    else:
+                        rep["changed"] += 1
+                        st = "rev"
+                        if len(rep["changed_list"]) < 200:
+                            rep["changed_list"].append(f"{f['name']}/{key}")
+                    ft[key] = {"t": val, "st": st}
+                    touched = True
+                    for sf, sk in self.same.get(e["body"], ()):
+                        if (sf, sk) == (f["name"], key):
+                            continue
+                        oft = self.tr.setdefault(sf, {})
+                        o = oft.get(sk)
+                        if o is None or not o.get("t") or o.get("auto"):
+                            oft[sk] = {"t": val, "auto": True, "st": (o or {}).get("st", "")}
+                rep["files"] += touched
+            for name, value in other.names.items():
+                if value and not self.names.get(name):
+                    self.names[name] = value
+                    rep["names"] += 1
+            self.touch()
+        self.save(force=True)
+        return rep
 
     # ------------------------------------------------------------ traducao automatica
     def mt_context(self, fname: str, key: str) -> dict:
@@ -695,7 +822,7 @@ class Project:
         out = tr.translate(c["body"], c["who"], c["prev"], c["menu"], self._mt_extra_glossary())
         if not c["menu"]:
             out, _ = text.wrap(out, int(self.settings.get("cols", 48)), int(self.settings.get("lines", 3)),
-                               self.charmap_codes())
+                               self.charmap_codes(), self.eu)
         return out
 
     # Lote: quando parar de insistir num servico que nao responde.
@@ -914,6 +1041,9 @@ class Project:
                 "backup": os.path.join(self.dir, "copias_do_destino", tag)}
 
     def set_recomp(self, root: Optional[str], use: bool):
+        if self.eu and (root or use):
+            raise ProjectError("O recomp so' roda a versao americana; a versao europeia e' gravada "
+                               "so' na pasta do jogo.")
         with self.lock:
             if root:
                 gid = recomp.game_id(root)
@@ -978,7 +1108,7 @@ class Project:
                 issues = self.check_text(t)
                 if issues:
                     report["long"].append({"file": f["name"], "k": e["k"], "issue": issues[0]})
-            raw = enc.encode(text.GameText(new_head, bool(e.get("br")), body, e["end"]))
+            raw = enc.encode(text.GameText(new_head, bool(e.get("br")), body, e["end"], e.get("bs", "jp")))
             if e["i"] >= 0:
                 new_sec[e["i"]] = raw
             else:
@@ -993,7 +1123,7 @@ class Project:
             if not targets:
                 raise ProjectError("Nenhuma pasta de destino.")
             cm = self.charmap_codes()
-            enc = text.Encoder(cm)
+            enc = text.Encoder(cm, eu=self.eu)
             pad = bool(self.settings.get("keep_states"))
             report = {"entries": 0, "long": [], "errors": [], "targets": []}
             states = []

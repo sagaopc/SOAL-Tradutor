@@ -240,6 +240,10 @@ table.grid input{width:100%}
     <p class="note">Ao importar, as linhas que passam do tamanho da caixa são quebradas de novo automaticamente. Nos menus de escolha, mantenha uma opção por linha.</p>
     <p><input type="file" id="csvFile" accept=".csv,text/csv"> <button id="btnImport">Importar CSV</button></p>
     <p class="note" id="sheetMsg"></p>
+    <hr>
+    <p><b>Trazer de outro projeto</b><br>Copia as traduções e os nomes de outro projeto do SOAL Tradutor, como o da versão americana para o da europeia. As falas são ligadas pelo arquivo e pela chave, que são os mesmos nas duas versões. Se o texto em inglês for diferente entre elas, a tradução vem marcada para revisar. O que este projeto já tem traduzido não é trocado.</p>
+    <p><button id="btnImpProj" type="button">Escolher a pasta do outro projeto…</button></p>
+    <p class="note" id="impProjMsg"></p>
   </div>
   <div class="df"><button data-close>Fechar</button></div></dialog>
 
@@ -441,6 +445,7 @@ function bumpFile(name, delta) {
 const strip = ch => { const d = ch.normalize("NFD"); return (d.length > 1 && d.charCodeAt(0) < 127) ? d[0] : null; };
 function charCols(ch) {
   const st = S.project.settings;
+  if (S.project.region === "eu" && (ch.charCodeAt(0) <= 255 || ch === "…")) return 1;
   if (ch.charCodeAt(0) < 127 || ch === "“" || ch === "”" || ch === "‘" || ch === "’" || ch === "–" || ch === "—" || ch === "\u00a0") return 1;
   if (st.accents === "font" && st.charmap[ch]) return 1;
   if (strip(ch)) return 1;
@@ -456,7 +461,7 @@ function issuesOf(t) {
     ls.forEach((l, i) => { const w = lineCols(l); if (w > st.cols) out.push("Linha " + (i + 1) + " tem " + w + " colunas; o limite é " + st.cols + "."); });
   }
   const lost = new Set();
-  for (const ch of t) { if (ch.charCodeAt(0) > 126 && !(st.accents === "font" && st.charmap[ch]) && strip(ch)) lost.add(ch); }
+  if (S.project.region !== "eu") for (const ch of t) { if (ch.charCodeAt(0) > 126 && !(st.accents === "font" && st.charmap[ch]) && strip(ch)) lost.add(ch); }
   if (lost.size && st.accents === "font") out.push("Sem lugar na fonte, vai sem acento: " + [...lost].join(" "));
   return out;
 }
@@ -781,6 +786,21 @@ function renderNames() {
 $("#dlgNames").addEventListener("close", () => { if (S.file && !S.searchMode) renderWork(); });
 
 $("#btnSheet").onclick = async () => { await flushAll(); $("#sheetMsg").textContent = ""; $("#dlgSheet").showModal(); };
+$("#btnImpProj").onclick = async () => {
+  const m = $("#impProjMsg"); m.style.color = "";
+  let dir = "";
+  try { const r = await api("/api/pick", {}); dir = r.path || ""; } catch (e) {}
+  if (!dir) return;
+  await flushAll();
+  m.textContent = "Trazendo as traduções…";
+  try {
+    const r = (await api("/api/import_project", { dir })).result;
+    S.project.summary = (await api("/api/state")).project.summary; renderMeter(); renderFiles();
+    if (S.file) { const cur = S.file; S.file = null; await openFile(cur); }
+    const fmt = n => n.toLocaleString("pt-BR");
+    m.textContent = fmt(r.same + r.changed) + " traduções trazidas em " + fmt(r.files) + " arquivos: " + fmt(r.same) + " com o original igual e " + fmt(r.changed) + " com o original em inglês diferente (marcadas para revisar)." + (r.kept ? " " + fmt(r.kept) + " ficaram como estavam, porque este projeto já tinha tradução." : "") + (r.missing ? " " + fmt(r.missing) + " falas do outro projeto não existem nesta versão." : "") + (r.names ? " " + fmt(r.names) + " nomes de personagens." : "");
+  } catch (e) { m.style.color = "var(--alert)"; m.textContent = e.message; }
+};
 $("#btnImport").onclick = async () => {
   const f = $("#csvFile").files[0]; if (!f) { $("#sheetMsg").textContent = "Escolha o arquivo CSV primeiro."; return; }
   try { const r = await api("/api/import", await f.arrayBuffer(), true); $("#sheetMsg").textContent = r.applied + " falas atualizadas, " + r.filled + " repetições preenchidas" + (r.wrapped ? ", " + r.wrapped + " falas com as linhas quebradas de novo" : "") + (r.skipped ? ", " + r.skipped + " linhas ignoradas (arquivo ou chave desconhecidos)" : "") + "."; const cur = S.file; await refreshState(); if (cur) openFile(cur); }
@@ -792,6 +812,8 @@ const ACCENT_CHOICES = "áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇüñ";
 $("#btnSettings").onclick = () => {
   const st = S.project.settings;
   $("#stCols").value = st.cols; $("#stLines").value = st.lines; $("#stAuto").checked = !!st.autofill; $("#stAcc").value = st.accents; $("#stKeep").checked = !!st.keep_states;
+  const isEU = S.project.region === "eu";
+  $("#stAcc").closest(".field").classList.toggle("hidden", isEU); $("#accBox").classList.toggle("hidden", isEU || st.accents !== "font"); $("#stKeep").closest(".field").classList.toggle("hidden", isEU);
   $("#stDir").textContent = S.project.dir; $("#stGame").textContent = S.project.game_root;
   $("#mvDir").value = ""; $("#mvMsg").textContent = ""; $("#bkDir").value = S.project.backup_dir || ""; paintBackups(S.project.backups);
   const grid = $("#accGrid"); grid.textContent = "";
@@ -867,7 +889,7 @@ $("#btnBuild").onclick = async () => {
   const p = el("p"); p.append("Os arquivos traduzidos vão substituir os destas pastas:"); body.append(p);
   const main = el("p"); main.append(el("span", "secname", S.project.game_root), el("span", "note", S.project.is_recomp ? "  (jogo importado no recomp)" : "  (pasta extraída)")); body.append(main);
   let chk = null;
-  if (!S.project.is_recomp) {
+  if (!S.project.is_recomp && S.project.region !== "eu") {
     const box = el("p");
     if (S.project.recomp_root) {
       const lab = el("label"); chk = el("input"); chk.type = "checkbox"; chk.checked = S.project.use_recomp;

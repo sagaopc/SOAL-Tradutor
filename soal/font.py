@@ -34,14 +34,20 @@ class Font:
     def __init__(self, data: bytes):
         if data[:4] != b"AFNT":
             raise FontError("nao e' um arquivo de fonte AFNT")
-        self.head = bytes(data[:0x20])
-        self.first_code, self.half_cells = struct.unpack_from(">II", data, 0x10)
-        table_end = struct.unpack_from(">I", data, 0x24)[0]
-        if table_end > len(data) or (table_end - 0x20) % 8:
+        # 0x0C: quantos blocos; 0x10: (inicio da tabela, celulas de meia largura) do primeiro.
+        # FontData.US: tabela em 0x20, 48 celulas (0x20-0x7F); FontData.EU: tabela em 0x18,
+        # 112 celulas (0x20-0xFF, com as letras acentuadas do Latin-1).
+        self.table_start, self.half_cells = struct.unpack_from(">II", data, 0x10)
+        self.first_code = 0x20
+        if self.table_start < 0x18 or self.table_start % 8:
+            raise FontError("tabela de glifos invalida")
+        self.head = bytes(data[:self.table_start])
+        table_end = struct.unpack_from(">I", data, self.table_start + 4)[0]
+        if table_end > len(data) or (table_end - self.table_start) % 8:
             raise FontError("tabela de glifos invalida")
         self.cells: List[bytes] = []          # dados originais de cada celula (como no arquivo)
         self.flags: List[int] = []
-        for o in range(0x20, table_end, 8):
+        for o in range(self.table_start, table_end, 8):
             flag, size, pos = struct.unpack_from(">HHI", data, o)
             self.flags.append(flag)
             self.cells.append(bytes(data[pos:pos + size]))
@@ -134,7 +140,7 @@ class Font:
             else:
                 blobs.append((self.flags[i], raw))
         table = bytearray()
-        pos = 0x20 + 8 * len(blobs)
+        pos = self.table_start + 8 * len(blobs)
         body = bytearray()
         for flag, blob in blobs:
             table += struct.pack(">HHI", flag, len(blob), pos)

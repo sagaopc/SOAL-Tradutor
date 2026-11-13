@@ -12,7 +12,7 @@ import sys
 from bisect import bisect_right
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from soal import project, sct, text  # noqa: E402
+from soal import project, recomp, sct, text  # noqa: E402
 
 
 def where(s, pos):
@@ -32,10 +32,14 @@ def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     field, _ = project.find_game(sys.argv[1])
+    gid = recomp.game_id(sys.argv[1]) or ""
+    eu = project.REGIONS.get(gid) == "eu"
+    print(f"Versao: {recomp.REGION_NAMES.get(gid, 'desconhecida')} ({gid or '?'})")
     names = sorted((f for f in os.listdir(field) if f.lower().endswith(".sct")), key=str.lower)
     bad = 0
     texts = links = 0
-    enc = text.Encoder()
+    notes = 0
+    enc = text.Encoder(eu=eu)
     for fi, name in enumerate(names):
         try:
             s = sct.load(os.path.join(field, name))
@@ -47,8 +51,13 @@ def main():
                 raw = s.text_bytes(sec)
                 texts += 1
                 try:
-                    if enc.encode(text.decode(raw)) != raw:
-                        errs.append(f"texto {sec.name} nao volta igual")
+                    if enc.encode(text.decode(raw, eu)) != raw:
+                        # so' importa para falas que forem traduzidas: o resto fica com os bytes
+                        # originais. Na europeia ha' poucos casos assim (espacos especiais).
+                        if eu:
+                            notes += 1
+                        else:
+                            errs.append(f"texto {sec.name} nao volta igual")
                 except text.TextError as exc:
                     errs.append(f"texto {sec.name}: {exc}")
                 new[sec.index] = raw + b"#" * ((n * 7 + fi) % 23)
@@ -72,6 +81,9 @@ def main():
         if (fi + 1) % 25 == 0:
             print(f"  ... {fi + 1} de {len(names)}")
     print(f"\n{len(names)} arquivos, {texts} textos, {links} referencias conferidas.")
+    if notes:
+        print(f"{notes} textos nao voltam byte a byte iguais ao serem lidos e regravados sem mudanca "
+              "(ficam com os bytes originais enquanto nao forem traduzidos).")
     print("Tudo certo." if not bad else f"{bad} arquivos com problema.")
     sys.exit(1 if bad else 0)
 

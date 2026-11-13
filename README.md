@@ -1,6 +1,7 @@
 # SOAL Tradutor
 
-Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versão americana).
+Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versões americana e
+europeia).
 Ela lê os textos direto dos arquivos de script `.sct` do jogo, mostra tudo organizado numa interface
 numa janela própria e grava a tradução de volta, **sem limite de tamanho por fala**. Também monta a
 imagem de disco (`.iso`) já traduzida.
@@ -51,7 +52,11 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
   filtros.
 - Exportar e importar planilha CSV, com uma linha por fala diferente; na importação as repetições
   são preenchidas e as linhas longas são quebradas sozinhas.
-- Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos.
+- Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos. Na
+  europeia, a fonte já tem todas as letras do português.
+- **Versão europeia**: mostra só as falas em inglês (francês, alemão e espanhol ficam intactos) e
+  traz a tradução feita na americana com **Planilha → Trazer de outro projeto**, marcando para
+  revisar as falas cujo inglês muda entre as versões.
 - Tradução automática opcional, fala por fala, por arquivo ou por capítulos na ordem da história,
   com o serviço que você escolher (Ollama/LM Studio no seu PC, Claude, DeepL, Google ou
   LibreTranslate). Mostra o tempo por fala e quanto falta, para sozinha se o serviço deixar de
@@ -67,13 +72,14 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
 
 `tools/verificar.py` reconstrói cada `.sct` em memória e confere se o arquivo continua idêntico e
 se todas as referências do script seguem apontando para o lugar certo depois que os textos mudam de
-tamanho. Com o disco americano: 258 arquivos, 25.347 textos e 78.937 referências conferidas.
+tamanho. Com o disco americano: 258 arquivos, 25.347 textos e 78.937 referências conferidas; com o
+europeu: 258 arquivos, 98.942 textos (quatro idiomas) e 241.488 referências.
 
     python tools/verificar.py "caminho\da\pasta\do\jogo"
 
 ## Estado
 
-Versão 0.6, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
+Versão 0.7, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
 arquivos do jogo, e a geração da ISO foi conferida extraindo a imagem de volta. O jogo traduzido
 ainda precisa ser testado rodando, principalmente as letras acentuadas e a ISO num console.
 Relatos são bem-vindos em [Issues](../../issues).
@@ -81,7 +87,7 @@ Relatos são bem-vindos em [Issues](../../issues).
 As mudanças de cada versão estão nas notas de cada [release](../../releases).
 
 Limites: só os diálogos dos `.sct` (itens, magias e menus ficam no `main.dol` e ainda não são
-editados) e só a versão americana (GEAE8P).
+editados); versões americana (GEAE8P) e europeia (GEAP8P); o recomp só roda a americana.
 
 ## Créditos
 

@@ -1,6 +1,6 @@
 # SOAL Tradutor 0.5
 
-Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versão americana).
+Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versões americana e europeia).
 Lê os textos direto dos arquivos `.sct` do jogo, mostra tudo organizado numa interface no
 navegador e grava a tradução de volta, sem limite de tamanho por fala.
 
@@ -203,9 +203,25 @@ Nesse caso, libere o símbolo em Ajustes ou escolha "Gravar sem acento".
 
 - Só os diálogos dos `.sct` (pasta `field`). Nomes de itens, magias, menus e textos de batalha
   ficam no executável (`main.dol`) e ainda não são editados.
-- Feita e conferida com a versão americana (GEAE8P). A europeia usa outra codificação de texto; o
-  programa recusa as outras regiões.
-- Não remonta a ISO: o Dolphin roda a pasta extraída. Para gerar ISO, use o GCRebuilder.
+- Versões americana (GEAE8P) e europeia (GEAP8P). A japonesa não é aceita.
+- O recomp (port nativo) só roda a versão americana.
+
+## Versão europeia
+
+Escolha a pasta da versão europeia extraída (com `files` e `sys`) como se fosse a americana: o
+programa reconhece o disco (GEAP8P) e cria um projeto separado.
+
+- Cada fala do disco europeu existe em inglês, francês, alemão e espanhol. O programa mostra só a
+  inglesa, e é ela que é trocada pela tradução; os outros idiomas ficam intactos. No jogo, escolha
+  **English** no menu de idioma.
+- As chaves das falas (`MA0150001` e outras) e os nomes dos arquivos são os mesmos da versão
+  americana. Por isso a tradução feita na americana passa para a europeia: abra o projeto europeu,
+  vá em **Planilha → Trazer de outro projeto** e escolha a pasta do projeto americano. As falas cujo
+  texto em inglês é diferente entre as versões chegam marcadas para revisar.
+- A fonte europeia já tem as letras acentuadas (á, ã, ç, õ...), então não há troca de símbolos nem
+  limite de acentos.
+- A planilha CSV da americana também pode ser importada direto no projeto europeu, mas aí as
+  falas com o inglês diferente não ganham a marca de revisar.
 
 ## Conferir os arquivos
 
