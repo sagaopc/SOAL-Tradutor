@@ -21,7 +21,7 @@ from . import mt, recomp, sct, text
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
 ORIG_DIR = "originais"
-CACHE_VERSION = 5
+CACHE_VERSION = 6
 
 CATEGORIES = [
     ("cidades", "Cidades e ilhas"),
@@ -48,7 +48,11 @@ DEFAULT_SETTINGS = {
     "autofill": True,
     "keep_states": False,    # so' no recomp: tamanhos em blocos de 32 KB (experimental)
     "backup_dir": "",        # pasta onde guardar copias de seguranca do projeto
+    "eu_slot": "en",         # versao europeia: idioma do jogo que recebe a traducao (en, es, fr, de)
 }
+
+EU_SLOTS = {"en": "", "es": "S", "fr": "F", "de": "G"}
+EU_SLOT_NAMES = {"en": "inglês", "es": "espanhol", "fr": "francês", "de": "alemão"}
 
 BACKUP_EVERY = 600           # segundos entre copias de seguranca enquanto ha' mudancas
 BACKUP_KEEP = 20             # quantas copias com data manter
@@ -441,6 +445,7 @@ class Project:
         eu = self.eu
         secs = s.string_sections()
         skip = eu_foreign_sections([x.name for x in secs]) if eu else set()
+        by_name = {x.name: x for x in secs} if eu else {}
         for sec in secs:
             if sec.name in skip:
                 continue
@@ -456,6 +461,20 @@ class Project:
                     e["bs"] = gt.style
             except text.TextError:
                 e.update(head=None, br=False, body="", end="", raw=raw.hex())
+            if eu and sec.name[:1] == "M" and n == 0:
+                # as mesmas falas em espanhol, frances e alemao: a traducao pode ir para uma delas
+                alt = {}
+                for lang in "SFG":
+                    o = by_name.get("M" + lang + sec.name[1:])
+                    if o is None or o.name not in skip:
+                        continue
+                    try:
+                        og = text.decode(s.text_bytes(o), True)
+                        alt[lang] = [o.index, og.head, og.brackets, og.style, og.end]
+                    except text.TextError:
+                        continue
+                if alt:
+                    e["alt"] = alt
             e["cont"] = bool(prev_cont and prev_index == sec.index - 1)
             if text.has_japanese(e["body"]) or e["body"].startswith("//"):
                 e["dbg"] = True
@@ -1089,15 +1108,37 @@ class Project:
         return True
 
     # ------------------------------------------------------------ gravar no jogo
+    def eu_slot(self) -> str:
+        """Letra do idioma europeu que recebe a traducao ("" = ingles)."""
+        if not self.eu:
+            return ""
+        return EU_SLOTS.get(self.settings.get("eu_slot") or "en", "")
+
     def _new_texts(self, f: dict, enc: text.Encoder, report: dict):
         tr = self.tr.get(f["name"], {})
         names = self.names
         new_sec: Dict[int, bytes] = {}
         new_foot: Dict[int, bytes] = {}
+        slot = self.eu_slot()
         for e in f["entries"]:
             if e.get("raw"):
                 continue
             t = tr.get(e["k"], {}).get("t", "")
+            if slot and e["i"] >= 0:
+                # versao europeia, traducao no lugar de outro idioma: so' as falas traduzidas
+                # mudam; o resto continua no idioma original desse lugar
+                alt = (e.get("alt") or {}).get(slot)
+                if not t or not alt:
+                    continue
+                idx, ohead, obr, ostyle, oend = alt
+                head = e.get("head")
+                new_head = names.get(head) if (head and e.get("br") and names.get(head)) else ohead
+                report["entries"] += 1
+                issues = self.check_text(t)
+                if issues:
+                    report["long"].append({"file": f["name"], "k": e["k"], "issue": issues[0]})
+                new_sec[idx] = enc.encode(text.GameText(new_head, bool(obr), t, oend, ostyle))
+                continue
             head = e.get("head")
             new_head = names.get(head, head) if (head and e.get("br")) else head
             if not t and new_head == head:

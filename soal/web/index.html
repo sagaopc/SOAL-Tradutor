@@ -252,6 +252,9 @@ table.grid input{width:100%}
     <div class="field"><label for="stCols">Colunas por linha</label><input type="number" id="stCols" min="10" max="80"><small>A linha mais longa do jogo original tem 48 colunas.</small></div>
     <div class="field"><label for="stLines">Linhas por caixa</label><input type="number" id="stLines" min="1" max="8"><small>O original nunca passa de 3.</small></div>
     <div class="field"><label for="stAuto">Falas repetidas</label><label><input type="checkbox" id="stAuto"> Preencher sozinho as falas idênticas ainda não traduzidas</label></div>
+    <div class="field hidden" id="euSlotRow"><label for="stSlot">Idioma que recebe a tradução</label>
+      <select id="stSlot"><option value="en">Inglês</option><option value="es">Espanhol</option><option value="fr">Francês</option><option value="de">Alemão</option></select>
+      <small>Versão europeia: você traduz a partir do inglês, e a tradução é gravada no lugar do idioma escolhido. No jogo, escolha esse idioma no menu. Os outros idiomas ficam como estão; falas ainda não traduzidas aparecem no idioma original desse lugar.</small></div>
     <div class="field"><label for="stAcc">Letras acentuadas</label>
       <select id="stAcc"><option value="font">Desenhar na fonte do jogo</option><option value="strip">Gravar sem acento</option></select>
       <small>A fonte da versão americana não tem acentos. Na primeira opção, cada letra acentuada toma o lugar de um símbolo que os diálogos não usam. Só há 15 lugares; as letras que ficarem de fora são gravadas sem acento.</small></div>
@@ -813,6 +816,7 @@ $("#btnSettings").onclick = () => {
   const st = S.project.settings;
   $("#stCols").value = st.cols; $("#stLines").value = st.lines; $("#stAuto").checked = !!st.autofill; $("#stAcc").value = st.accents; $("#stKeep").checked = !!st.keep_states;
   const isEU = S.project.region === "eu";
+  $("#euSlotRow").classList.toggle("hidden", !isEU); $("#stSlot").value = st.eu_slot || "en";
   $("#stAcc").closest(".field").classList.toggle("hidden", isEU); $("#accBox").classList.toggle("hidden", isEU || st.accents !== "font"); $("#stKeep").closest(".field").classList.toggle("hidden", isEU);
   $("#stDir").textContent = S.project.dir; $("#stGame").textContent = S.project.game_root;
   $("#mvDir").value = ""; $("#mvMsg").textContent = ""; $("#bkDir").value = S.project.backup_dir || ""; paintBackups(S.project.backups);
@@ -876,7 +880,7 @@ $("#stAcc").onchange = () => $("#accBox").classList.toggle("hidden", $("#stAcc")
 $("#btnSaveSettings").onclick = async () => {
   const cm = {}; $("#accGrid").querySelectorAll("select").forEach(s => { if (s.value) cm[s.value] = s.dataset.sym; });
   try { if ($("#mtProv").value !== ((S.mt && S.mt.provider) || "") || $("#mtKey").value || $("#mtUrl").value !== ((S.mt && S.mt.url) || "") || $("#mtModel").value !== ((S.mt && S.mt.model) || "")) await saveMt();
-    const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) renderWork(); }
+    const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm, eu_slot:$("#stSlot").value }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) renderWork(); }
   catch (e) { alertInline(e.message); }
 };
 $("#btnCloseProject").onclick = async () => { await flushAll(); await api("/api/close", {}); S.file = null; S.glyphs = null; S.nameMap = null; $("#dlgSettings").close(); refreshState(); };

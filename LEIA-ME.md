@@ -211,9 +211,12 @@ Nesse caso, libere o símbolo em Ajustes ou escolha "Gravar sem acento".
 Escolha a pasta da versão europeia extraída (com `files` e `sys`) como se fosse a americana: o
 programa reconhece o disco (GEAP8P) e cria um projeto separado.
 
-- Cada fala do disco europeu existe em inglês, francês, alemão e espanhol. O programa mostra só a
-  inglesa, e é ela que é trocada pela tradução; os outros idiomas ficam intactos. No jogo, escolha
-  **English** no menu de idioma.
+- Cada fala do disco europeu existe em inglês, francês, alemão e espanhol. O programa mostra a
+  inglesa para você traduzir. Em **Ajustes → Idioma que recebe a tradução** você escolhe em qual
+  idioma do jogo a tradução é gravada (inglês, espanhol, francês ou alemão); no jogo, escolha esse
+  idioma no menu. Os outros idiomas ficam intactos, e as falas ainda não traduzidas aparecem no
+  idioma original do lugar escolhido. Os nomes de quem fala que você não traduziu em **Nomes**
+  ficam como estão nesse idioma.
 - As chaves das falas (`MA0150001` e outras) e os nomes dos arquivos são os mesmos da versão
   americana. Por isso a tradução feita na americana passa para a europeia: abra o projeto europeu,
   vá em **Planilha → Trazer de outro projeto** e escolha a pasta do projeto americano. As falas cujo
