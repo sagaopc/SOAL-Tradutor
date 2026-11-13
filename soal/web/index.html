@@ -287,6 +287,17 @@ table.grid input{width:100%}
   </div>
   <div class="df"><button data-close>Cancelar</button><button class="primary" id="btnStyGo">Começar</button></div></dialog>
 
+<dialog id="dlgIso"><div class="dh"><h2>Gerar ISO</h2></div>
+  <div class="db">
+    <p>Monta uma imagem de disco de GameCube (<code>.iso</code>) com os arquivos da pasta do jogo, para guardar, jogar no Dolphin ou usar num console. As posições dos arquivos que mudaram de tamanho com a tradução são ajustadas sozinhas. A pasta do jogo não é alterada.</p>
+    <div class="field"><label for="isoPath">Salvar como</label><input type="text" id="isoPath" spellcheck="false"></div>
+    <p><button id="btnIsoPick" type="button">Escolher pasta…</button></p>
+    <p><label><input type="checkbox" id="isoBuild" checked> Gravar a tradução no jogo antes (recomendado)</label></p>
+    <p class="note">A imagem ocupa cerca de 1,4 GB. No fim, o programa confere a imagem gerada antes de entregá-la.</p>
+    <p class="err" id="isoMsg"></p>
+  </div>
+  <div class="df"><button data-close>Cancelar</button><button class="primary" id="btnIsoGo">Gerar ISO</button></div></dialog>
+
 <dialog id="dlgBuild"><div class="dh"><h2>Gravar no jogo</h2></div>
   <div class="db" id="buildBody"></div>
   <div class="df" id="buildFoot"></div></dialog>
@@ -352,7 +363,7 @@ async function waitJob(onTick) {
     $("#busyLabel").textContent = j.label || "Trabalhando";
     $("#busyBar").style.width = (j.total ? Math.round(100 * j.cur / j.total) : 5) + "%";
     $("#busyNote").textContent = j.total ? (j.cur + " de " + j.total) : "";
-    $("#busyCancel").classList.toggle("hidden", j.kind !== "mt");
+    $("#busyCancel").classList.toggle("hidden", j.kind !== "mt" && j.kind !== "iso");
     if (onTick) onTick(j);
     if (!j.running) break;
     await sleep(250);
@@ -879,6 +890,7 @@ $("#btnBuild").onclick = async () => {
   const bRestore = el("button", "quiet", "Devolver os originais"), bCancel = el("button", "", "Cancelar"), bGo = el("button", "primary", "Gravar no jogo");
   bRestore.style.marginRight = "auto";
   bCancel.onclick = () => $("#dlgBuild").close();
+  if (S.project.can_iso) { const bIso = el("button", "", "Gerar ISO…"); bIso.onclick = () => { $("#dlgBuild").close(); openIso(); }; foot.append(bIso); }
   const saveChoice = async () => { if (chk) await api("/api/recomp", { use: chk.checked }); };
   bRestore.onclick = async () => { try { await saveChoice(); const r = await api("/api/restore", {}); body.textContent = ""; body.append(el("p", "", "Arquivos originais devolvidos:")); const ul = el("ul", "report"); for (const t of r.targets) ul.append(el("li", "", t.root + " (" + t.files + " arquivos)")); body.append(ul); foot.textContent = ""; const c = el("button", "", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c); } catch (e) { body.append(el("p", "err", e.message)); } };
   bGo.onclick = async () => {
@@ -910,9 +922,36 @@ function showReport(r, err) {
     for (const e of r.errors) ul.append(el("li", "err", e.file + ": " + e.error));
     body.append(ul, el("p", "note", r.targets.some(t => t.recomp) ? "Abra o recomp e inicie o jogo para conferir. Se o launcher pedir o disco de novo (numa atualização, por exemplo), ele reextrai tudo: é só gravar a tradução outra vez." : "Agora abra o jogo pela pasta extraída no Dolphin para conferir."));
   }
+  if (!err && S.project.can_iso) { const bIso = el("button", "", "Gerar ISO…"); bIso.onclick = () => { $("#dlgBuild").close(); openIso(false); }; foot.append(bIso); }
   const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);
   $("#dlgBuild").showModal();
 }
+async function openIso(buildFirst) {
+  const st = await api("/api/state"); S.project.iso_default = st.project.iso_default; S.project.can_iso = st.project.can_iso;
+  $("#isoPath").value = S.project.iso_default; $("#isoBuild").checked = buildFirst !== false; $("#isoMsg").textContent = "";
+  $("#dlgIso").showModal();
+}
+$("#btnIsoPick").onclick = async () => {
+  const name = ($("#isoPath").value || S.project.iso_default).split(/[\\/]/).pop();
+  try { const r = await api("/api/pick", {}); if (r.path) $("#isoPath").value = r.path.replace(/[\\/]+$/, "") + "\\" + name; } catch (e) {}
+};
+$("#btnIsoGo").onclick = async () => {
+  await flushAll();
+  try { await api("/api/iso", { path:$("#isoPath").value, build:$("#isoBuild").checked }); }
+  catch (e) { $("#isoMsg").textContent = e.message; return; }
+  $("#dlgIso").close();
+  try {
+    const r = await waitJob();
+    const body = $("#buildBody"), foot = $("#buildFoot"); body.textContent = ""; foot.textContent = "";
+    body.append(el("p", "", "Imagem pronta:"), el("p", "secname", r.iso.path));
+    const ul = el("ul", "report");
+    if (r.build) ul.append(el("li", "", "Antes, a tradução foi gravada no jogo: " + pl(r.build.entries, "fala traduzida", "falas traduzidas") + "."));
+    ul.append(el("li", "", pl(r.iso.files, "arquivo", "arquivos") + " no disco, " + pl(r.iso.changed, "com tamanho novo", "com tamanho novo") + "; imagem de " + (r.iso.bytes / 1073741824).toFixed(2).replace(".", ",") + " GB, conferida depois de gravada."));
+    body.append(ul, el("p", "note", "No Dolphin, abra o arquivo .iso (ou adicione a pasta dele à lista de jogos). Para economizar espaço, o próprio Dolphin converte a imagem para RVZ: clique com o botão direito no jogo e escolha “Converter arquivo”."));
+    const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);
+    $("#dlgBuild").showModal();
+  } catch (e) { $("#busy").classList.add("hidden"); setSaved("Não gerou a ISO: " + e.message, true); }
+};
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 10000);
 fetch("/api/ping").catch(() => {});

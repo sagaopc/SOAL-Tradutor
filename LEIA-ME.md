@@ -67,6 +67,20 @@ preciso instalar nada além do Python.
   pasta de usuário.
 - Arquivos exportados (planilha CSV) vão para a pasta Downloads.
 
+## Gerar ISO
+
+Para jogar no Dolphin, não é preciso montar um disco: abra o `sys\main.dol` da pasta do jogo e o
+Dolphin roda a pasta extraída direto. Para ter um arquivo `.iso` (guardar, mandar para alguém ou
+usar num console), clique em **Gravar no jogo → Gerar ISO…**:
+
+- escolha onde salvar (o padrão é ao lado da pasta do jogo, com "(PT-BR)" no nome);
+- deixe marcado **Gravar a tradução no jogo antes**, para a imagem sair com a tradução mais recente;
+- a imagem tem o tamanho de um disco de GameCube (cerca de 1,4 GB). Os arquivos entram na mesma
+  ordem do disco original, alinhados em 32 KB, e as posições dos que mudaram de tamanho são
+  ajustadas na tabela do disco. No fim, o programa confere a imagem antes de entregá-la.
+
+O Dolphin converte a `.iso` para RVZ (bem menor) pelo botão direito no jogo → **Converter arquivo**.
+
 ## Ordem da história
 
 No topo da lista de arquivos, troque **Organizar por tipo** por **Ordem da história** para ver os

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -18,11 +19,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import janela, mt, recomp, text
+from . import iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.5.7"
+VERSION = "0.6.0"
 
 
 class App:
@@ -139,6 +140,37 @@ class App:
         p = self.need()
         self.start_job("build", lambda: p.build(progress=self._progress))
 
+    def iso_default(self, p: pj.Project) -> str:
+        root = os.path.abspath(p.meta.get("game_root") or "").rstrip("\\/")
+        return os.path.join(os.path.dirname(root), os.path.basename(root) + " (PT-BR).iso")
+
+    def make_iso(self, out_path: str, build_first: bool):
+        p = self.need()
+        root = p.meta.get("game_root") or ""
+        if not iso.is_extracted_disc(root):
+            raise pj.ProjectError("A pasta do jogo não está no formato extraído (sys/ e files/); "
+                                  "não dá para gerar a imagem a partir dela.")
+        out_path = (out_path or "").strip().strip('"') or self.iso_default(p)
+        if not out_path.lower().endswith((".iso", ".gcm")):
+            out_path += ".iso"
+        d = os.path.dirname(os.path.abspath(out_path)) or "."
+        os.makedirs(d, exist_ok=True)
+        old = os.path.getsize(out_path) if os.path.isfile(out_path) else 0
+        if shutil.disk_usage(d).free + old < iso.DISC_SIZE + 64 * 1024 * 1024:
+            raise pj.ProjectError("Não há espaço livre suficiente nesse disco: a imagem ocupa cerca de 1,4 GB.")
+
+        def fn():
+            res = {}
+            if build_first:
+                res["build"] = p.build(progress=self._progress)
+            try:
+                res["iso"] = iso.build(root, out_path, progress=self._progress,
+                                       cancelled=lambda: self.cancel)
+            except iso.IsoError as e:
+                raise pj.ProjectError(str(e))
+            return res
+        self.start_job("iso", fn)
+
     # ------------------------------------------------------- traducao automatica
     def mt_cfg(self) -> dict:
         c = self.config.get("mt")
@@ -188,6 +220,8 @@ class App:
                 "targets": [{"root": t["root"], "recomp": t["recomp"]} for t in p.targets()],
                 "tool_dir_suggestion": os.path.join(pj.tool_dir(), "projetos", os.path.basename(p.dir.rstrip("\\/"))),
                 "backup_dir": p.settings.get("backup_dir") or "",
+                "iso_default": self.iso_default(p),
+                "can_iso": iso.is_extracted_disc(p.meta.get("game_root") or ""),
                 "backups": p.backup_list()[:5],
             }
         return out
@@ -449,6 +483,9 @@ def make_handler(app: App):
                         app._save_config()
                         root = found["game_root"]
                     app.need().set_recomp(root or None, bool(data.get("use")))
+                    return self._json({"ok": True})
+                if u.path == "/api/iso":
+                    app.make_iso(data.get("path") or "", bool(data.get("build", True)))
                     return self._json({"ok": True})
                 if u.path == "/api/build":
                     app.build()
