@@ -54,6 +54,22 @@ BACKUP_EVERY = 600           # segundos entre copias de seguranca enquanto ha' m
 BACKUP_KEEP = 20             # quantas copias com data manter
 
 
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_STORY = None
+
+
+def story_order() -> list:
+    """Capitulos da historia com os arquivos de cada um (data/ordem_historia.json)."""
+    global _STORY
+    if _STORY is None:
+        try:
+            with open(os.path.join(DATA_DIR, "ordem_historia.json"), encoding="utf-8") as fh:
+                _STORY = [[c["titulo"], list(c["arquivos"])] for c in json.load(fh)["capitulos"]]
+        except (OSError, ValueError, KeyError):
+            _STORY = []
+    return _STORY
+
+
 def tool_dir() -> str:
     """Pasta do proprio SOAL Tradutor (a do .exe, ou a que tem o run.py)."""
     if getattr(sys, "frozen", False):
@@ -439,7 +455,7 @@ class Project:
             out.append({"name": f["name"], "cat": f["cat"], "total": t, "done": d,
                         "count": len(f["entries"]), "error": f.get("error")})
         return {"files": out, "total": gt, "done": gd,
-                "unique": len(self.same), "categories": CATEGORIES}
+                "unique": len(self.same), "categories": CATEGORIES, "story": story_order()}
 
     def file_entries(self, fname: str) -> dict:
         f = self.by_name.get(fname)

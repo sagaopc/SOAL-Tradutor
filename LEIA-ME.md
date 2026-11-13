@@ -67,6 +67,14 @@ preciso instalar nada além do Python.
   pasta de usuário.
 - Arquivos exportados (planilha CSV) vão para a pasta Downloads.
 
+## Ordem da história
+
+No topo da lista de arquivos, troque **Organizar por tipo** por **Ordem da história** para ver os
+arquivos agrupados em capítulos, na ordem em que aparecem no jogo: do prólogo no navio do Alfonso
+até Soltis. Ajuda a traduzir e revisar seguindo a história. A ordem é aproximada: foi montada pelos
+lugares e personagens de cada arquivo. Arquivos usados em vários momentos (o Delphinus, a Ilha
+Crescente, o mapa-múndi, batalhas de navio opcionais) ficam em grupos próprios no fim.
+
 ## O que fica onde
 
 Ao abrir a pasta `X`, o programa cria ao lado dela a pasta `X_traducao`:

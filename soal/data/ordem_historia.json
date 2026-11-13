@@ -1,0 +1,361 @@
+{
+ "_sobre": "Ordem aproximada dos arquivos de falas na história de Skies of Arcadia Legends (versão americana). Montada pelos lugares e personagens de cada arquivo; arquivos usados em vários momentos ficam em grupos próprios. Arquivos que não aparecem aqui entram em 'Outros' no fim.",
+ "capitulos": [
+  {
+   "titulo": "Prólogo: o navio do Alfonso",
+   "arquivos": [
+    "me201a.sct",
+    "me101c.sct",
+    "me200a.sct",
+    "me101b.sct"
+   ]
+  },
+  {
+   "titulo": "Ilha Pirata e Ilha do Santuário",
+   "arquivos": [
+    "me002d.sct",
+    "me002e.sct",
+    "me002a.sct",
+    "me202a.sct",
+    "me103a.sct",
+    "me103b.sct",
+    "me103c.sct",
+    "me002b.sct"
+   ]
+  },
+  {
+   "titulo": "Resgate do Drachma e Ilha dos Marinheiros",
+   "arquivos": [
+    "me203a.sct",
+    "me205a.sct",
+    "me500a.sct",
+    "me506a.sct",
+    "me004a.sct"
+   ]
+  },
+  {
+   "titulo": "Valua: Cidade Baixa, Cidade Alta e Grande Fortaleza",
+   "arquivos": [
+    "me213a.sct",
+    "me005a.sct",
+    "me005b.sct",
+    "me107a.sct",
+    "me106a.sct",
+    "me106b.sct",
+    "me106c.sct",
+    "me107d.sct",
+    "me107e.sct",
+    "me209a.sct",
+    "me501a.sct"
+   ]
+  },
+  {
+   "titulo": "De volta à Ilha Pirata",
+   "arquivos": [
+    "me002c.sct",
+    "me032a.sct"
+   ]
+  },
+  {
+   "titulo": "Nasr, Maramba e o Templo de Pyrynn",
+   "arquivos": [
+    "me013e.sct",
+    "me008a.sct",
+    "me008b.sct",
+    "me109a.sct",
+    "me109b.sct",
+    "me109c.sct",
+    "me109d.sct",
+    "me109e.sct",
+    "me109g.sct",
+    "me220a.sct",
+    "me507a.sct",
+    "me204a.sct"
+   ]
+  },
+  {
+   "titulo": "Ixa'taka e Rixis",
+   "arquivos": [
+    "me010a.sct",
+    "me010b.sct",
+    "me010c.sct",
+    "me208a.sct",
+    "me111a.sct",
+    "me111b.sct",
+    "me111c.sct",
+    "me111d.sct",
+    "me215a.sct",
+    "me241a.sct",
+    "me509a.sct",
+    "me514a.sct",
+    "me112a.sct",
+    "me112b.sct",
+    "me112c.sct",
+    "me235a.sct"
+   ]
+  },
+  {
+   "titulo": "O Little Jack atacado e a ilha deserta",
+   "arquivos": [
+    "me240a.sct",
+    "me033b.sct",
+    "me017a.sct",
+    "me219a.sct",
+    "me013c.sct",
+    "me222a.sct",
+    "me013b.sct",
+    "me013a.sct"
+   ]
+  },
+  {
+   "titulo": "Ilha de Daccat e a prisão de Valua",
+   "arquivos": [
+    "me115a.sct",
+    "me115b.sct",
+    "me115c.sct",
+    "me230a.sct",
+    "me253a.sct",
+    "me116a.sct",
+    "me116b.sct",
+    "me116c.sct",
+    "me116g.sct",
+    "me116h.sct",
+    "me116d.sct",
+    "me116e.sct",
+    "me116f.sct",
+    "me519a.sct"
+   ]
+  },
+  {
+   "titulo": "Esperanza e o Abismo Sombrio",
+   "arquivos": [
+    "me242a.sct",
+    "me520a.sct",
+    "me521a.sct",
+    "me522a.sct",
+    "me018a.sct",
+    "me018b.sct"
+   ]
+  },
+  {
+   "titulo": "Yafutoma e a Ilha de Tenkou",
+   "arquivos": [
+    "me019a.sct",
+    "me019b.sct",
+    "me019c.sct",
+    "me019d.sct",
+    "me232a.sct",
+    "me020a.sct",
+    "me020b.sct",
+    "me121a.sct",
+    "me121b.sct",
+    "me121c.sct",
+    "me121d.sct",
+    "me121e.sct",
+    "me247a.sct",
+    "me525a.sct",
+    "me530a.sct"
+   ]
+  },
+  {
+   "titulo": "Glacia",
+   "arquivos": [
+    "me123a.sct",
+    "me123b.sct",
+    "me123d.sct",
+    "me123c.sct",
+    "me292a.sct"
+   ]
+  },
+  {
+   "titulo": "Valua e o Cristal Amarelo",
+   "arquivos": [
+    "me243a.sct",
+    "me216a.sct",
+    "me125a.sct",
+    "me125b.sct",
+    "me125c.sct",
+    "me125d.sct",
+    "me244a.sct",
+    "me535a.sct",
+    "me246a.sct"
+   ]
+  },
+  {
+   "titulo": "Sob as nuvens: o navio da Fina",
+   "arquivos": [
+    "me127a.sct",
+    "me127b.sct"
+   ]
+  },
+  {
+   "titulo": "O Grande Santuário de Prata",
+   "arquivos": [
+    "me028a.sct",
+    "me028b.sct",
+    "me028c.sct",
+    "me028d.sct",
+    "me028e.sct",
+    "me028f.sct",
+    "me028g.sct",
+    "me249a.sct"
+   ]
+  },
+  {
+   "titulo": "A Armada de Valua e a Hydra",
+   "arquivos": [
+    "me251a.sct",
+    "me126a.sct",
+    "me126b.sct",
+    "me126c.sct",
+    "me126d.sct",
+    "me126e.sct",
+    "me126f.sct",
+    "me544a.sct",
+    "me545a.sct",
+    "me130a.sct",
+    "me130b.sct",
+    "me130c.sct",
+    "me130d.sct"
+   ]
+  },
+  {
+   "titulo": "Soltis e o final",
+   "arquivos": [
+    "me580a.sct",
+    "me583a.sct",
+    "me131a.sct",
+    "me131c.sct",
+    "me131d.sct",
+    "me131e.sct",
+    "me131f.sct",
+    "me131g.sct",
+    "me131h.sct",
+    "me131i.sct",
+    "me547a.sct"
+   ]
+  },
+  {
+   "titulo": "Delphinus (o navio; muda ao longo do jogo)",
+   "arquivos": [
+    "me034a.sct",
+    "me034b.sct",
+    "me034c.sct",
+    "me034d.sct",
+    "me034e.sct",
+    "me034f.sct",
+    "me034g.sct",
+    "me034h.sct",
+    "me034i.sct",
+    "me035a.sct",
+    "me035ag.sct",
+    "me035b.sct",
+    "me035d.sct",
+    "me035e.sct",
+    "me035f.sct",
+    "me035g.sct",
+    "me035h.sct",
+    "me035i.sct"
+   ]
+  },
+  {
+   "titulo": "Ilha Crescente (a base; muda ao longo do jogo)",
+   "arquivos": [
+    "me017b.sct",
+    "me017c.sct",
+    "me017d.sct",
+    "me017e.sct",
+    "me017f.sct",
+    "me017h.sct",
+    "me017i.sct"
+   ]
+  },
+  {
+   "titulo": "Lugares opcionais e revisitas",
+   "arquivos": [
+    "me013d.sct",
+    "me236a.sct",
+    "me237a.sct",
+    "me238a.sct",
+    "me239a.sct",
+    "me122b.sct"
+   ]
+  },
+  {
+   "titulo": "Mapa-múndi e encontros no céu (o jogo todo)",
+   "arquivos": [
+    "me033a.sct",
+    "me099a.sct",
+    "me099b.sct",
+    "me099c.sct",
+    "me099d.sct",
+    "me099e.sct",
+    "me099f.sct",
+    "me099g.sct",
+    "me099h.sct",
+    "me099i.sct",
+    "me099j.sct",
+    "me099k.sct",
+    "me099l.sct",
+    "me099m.sct",
+    "me099o.sct",
+    "me099p.sct",
+    "me099q.sct",
+    "me122a.sct",
+    "me250a.sct",
+    "me260a.sct"
+   ]
+  },
+  {
+   "titulo": "Batalhas de navio (outras e opcionais)",
+   "arquivos": [
+    "me503a.sct",
+    "me504a.sct",
+    "me513a.sct",
+    "me515a.sct",
+    "me518a.sct",
+    "me523a.sct",
+    "me524a.sct",
+    "me527a.sct",
+    "me531a.sct",
+    "me532a.sct",
+    "me540a.sct",
+    "me541a.sct",
+    "me542a.sct",
+    "me543a.sct",
+    "me550a.sct",
+    "me551a.sct",
+    "me552a.sct",
+    "me553a.sct",
+    "me554a.sct",
+    "me555a.sct",
+    "me556a.sct",
+    "me557a.sct",
+    "me558a.sct",
+    "me559a.sct",
+    "me560a.sct",
+    "me561a.sct",
+    "me562a.sct",
+    "me563a.sct",
+    "me564a.sct",
+    "me565a.sct",
+    "me566a.sct",
+    "me567a.sct",
+    "me568a.sct",
+    "me569a.sct",
+    "me570a.sct",
+    "me571a.sct",
+    "me572a.sct",
+    "me573a.sct",
+    "me574a.sct",
+    "me575a.sct",
+    "me576a.sct",
+    "me577a.sct",
+    "me578a.sct",
+    "me579a.sct",
+    "me581a.sct",
+    "me582a.sct"
+   ]
+  }
+ ]
+}
