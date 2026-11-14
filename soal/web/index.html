@@ -93,6 +93,7 @@ section.work{overflow:auto;min-height:0;background:var(--sky)}
 .empty{padding:60px 22px;color:var(--muted);max-width:520px}
 .page{display:block;width:100%;max-width:420px;border-radius:6px;border:1px solid var(--line);background:#e6e4e6}
 .orig .small{display:block;color:var(--muted);font-size:12px;margin-top:4px;white-space:pre-wrap}
+div.orig pre.orig{padding:0}
 #pvPage{margin-bottom:10px}
 .hit{padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .hit:hover .o{color:var(--sea)}
@@ -287,6 +288,9 @@ table.grid input{width:100%}
     <div class="mtbox"><b>Tradução automática</b>
       <p class="note">Usada pelos botões “Traduzir automático”. Você escolhe o serviço e decide quais falas traduzir; as falas traduzidas assim ficam marcadas para revisar. A chave fica só neste computador, fora do projeto.</p>
       <div class="field"><label for="mtProv">Serviço</label><select id="mtProv"><option value="">Nenhum</option></select></div>
+      <div class="field hidden" id="mtSrcRow"><label for="mtSrc">Traduzir a partir do</label>
+        <select id="mtSrc"><option value="en">Inglês</option><option value="es">Espanhol</option><option value="fr">Francês</option><option value="de">Alemão</option></select>
+        <small>Versão europeia: o texto mandado ao serviço pode ser o espanhol (ou francês, alemão) em vez do inglês. O espanhol já traz o gênero das palavras, o que ajuda serviços como DeepL e Google, que não recebem quem fala. O original em inglês continua aparecendo, e o espanhol aparece embaixo dele. Vale para o que for traduzido depois de salvar os ajustes.</small></div>
       <p class="note" id="mtHelp"></p>
       <div class="field" id="mtKeyRow"><label for="mtKey">Chave da API</label><input type="password" id="mtKey" autocomplete="off" spellcheck="false"></div>
       <div class="field" id="mtUrlRow"><label for="mtUrl">Endereço do servidor</label><input type="text" id="mtUrl" spellcheck="false"></div>
@@ -312,6 +316,7 @@ table.grid input{width:100%}
     <p>Traduz as falas que faltam, capítulo por capítulo, na ordem em que aparecem no jogo, usando o serviço escolhido em Ajustes (<b id="stySvc"></b>). Falas iguais já traduzidas são reaproveitadas, e as novas ficam marcadas como “tradução automática” para você revisar.</p>
     <div class="field"><label for="styFrom">Do capítulo</label><select id="styFrom"></select></div>
     <div class="field"><label for="styTo">Até o capítulo</label><select id="styTo"></select></div>
+    <p><button type="button" id="btnStyAll">Tudo de uma vez</button> <span class="note">do prólogo até o fim, com os lugares opcionais, os itens, menus e sistema e a introdução</span></p>
     <p id="styInfo"></p>
     <p class="note">Pode parar quando quiser: o que já foi traduzido fica salvo, e começar de novo continua das que faltam. Se o serviço parar de responder, a tradução para sozinha e diz o motivo.</p>
   </div>
@@ -594,6 +599,7 @@ function showPreview(e) {
   if (e.dup > 1) add("Repetições", "este mesmo texto aparece " + e.dup + " vezes no jogo");
 }
 
+const SRC_NAME = { es:"Espanhol", fr:"Francês", de:"Alemão" };
 let introTimer = null;
 function introPreview(e) {
   clearTimeout(introTimer);
@@ -669,6 +675,8 @@ function rowFor(e) {
     const img = el("img", "page"); img.alt = "Página " + (e.page + 1) + " da introdução"; img.loading = "lazy";
     img.src = "/api/intro?n=" + e.page; img.onerror = () => { img.remove(); };
     orig.append(img, el("span", "small", e.body));
+  } else if (e.src) {
+    orig = el("div", "orig"); orig.append(el("pre", "orig", e.body), el("span", "small", (SRC_NAME[S.project.settings.mt_source] || "") + ": " + e.src));
   } else orig = el("pre", "orig", e.body);
   const tr = el("div", "tr"), ta = el("textarea"); ta.value = e.t || ""; ta.spellcheck = true; ta.lang = "pt-BR"; ta.rows = 1;
   ta.placeholder = e.dbg ? "Texto de teste dos desenvolvedores; não precisa traduzir" : "Tradução";
@@ -788,6 +796,7 @@ $("#btnMtStory").onclick = async () => {
   $("#stySvc").textContent = S.mt.providers[S.mt.provider];
   paintSty(); $("#dlgStory").showModal();
 };
+$("#btnStyAll").onclick = () => { $("#styFrom").value = "0"; $("#styTo").value = String(STY.length - 1); paintSty(); };
 function paintSty() {
   const a = +$("#styFrom").value, b = +$("#styTo").value, info = $("#styInfo");
   if (b < a) { info.textContent = "O capítulo final vem antes do inicial."; info.style.color = "var(--alert)"; $("#btnStyGo").disabled = true; return; }
@@ -931,6 +940,7 @@ $("#btnSettings").onclick = () => {
   const isEU = S.project.region === "eu";
   $("#euSlotRow").classList.toggle("hidden", !isEU); $("#stSlot").value = st.eu_slot || "en";
   $("#stIntro").value = st.intro_font || "uncial";
+  $("#mtSrcRow").classList.toggle("hidden", !isEU); $("#mtSrc").value = st.mt_source || "en";
   $("#stAcc").closest(".field").classList.toggle("hidden", isEU); $("#accBox").classList.toggle("hidden", isEU || st.accents !== "font"); $("#stKeep").closest(".field").classList.toggle("hidden", isEU);
   $("#stDir").textContent = S.project.dir; $("#stGame").textContent = S.project.game_root;
   $("#mvDir").value = ""; $("#mvMsg").textContent = ""; $("#bkDir").value = S.project.backup_dir || ""; paintBackups(S.project.backups);
@@ -994,7 +1004,7 @@ $("#stAcc").onchange = () => $("#accBox").classList.toggle("hidden", $("#stAcc")
 $("#btnSaveSettings").onclick = async () => {
   const cm = {}; $("#accGrid").querySelectorAll("select").forEach(s => { if (s.value) cm[s.value] = s.dataset.sym; });
   try { if ($("#mtProv").value !== ((S.mt && S.mt.provider) || "") || $("#mtKey").value || $("#mtUrl").value !== ((S.mt && S.mt.url) || "") || $("#mtModel").value !== ((S.mt && S.mt.model) || "")) await saveMt();
-    const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm, eu_slot:$("#stSlot").value, intro_font:$("#stIntro").value }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) renderWork(); }
+    const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm, eu_slot:$("#stSlot").value, intro_font:$("#stIntro").value, mt_source:$("#mtSrc").value }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) { const f = S.file; S.file = null; await openFile(f); } }
   catch (e) { alertInline(e.message); }
 };
 const REGION = { us:"Americana", eu:"Europeia" };

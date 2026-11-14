@@ -175,6 +175,20 @@ def _post(url: str, payload: dict, headers: Dict[str, str], timeout: int) -> dic
 
 
 # ------------------------------------------------------------------ instrucoes
+SOURCE_LANGS = {"en": ("EN", "en", "inglês"), "es": ("ES", "es", "espanhol"),
+                "fr": ("FR", "fr", "francês"), "de": ("DE", "de", "alemão")}
+
+
+def style_for(src: str = "en") -> str:
+    """Instrucoes do modelo; com outro idioma de origem, troca 'do ingles' pelo idioma."""
+    if src == "en" or src not in SOURCE_LANGS:
+        return STYLE
+    name = SOURCE_LANGS[src][2]
+    return (STYLE.replace("do inglês para o", f"do {name} para o")
+            + f"\n9. O texto de origem está em {name} (versão europeia do jogo). Use o gênero e a "
+              "concordância que o original deixa claros.")
+
+
 STYLE = (
     "Você é tradutor de videogames e localiza o RPG Skies of Arcadia Legends do inglês para o "
     "português do Brasil. Regras:\n"
@@ -195,7 +209,8 @@ STYLE = (
 
 
 def build_prompt(text: str, who: Optional[str], prev: Optional[str], menu: bool,
-                 extra_glossary: Optional[List[List[str]]] = None, note: Optional[str] = None) -> str:
+                 extra_glossary: Optional[List[List[str]]] = None, note: Optional[str] = None,
+                 gloss_text: Optional[str] = None) -> str:
     parts = []
     if note:
         parts.append("Onde o texto aparece: " + note)
@@ -204,7 +219,7 @@ def build_prompt(text: str, who: Optional[str], prev: Optional[str], menu: bool,
         parts.append(f"Quem fala: {who}" + (f" ({'homem' if g == 'M' else 'mulher'})" if g in ("M", "F") else ""))
     if prev:
         parts.append(f"Fala anterior (só contexto, não traduza): {prev}")
-    gl = glossary_for(text + " " + (who or ""), extra_glossary)
+    gl = glossary_for((gloss_text or text) + " " + (who or ""), extra_glossary)
     if gl:
         parts.append("Glossário:\n" + "\n".join(f"- {a} = {b}" for a, b in gl))
     if menu:
@@ -242,7 +257,7 @@ class Translator:
 
     def translate(self, text: str, who: Optional[str] = None, prev: Optional[str] = None,
                   menu: bool = False, extra_glossary: Optional[List[List[str]]] = None,
-                  note: Optional[str] = None) -> str:
+                  note: Optional[str] = None, src: str = "en", gloss_text: Optional[str] = None) -> str:
         """text vem com as quebras de linha do jogo como '\\n'. Devolve no mesmo formato."""
         if not text.strip():
             return ""
@@ -252,6 +267,8 @@ class Translator:
         else:
             lines = [" ".join(l.strip() for l in src.split("\n"))]
         self._note = note
+        self._src = src if src in SOURCE_LANGS else "en"
+        self._gloss = gloss_text
         fn = getattr(self, "_" + self.provider)
         if self.provider in ("openai", "anthropic"):
             out = fn("\n".join(lines), who, prev, menu, extra_glossary)
@@ -279,7 +296,7 @@ class Translator:
             ctx.append(f"Previous line: {prev}")
         if getattr(self, "_note", None):
             ctx.append(self._note)
-        payload = {"text": lines, "source_lang": "EN", "target_lang": "PT-BR",
+        payload = {"text": lines, "source_lang": SOURCE_LANGS[getattr(self, "_src", "en")][0], "target_lang": "PT-BR",
                    "formality": "prefer_less", "preserve_formatting": True}
         if ctx:
             payload["context"] = " ".join(ctx)
@@ -296,7 +313,8 @@ class Translator:
             raise MTError("Informe a chave do Google Cloud em Ajustes.")
         base = (self.cfg.get("url") or "").strip().rstrip("/") or "https://translation.googleapis.com"
         url = base + "/language/translate/v2?key=" + urllib.request.quote(key)
-        r = _post(url, {"q": lines, "source": "en", "target": "pt-BR", "format": "text"}, {}, self.timeout)
+        r = _post(url, {"q": lines, "source": SOURCE_LANGS[getattr(self, "_src", "en")][1], "target": "pt-BR",
+                        "format": "text"}, {}, self.timeout)
         try:
             return [t["translatedText"] for t in r["data"]["translations"]]
         except (KeyError, TypeError):
@@ -307,7 +325,7 @@ class Translator:
         base = (self.cfg.get("url") or "").strip().rstrip("/")
         if not base:
             raise MTError("Informe o endereço do servidor LibreTranslate em Ajustes.")
-        payload = {"q": lines, "source": "en", "target": (self.cfg.get("model") or "pt").strip(), "format": "text"}
+        payload = {"q": lines, "source": SOURCE_LANGS[getattr(self, "_src", "en")][1], "target": (self.cfg.get("model") or "pt").strip(), "format": "text"}
         if self.cfg.get("key"):
             payload["api_key"] = self.cfg["key"].strip()
         r = _post(base + "/translate", payload, {}, self.timeout)
@@ -329,8 +347,9 @@ class Translator:
             headers["Authorization"] = "Bearer " + self.cfg["key"].strip()
         local = _is_local(base)
         payload = {"model": model, "temperature": 0.3, "max_tokens": 2048,
-                   "messages": [{"role": "system", "content": STYLE},
-                                {"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None))}]}
+                   "messages": [{"role": "system", "content": style_for(getattr(self, "_src", "en"))},
+                                {"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None),
+                                                                        getattr(self, "_gloss", None))}]}
         if local:
             # Em pedacos: enquanto o modelo gera, a conexao nao fica parada esperando.
             payload["stream"] = True
@@ -379,8 +398,9 @@ class Translator:
             raise MTError("Informe a chave da API da Anthropic em Ajustes.")
         base = (self.cfg.get("url") or "").strip().rstrip("/") or "https://api.anthropic.com"
         model = (self.cfg.get("model") or "").strip() or "claude-sonnet-5-5"
-        payload = {"model": model, "max_tokens": 1024, "system": STYLE,
-                   "messages": [{"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None))}]}
+        payload = {"model": model, "max_tokens": 1024, "system": style_for(getattr(self, "_src", "en")),
+                   "messages": [{"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None),
+                                                                        getattr(self, "_gloss", None))}]}
         r = _post(base + "/v1/messages", payload,
                   {"x-api-key": key, "anthropic-version": "2023-06-01"}, self.timeout)
         try:

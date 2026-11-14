@@ -21,7 +21,7 @@ from . import intro, mt, recomp, sct, sistema, text
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
 ORIG_DIR = "originais"
-CACHE_VERSION = 6
+CACHE_VERSION = 7
 
 CATEGORIES = [
     ("cidades", "Cidades e ilhas"),
@@ -52,6 +52,7 @@ DEFAULT_SETTINGS = {
     "backup_dir": "",        # pasta onde guardar copias de seguranca do projeto
     "eu_slot": "en",         # versao europeia: idioma do jogo que recebe a traducao (en, es, fr, de)
     "intro_font": "uncial",  # fonte da introducao: uncial (como a americana) ou gotica (como a europeia)
+    "mt_source": "en",       # versao europeia: idioma do original mandado a traducao automatica
 }
 
 EU_SLOTS = {"en": "", "es": "S", "fr": "F", "de": "G"}
@@ -342,7 +343,12 @@ class Project:
             if self.eu:
                 raw = self._extra_orig("english.sot")
                 if raw:
-                    out += sistema.eu_files(raw)
+                    others = {}
+                    for lang, name in sistema.EU_SOT_FILES.items():
+                        o = self._extra_orig(name)
+                        if lang != "en" and o:
+                            others[EU_SLOTS[lang]] = o
+                    out += sistema.eu_files(raw, others)
             else:
                 raw = self._extra_orig("main.dol")
                 if raw:
@@ -573,7 +579,7 @@ class Project:
                         continue
                     try:
                         og = text.decode(s.text_bytes(o), True)
-                        alt[lang] = [o.index, og.head, og.brackets, og.style, og.end]
+                        alt[lang] = [o.index, og.head, og.brackets, og.style, og.end, og.body]
                     except text.TextError:
                         continue
                 if alt:
@@ -663,6 +669,10 @@ class Project:
             row["st"] = t.get("st", "")
             row["auto"] = bool(t.get("auto"))
             row["dup"] = len(self.same.get(self._skey(e), ())) if e["body"] else 0
+            st_ = self.source_text(e)
+            if st_:
+                row["src"] = st_
+            row.pop("alt", None)
             rows.append(row)
         out = {"name": fname, "cat": f["cat"], "entries": rows, "error": f.get("error")}
         if f.get("virt"):
@@ -1061,6 +1071,23 @@ class Project:
     def _mt_extra_glossary(self) -> List[List[str]]:
         return [[n, t] for n, t in self.names.items() if t]
 
+    def mt_source(self) -> str:
+        """Idioma do original mandado a traducao automatica (so' na versao europeia)."""
+        src = self.settings.get("mt_source") or "en"
+        return src if self.eu and src in EU_SLOTS else "en"
+
+    def source_text(self, e: dict) -> Optional[str]:
+        """O mesmo texto no idioma escolhido como origem (espanhol, frances ou alemao)."""
+        src = self.mt_source()
+        if src == "en":
+            return None
+        letter = EU_SLOTS[src]
+        alt = (e.get("alt") or {}).get(letter)
+        if alt and len(alt) > 5 and alt[5].strip():
+            return alt[5]
+        t = (e.get("src") or {}).get(letter)
+        return t if t and t.strip() else None
+
     def _mt_note(self, f: dict, e: dict) -> str:
         if f.get("virt") == "intro":
             return ("introdução do jogo, texto poético mostrado em uma página; responda com 2 linhas "
@@ -1078,11 +1105,14 @@ class Project:
 
     def mt_suggest(self, tr: "mt.Translator", fname: str, key: str) -> str:
         c = self.mt_context(fname, key)
+        f = self.by_name[fname]
+        e = f["_idx"][key]
+        src_text = self.source_text(e)
+        src = self.mt_source() if src_text else "en"
         if c.get("note"):
-            f = self.by_name[fname]
-            e = f["_idx"][key]
-            body = c["body"].strip(" ")
-            out = tr.translate(body, None, None, False, self._mt_extra_glossary(), note=c["note"])
+            body = (src_text or c["body"]).strip(" ")
+            out = tr.translate(body, None, None, False, self._mt_extra_glossary(), note=c["note"],
+                               src=src, gloss_text=c["body"])
             if f.get("virt") == "intro":
                 if "\n" not in out:
                     out, _ = text.wrap(out, max(14, len(out) // 2 + 2), 3)
@@ -1096,7 +1126,13 @@ class Project:
                     left = (w - len(out)) // 2
                     out = " " * left + out + " " * (w - len(out) - left)
             return self.fit(e, out)
-        out = tr.translate(c["body"], c["who"], c["prev"], c["menu"], self._mt_extra_glossary())
+        if src_text and c["menu"] and src_text.count("\n") != c["body"].count("\n"):
+            src_text = None          # menu com outra quantidade de opcoes: vai pelo ingles
+        if src_text:
+            out = tr.translate(src_text, c["who"], c["prev"], c["menu"], self._mt_extra_glossary(),
+                               src=src, gloss_text=c["body"])
+        else:
+            out = tr.translate(c["body"], c["who"], c["prev"], c["menu"], self._mt_extra_glossary())
         if not c["menu"]:
             out, _ = text.wrap(out, int(self.settings.get("cols", 48)), int(self.settings.get("lines", 3)),
                                self.charmap_codes(), self.eu)
@@ -1450,7 +1486,7 @@ class Project:
                 alt = (e.get("alt") or {}).get(slot)
                 if not t or not alt:
                     continue
-                idx, ohead, obr, ostyle, oend = alt
+                idx, ohead, obr, ostyle, oend = alt[:5]
                 head = e.get("head")
                 new_head = names.get(head) if (head and e.get("br") and names.get(head)) else ohead
                 report["entries"] += 1

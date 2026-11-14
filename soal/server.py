@@ -23,7 +23,7 @@ from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.8.1"
+VERSION = "0.8.2"
 
 
 class App:
@@ -443,6 +443,8 @@ def make_handler(app: App):
                             st["keep_states"] = bool(data["keep_states"])
                         if data.get("eu_slot") in pj.EU_SLOTS:
                             st["eu_slot"] = data["eu_slot"]
+                        if data.get("mt_source") in pj.EU_SLOTS:
+                            st["mt_source"] = data["mt_source"]
                         if data.get("intro_font") in intro.FONTS:
                             st["intro_font"] = data["intro_font"]
                         if isinstance(data.get("charmap"), dict):

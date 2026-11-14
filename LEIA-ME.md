@@ -259,6 +259,10 @@ da versão na barra de cima (“Americana ▾” ou “Europeia ▾”) para tro
   americana. Por isso a tradução feita na americana passa para a europeia: abra o projeto europeu,
   vá em **Planilha → Trazer de outro projeto** e escolha a pasta do projeto americano. As falas cujo
   texto em inglês é diferente entre as versões chegam marcadas para revisar.
+- Em **Ajustes → Tradução automática → Traduzir a partir do**, a tradução automática pode partir do
+  espanhol (ou do francês, do alemão) em vez do inglês. O espanhol já marca o gênero das palavras,
+  o que ajuda serviços como DeepL e Google, que não recebem quem fala. O texto nesse idioma aparece
+  embaixo do original em inglês.
 - A fonte europeia já tem as letras acentuadas (á, ã, ç, õ...), então não há troca de símbolos nem
   limite de acentos.
 - A planilha CSV da americana também pode ser importada direto no projeto europeu, mas aí as

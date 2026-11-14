@@ -369,8 +369,16 @@ def us_files(dol: bytes) -> List[dict]:
     return _virtual_files(entries)
 
 
-def eu_files(sot_en: bytes) -> List[dict]:
+def eu_files(sot_en: bytes, others: Optional[Dict[str, bytes]] = None) -> List[dict]:
+    """others: {"S": spanish.sot, "F": ..., "G": ...} para guardar o mesmo texto nos outros
+    idiomas (usado como origem da traducao automatica, se o usuario escolher)."""
     s = Sot(sot_en)
+    alts = {}
+    for letter, raw in (others or {}).items():
+        try:
+            alts[letter] = dict(Sot(raw).tables)
+        except SistemaError:
+            continue
     entries = []
     seen = set()
     for tname, strs in s.tables:
@@ -385,9 +393,14 @@ def eu_files(sot_en: bytes) -> List[dict]:
             if k in seen:
                 continue
             seen.add(k)
+            src = {}
+            for letter, tabs in alts.items():
+                ss = tabs.get(tname)
+                if ss is not None and i < len(ss):
+                    src[letter] = sot_decode(ss[i])
             entries.append({"k": k, "sec": table_label(tname), "i": -1, "head": None, "br": False,
                             "body": body, "end": "", "tab": k, "grp": SOT_GROUPS[tname],
-                            "lim": {"bytes": None}})
+                            "lim": {"bytes": None}, "src": src})
     return _virtual_files(entries)
 
 
