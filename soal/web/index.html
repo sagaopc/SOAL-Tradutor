@@ -963,14 +963,15 @@ $("#btnSettings").onclick = () => {
 };
 const MT_HELP = {
   "": "",
-  deepl: "DeepL: crie uma conta em deepl.com/pro-api. O plano Free traduz 500 mil caracteres por mês sem custo (o jogo inteiro tem cerca de 875 mil). Chaves do plano Free terminam em “:fx”. Recebe quem fala e a fala anterior como contexto, mas não usa o glossário.",
+  deepl: "DeepL: crie uma conta da API em deepl.com (plano Developer, que pede cartão para identificação e dá um crédito único de caracteres). Chaves do plano grátis terminam em “:fx”. Recebe quem fala e a fala anterior como contexto, mas não usa o glossário.",
+  gemini: "Google Gemini: crie uma chave grátis em aistudio.google.com (não pede cartão). Recebe as regras de estilo, o glossário, o gênero de quem fala e a fala anterior. O plano grátis limita os pedidos por minuto e por dia: quando o Google pede para esperar, o programa espera e continua sozinho. Modelo: deixe em branco para usar o Flash mais recente, ou use um nome da lista do AI Studio.",
   google: "Google Cloud Translation: precisa de um projeto no Google Cloud com a API ativada e uma chave de API. Traduz só o texto, sem contexto nem glossário.",
   libre: "LibreTranslate: gratuito e de código aberto. Informe o endereço de um servidor (por exemplo, um instalado no seu PC). A qualidade é menor. Em “Modelo”, o idioma de destino (pt ou pb).",
   openai: "Modelos de linguagem no seu PC (Ollama ou LM Studio) ou em serviços compatíveis com OpenAI. Recebem as regras de estilo, o glossário, o gênero de quem fala e a fala anterior. Ollama: endereço http://localhost:11434/v1 e, em Modelo, um nome que aparece em “ollama list”. Chave só se o serviço pedir.",
   anthropic: "Claude, pela API da Anthropic: crie uma chave em console.anthropic.com (uso pago por volume). Recebe as regras de estilo, o glossário, o gênero de quem fala e a fala anterior. Modelo padrão: claude-sonnet-5-5.",
 };
-const MT_FIELDS = { "": [], deepl: ["key"], google: ["key"], libre: ["url", "model", "key"], openai: ["url", "model", "key"], anthropic: ["key", "model"] };
-const MT_PH = { libre: { url: "https://seu-servidor-libretranslate", model: "pt" }, openai: { url: "http://localhost:11434/v1", model: "nome do modelo" }, anthropic: { model: "claude-sonnet-5-5" }, deepl: {}, google: {}, "": {} };
+const MT_FIELDS = { "": [], deepl: ["key"], google: ["key"], libre: ["url", "model", "key"], openai: ["url", "model", "key"], anthropic: ["key", "model"], gemini: ["key", "model"] };
+const MT_PH = { libre: { url: "https://seu-servidor-libretranslate", model: "pt" }, openai: { url: "http://localhost:11434/v1", model: "nome do modelo" }, anthropic: { model: "claude-sonnet-5-5" }, gemini: { model: "gemini-flash-latest" }, deepl: {}, google: {}, "": {} };
 function paintMt() {
   const pv = $("#mtProv").value, f = MT_FIELDS[pv] || [];
   $("#mtHelp").textContent = MT_HELP[pv] || "";

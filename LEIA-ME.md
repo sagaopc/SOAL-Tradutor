@@ -163,8 +163,9 @@ Serviços:
 |---|---|---|
 | Ollama ou LM Studio (no seu PC) | o programa instalado e um modelo baixado; endereço `http://localhost:11434/v1` (Ollama) ou `http://localhost:1234/v1` (LM Studio, com o servidor ligado em **Model Server**) | sim: regras de estilo, glossário, gênero de quem fala e fala anterior |
 | Claude (API da Anthropic) | chave da API (pago por uso) | sim, igual ao anterior |
+| Google Gemini | chave grátis em aistudio.google.com (não pede cartão); o plano grátis limita pedidos por minuto e por dia, e o programa espera sozinho quando o Google pede | sim, igual ao anterior |
 | Outros compatíveis com OpenAI | endereço, modelo e chave do serviço | sim, igual ao anterior |
-| DeepL | chave da API (o plano Free dá 500 mil caracteres por mês) | só quem fala e a fala anterior |
+| DeepL | chave da API (plano Developer: pede cartão para identificação e dá um crédito único de caracteres) | só quem fala e a fala anterior |
 | Google Cloud Translation | chave da API | não |
 | LibreTranslate | endereço de um servidor | não |
 

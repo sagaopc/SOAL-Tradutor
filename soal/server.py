@@ -23,7 +23,7 @@ from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.8.2"
+VERSION = "0.8.3"
 
 
 class App:

@@ -36,7 +36,10 @@ PROVIDERS = {
     "libre": "LibreTranslate",
     "openai": "Ollama / LM Studio / OpenAI (compatível com OpenAI)",
     "anthropic": "Claude (API da Anthropic)",
+    "gemini": "Google Gemini (chave grátis, sem cartão)",
 }
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+GEMINI_MODEL = "gemini-flash-latest"
 
 DEFAULTS = {
     "provider": "",
@@ -146,7 +149,32 @@ def _read_stream(r) -> dict:
     return {"content": "".join(content), "reasoning_chars": reasoning, "finish": finish}
 
 
-def _post(url: str, payload: dict, headers: Dict[str, str], timeout: int) -> dict:
+RETRY_429 = (10, 20, 40)        # espera (s) antes de cada nova tentativa quando o servico pede calma
+
+
+def _post(url: str, payload: dict, headers: Dict[str, str], timeout: int, sleep=None) -> dict:
+    """POST com JSON. Com HTTP 429 (pedidos demais por minuto, comum nos planos gratis) espera
+    e tenta de novo algumas vezes antes de desistir."""
+    import time
+    sleep = sleep or time.sleep
+    for wait in RETRY_429 + (None,):
+        try:
+            return _post_once(url, payload, headers, timeout)
+        except _TooMany as e:
+            if wait is None:
+                raise MTError("limite de uso do serviço atingido (HTTP 429): o serviço continuou recusando "
+                              "depois de esperar. Se for o limite do dia, continue amanhã.", "fatal")
+            sleep(min(max(e.retry_after or wait, 1), 90))
+    raise MTError("limite de uso do serviço atingido (HTTP 429).", "fatal")
+
+
+class _TooMany(Exception):
+    def __init__(self, retry_after: Optional[float]):
+        super().__init__("429")
+        self.retry_after = retry_after
+
+
+def _post_once(url: str, payload: dict, headers: Dict[str, str], timeout: int) -> dict:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="POST",
                                  headers={"Content-Type": "application/json", **headers})
@@ -160,7 +188,11 @@ def _post(url: str, payload: dict, headers: Dict[str, str], timeout: int) -> dic
         if e.code in (401, 403):
             raise MTError(f"o serviço recusou a chave (HTTP {e.code}). Confira a chave em Ajustes.", "fatal")
         if e.code == 429:
-            raise MTError("limite de uso do serviço atingido (HTTP 429). Espere um pouco e tente de novo.", "fatal")
+            try:
+                ra = float(e.headers.get("Retry-After") or 0) or None
+            except (TypeError, ValueError):
+                ra = None
+            raise _TooMany(ra)
         if e.code == 456:
             raise MTError("a cota de caracteres da sua conta acabou (HTTP 456).", "fatal")
         raise MTError(f"o serviço respondeu HTTP {e.code}: {body}")
@@ -270,7 +302,7 @@ class Translator:
         self._src = src if src in SOURCE_LANGS else "en"
         self._gloss = gloss_text
         fn = getattr(self, "_" + self.provider)
-        if self.provider in ("openai", "anthropic"):
+        if self.provider in ("openai", "anthropic", "gemini"):
             out = fn("\n".join(lines), who, prev, menu, extra_glossary)
             if menu:
                 got = [l for l in out.split("\n") if l.strip()]
@@ -337,6 +369,18 @@ class Translator:
         raise MTError("resposta inesperada do LibreTranslate: " + str(r.get("error", r))[:200])
 
     # -- compativel com OpenAI (Ollama, LM Studio, OpenAI...) -----------------
+    def _gemini(self, text: str, who, prev, menu, extra) -> str:
+        """Gemini pelo endereco compativel com OpenAI do Google."""
+        if not (self.cfg.get("key") or "").strip():
+            raise MTError("Informe a chave do Gemini em Ajustes (crie em aistudio.google.com).")
+        saved = dict(self.cfg)
+        self.cfg["url"] = GEMINI_URL
+        self.cfg["model"] = (saved.get("model") or "").strip() or GEMINI_MODEL
+        try:
+            return self._openai(text, who, prev, menu, extra)
+        finally:
+            self.cfg = saved
+
     def _openai(self, text: str, who, prev, menu, extra) -> str:
         base = (self.cfg.get("url") or "").strip().rstrip("/") or "http://localhost:11434/v1"
         model = (self.cfg.get("model") or "").strip()
@@ -411,7 +455,7 @@ class Translator:
 
 # Campos que cada servico usa (os mesmos que a tela mostra).
 FIELDS = {"deepl": ("key",), "google": ("key",), "libre": ("url", "model", "key"),
-          "openai": ("url", "model", "key"), "anthropic": ("key", "model")}
+          "openai": ("url", "model", "key"), "anthropic": ("key", "model"), "gemini": ("key", "model")}
 
 
 def effective_config(cfg: dict) -> dict:
