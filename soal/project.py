@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import aklz
 from . import font as fontmod
-from . import mt, recomp, sct, text
+from . import intro, mt, recomp, sct, sistema, text
 
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
@@ -30,6 +30,8 @@ CATEGORIES = [
     ("navios", "Batalhas de navio"),
     ("mundo", "Mundo aberto"),
     ("outros", "Testes e outros"),
+    ("sistema", "Itens, menus e sistema"),
+    ("intro", "Introdução"),
 ]
 
 # letra acentuada -> simbolo da fonte que sera' redesenhado (nenhum deles aparece nos dialogos)
@@ -49,6 +51,7 @@ DEFAULT_SETTINGS = {
     "keep_states": False,    # so' no recomp: tamanhos em blocos de 32 KB (experimental)
     "backup_dir": "",        # pasta onde guardar copias de seguranca do projeto
     "eu_slot": "en",         # versao europeia: idioma do jogo que recebe a traducao (en, es, fr, de)
+    "intro_font": "uncial",  # fonte da introducao: uncial (como a americana) ou gotica (como a europeia)
 }
 
 EU_SLOTS = {"en": "", "es": "S", "fr": "F", "de": "G"}
@@ -175,6 +178,11 @@ class Project:
         return os.path.join(self.dir, ORIG_DIR, "field")
 
     @property
+    def orig_extra(self) -> str:
+        """Originais do que nao e' dialogo: main.dol ou .sot (sistema) e a introducao."""
+        return os.path.join(self.dir, ORIG_DIR, "extras")
+
+    @property
     def orig_font(self) -> Optional[str]:
         d = os.path.join(self.dir, ORIG_DIR)
         if os.path.isdir(d):
@@ -247,6 +255,7 @@ class Project:
                 progress("Guardando copias dos originais", i, len(names))
         if fnt and not p.orig_font:
             shutil.copy2(fnt, os.path.join(pdir, ORIG_DIR, os.path.basename(fnt)))
+        p._ensure_extras()
         p.meta["not_original"] = p.check_originals()
         p._dirty = True
         p.save(force=True)
@@ -259,8 +268,102 @@ class Project:
         if not os.path.exists(os.path.join(p.dir, PROJECT_FILE)):
             raise ProjectError("Essa pasta nao tem um projeto de traducao.")
         p._load_meta()
+        if p._ensure_extras():
+            p.touch()
+            p.save()
         p.extract(progress)
         return p
+
+    # ------------------------------------------------------------ itens, menus e introducao
+    @staticmethod
+    def _game_dirs(root: str) -> Tuple[str, str]:
+        """Pastas files/ e sys/ de uma extracao do jogo."""
+        field, _fnt = find_game(root)
+        files = os.path.dirname(field)
+        return files, os.path.join(os.path.dirname(files), "sys")
+
+    def extra_sources(self) -> List[Tuple[str, str]]:
+        """(nome guardado em originais/extras, caminho relativo a pasta do jogo)."""
+        if self.eu:
+            out = [(n, "files/" + n) for n in sistema.EU_SOT_FILES.values()]
+            out += [(n, "files/field/" + n) for n in intro.EU_FILES.values()]
+        else:
+            out = [("main.dol", "sys/main.dol"), (intro.US_FILE, "files/field/" + intro.US_FILE)]
+        return out
+
+    def _extra_path(self, root: str, rel: str) -> str:
+        files, sysd = self._game_dirs(root)
+        top, _, rest = rel.partition("/")
+        return os.path.join(sysd if top == "sys" else files, *rest.split("/"))
+
+    def _ensure_extras(self) -> bool:
+        """Guarda, uma unica vez, os originais do main.dol (ou dos .sot) e da introducao.
+        Arquivo que ja' nao e' o original (sha1 conhecido diferente) nao e' guardado."""
+        root = self.meta.get("game_root")
+        if not root or not os.path.isdir(root):
+            return False
+        os.makedirs(self.orig_extra, exist_ok=True)
+        notes = []
+        changed = False
+        for name, rel in self.extra_sources():
+            dst = os.path.join(self.orig_extra, name)
+            if os.path.exists(dst):
+                continue
+            try:
+                src = self._extra_path(root, rel)
+            except ProjectError:
+                continue
+            if not os.path.exists(src):
+                continue
+            want = sistema.KNOWN_SHA1.get(name) or intro.KNOWN_SHA1.get(name)
+            if want and self._sha1_file(src) != want:
+                notes.append(name)
+                continue
+            shutil.copy2(src, dst)
+            changed = True
+            if name in self.meta.get("extras_not_original", []):
+                self.meta["extras_not_original"] = [n for n in self.meta["extras_not_original"] if n != name]
+        if notes:
+            self.meta["extras_not_original"] = sorted(set(self.meta.get("extras_not_original", []) + notes))
+            changed = True
+        return changed
+
+    def _extra_orig(self, name: str) -> Optional[bytes]:
+        try:
+            with open(os.path.join(self.orig_extra, name), "rb") as fh:
+                return fh.read()
+        except OSError:
+            return None
+
+    def _virtual_files(self) -> List[dict]:
+        out: List[dict] = []
+        notes = []
+        try:
+            if self.eu:
+                raw = self._extra_orig("english.sot")
+                if raw:
+                    out += sistema.eu_files(raw)
+            else:
+                raw = self._extra_orig("main.dol")
+                if raw:
+                    out += sistema.us_files(raw)
+                    self._sys_orig_len = {x["k"]: raw.find(b"\0", x["off"]) - x["off"]
+                                          for x in sistema.us_map()["entries"]}
+        except (sistema.SistemaError, OSError, ValueError) as exc:
+            notes.append(f"itens e menus: {exc}")
+        name = intro.file_for(self.eu, "en")
+        raw = self._extra_orig(name)
+        if raw:
+            try:
+                intro.Mld(raw)
+                out += intro.entries()
+            except (intro.IntroError, ValueError) as exc:
+                notes.append(f"introdução: {exc}")
+        for f in out:
+            for e in f["entries"]:
+                e["virt"] = f["virt"]
+        self.extra_errors = notes
+        return out
 
     def check_originals(self) -> List[str]:
         """Arquivos guardados como originais que nao batem com os do disco americano
@@ -417,7 +520,7 @@ class Project:
                 with open(cache_path, encoding="utf-8") as fh:
                     c = json.load(fh)
                 if c.get("version") == CACHE_VERSION and [f["name"] for f in c["files"]] == names:
-                    self._set_files(c["files"])
+                    self._set_files(c["files"] + self._virtual_files())
                     return
             except (ValueError, KeyError):
                 pass
@@ -428,7 +531,7 @@ class Project:
             files.append(self._extract_file(f))
         _atomic_write(cache_path, json.dumps({"version": CACHE_VERSION, "files": files},
                                              ensure_ascii=False).encode("utf-8"))
-        self._set_files(files)
+        self._set_files(files + self._virtual_files())
 
     def _extract_file(self, fname: str) -> dict:
         entry = {"name": fname, "cat": category_of(fname), "entries": [], "error": None}
@@ -496,6 +599,13 @@ class Project:
             entry["entries"].append(e)
         return entry
 
+    @staticmethod
+    def _skey(e: dict) -> str:
+        """Chave das falas iguais: os textos de menus e da introducao so' se repetem entre si,
+        nunca com os dialogos (os limites de tamanho sao outros)."""
+        v = e.get("virt")
+        return ("\0" + v + "\0" + e["body"]) if v else e["body"]
+
     def _set_files(self, files: List[dict]):
         self.files = files
         self.by_name = {f["name"]: f for f in files}
@@ -504,7 +614,7 @@ class Project:
             f["_idx"] = {e["k"]: e for e in f["entries"]}
             for e in f["entries"]:
                 if e["body"] and not e.get("raw"):
-                    self.same.setdefault(e["body"], []).append((f["name"], e["k"]))
+                    self.same.setdefault(self._skey(e), []).append((f["name"], e["k"]))
 
     # ------------------------------------------------------------ consulta
     def translated(self, fname: str, key: str) -> Optional[dict]:
@@ -529,10 +639,16 @@ class Project:
             t, d = self.file_stats(f)
             gt += t
             gd += d
-            out.append({"name": f["name"], "cat": f["cat"], "total": t, "done": d,
-                        "count": len(f["entries"]), "error": f.get("error")})
+            item = {"name": f["name"], "cat": f["cat"], "total": t, "done": d,
+                    "count": len(f["entries"]), "error": f.get("error")}
+            if f.get("virt"):
+                item["label"] = f.get("label")
+                item["virt"] = f["virt"]
+            out.append(item)
         return {"files": out, "total": gt, "done": gd,
-                "unique": len(self.same), "categories": CATEGORIES, "story": story_order()}
+                "unique": len(self.same), "categories": CATEGORIES, "story": story_order(),
+                "extra_errors": getattr(self, "extra_errors", []),
+                "extras_not_original": self.meta.get("extras_not_original", [])}
 
     def file_entries(self, fname: str) -> dict:
         f = self.by_name.get(fname)
@@ -546,9 +662,46 @@ class Project:
             row["t"] = t.get("t", "")
             row["st"] = t.get("st", "")
             row["auto"] = bool(t.get("auto"))
-            row["dup"] = len(self.same.get(e["body"], ())) if e["body"] else 0
+            row["dup"] = len(self.same.get(self._skey(e), ())) if e["body"] else 0
             rows.append(row)
-        return {"name": fname, "cat": f["cat"], "entries": rows, "error": f.get("error")}
+        out = {"name": fname, "cat": f["cat"], "entries": rows, "error": f.get("error")}
+        if f.get("virt"):
+            out["label"] = f.get("label")
+            out["virt"] = f["virt"]
+            if f["virt"] == "sistema" and not self.eu:
+                out["pools"] = self.pool_usage(fname)
+        return out
+
+    def pool_usage(self, fname: str) -> Dict[str, dict]:
+        """Blocos de textos do main.dol usados por este arquivo: espaco total e quanto os
+        textos de outros arquivos ja' ocupam (cada texto conta em blocos de 4 bytes)."""
+        m = sistema.us_map()
+        here = {e["k"] for e in self.by_name[fname]["entries"]}
+        loc = {}
+        for f in self.files:
+            if f.get("virt") == "sistema":
+                for e in f["entries"]:
+                    loc[e["k"]] = (f["name"], e)
+        out = {}
+        for i, p in enumerate(m["pools"]):
+            if not here.intersection(p["keys"]):
+                continue
+            other = 0
+            for k in p["keys"]:
+                if k in here:
+                    continue
+                fn, e = loc.get(k, (None, None))
+                if e is None:
+                    continue          # texto do bloco que nao aparece na lista: fica como esta'
+                t = (self.translated(fn, k) or {}).get("t") or e["body"]
+                other += (self.sys_bytes(t) + 1 + 3) & ~3
+            hidden = 0
+            for k in p["keys"]:
+                if k not in loc:
+                    hidden += (getattr(self, "_sys_orig_len", {}).get(k, 3) + 1 + 3) & ~3
+            out[str(i)] = {"cap": p["end"] - p["start"], "other": other + hidden,
+                           "keys": [k for k in p["keys"] if k in here]}
+        return out
 
     # ------------------------------------------------------------ edicao
     def set_translation(self, fname: str, key: str, value: str, status: Optional[str] = None) -> dict:
@@ -571,7 +724,7 @@ class Project:
                 ft[key] = new
             filled = []
             if value and self.settings.get("autofill", True):
-                for of, ok in self.same.get(e["body"], ()):
+                for of, ok in self.same.get(self._skey(e), ()):
                     if of == fname and ok == key:
                         continue
                     oft = self.tr.setdefault(of, {})
@@ -638,7 +791,45 @@ class Project:
         return {ch: ord(sym) for ch, sym in (self.settings.get("charmap") or {}).items()
                 if len(ch) == 1 and len(sym) == 1}
 
-    def check_text(self, body: str) -> List[str]:
+    def sys_bytes(self, t: str) -> int:
+        """Tamanho em bytes de um texto de menu da versao americana."""
+        return len(sistema.UsEncoder(self.charmap_codes()).encode(t))
+
+    def limit_text(self, e: dict) -> str:
+        lim = e.get("lim") or {}
+        if e.get("virt") == "intro":
+            return "introdução: 2 linhas curtas, desenhadas como imagem"
+        parts = []
+        if lim.get("bytes"):
+            parts.append(f"no máximo {lim['bytes']} letras")
+        if lim.get("lines", 1) > 1:
+            parts.append(f"até {lim['lines']} linhas de {lim.get('cols')} colunas")
+        elif lim.get("cols"):
+            parts.append(f"uma linha (o original mais longo desta lista tem {lim['cols']} colunas)")
+        if e.get("pool") is not None:
+            parts.append("divide o espaço com os outros textos do mesmo bloco")
+        return "menu: " + "; ".join(parts) if parts else "menu"
+
+    def fit(self, e: dict, val: str) -> str:
+        """Quebra as linhas para caber: dialogos na caixa de dialogo, menus no limite deles."""
+        if not val:
+            return val
+        if e.get("virt") == "intro":
+            return val
+        if e.get("virt"):
+            lim = e.get("lim") or {}
+            if lim.get("lines", 1) > 1 and lim.get("cols"):
+                val, _ = text.wrap(val, int(lim["cols"]), int(lim["lines"]), self.charmap_codes(), self.eu)
+            return val
+        if text.is_menu(e["body"]):
+            return val
+        val, _ = text.wrap(val, int(self.settings.get("cols", 48)), int(self.settings.get("lines", 3)),
+                           self.charmap_codes(), self.eu)
+        return val
+
+    def check_text(self, body: str, e: Optional[dict] = None) -> List[str]:
+        if e is not None and e.get("virt"):
+            return self._check_virtual(body, e)
         cm = self.charmap_codes()
         cols = int(self.settings.get("cols", 48))
         maxl = int(self.settings.get("lines", 3))
@@ -651,6 +842,30 @@ class Project:
                 w = text.columns(ln, cm, self.eu)
                 if w > cols:
                     issues.append(f"linha com {w} colunas (limite {cols})")
+        return issues
+
+    def _check_virtual(self, body: str, e: dict) -> List[str]:
+        lim = e.get("lim") or {}
+        issues = []
+        if e.get("virt") == "intro":
+            n = len([l for l in body.split("\n") if l.strip()])
+            if n > 3:
+                issues.append(f"{n} linhas; a página comporta 2 ou 3")
+            return issues
+        lines = body.split("\n")
+        if len(lines) > lim.get("lines", 1):
+            issues.append(f"{len(lines)} linhas (o original usa até {lim.get('lines', 1)})")
+        cols = lim.get("cols")
+        if cols and lim.get("lines", 1) > 1:
+            for ln in lines:
+                if len(ln) > cols:
+                    issues.append(f"linha com {len(ln)} colunas (limite {cols})")
+        if lim.get("bytes") and not self.eu:
+            n = self.sys_bytes(body)
+            if n > lim["bytes"]:
+                issues.append(f"{n} letras; cabem {lim['bytes']}")
+        if sistema.placeholders(body) != sistema.placeholders(e["body"]):
+            issues.append("mantenha os códigos do original (" + " ".join(sistema.placeholders(e["body"])) + ")")
         return issues
 
     # ------------------------------------------------------------ planilha
@@ -684,12 +899,16 @@ class Project:
                     continue
                 body = e["body"]
                 who = e.get("head") if e.get("br") else ""
-                if body not in seen:
-                    seen.add(body)
+                sk = self._skey(e)
+                if sk not in seen:
+                    seen.add(sk)
                     t = tr.get(e["k"], {})
-                    kind = ("menu: mantenha uma opcao por linha" if text.is_menu(body)
-                            else f"fala: ate {maxl} linhas de {cols} colunas")
-                    w.writerow([f["name"], e["k"], who or "", kind, len(self.same.get(body, ())) or 1,
+                    if e.get("virt"):
+                        kind = self.limit_text(e)
+                    else:
+                        kind = ("menu: mantenha uma opcao por linha" if text.is_menu(body)
+                                else f"fala: ate {maxl} linhas de {cols} colunas")
+                    w.writerow([f["name"], e["k"], who or "", kind, len(self.same.get(self._skey(e), ())) or 1,
                                 prev, body, t.get("t", ""), t.get("st", "")])
                 prev = ((who + ": ") if who else "") + body.replace("\n", " ")
         return (chr(0xFEFF) + buf.getvalue()).encode("utf-8")
@@ -705,9 +924,6 @@ class Project:
         except ValueError:
             raise ProjectError("A planilha precisa das colunas 'arquivo', 'chave' e 'traducao'.")
         cs = head.index("situacao") if "situacao" in head else -1
-        cols = int(self.settings.get("cols", 48))
-        maxl = int(self.settings.get("lines", 3))
-        cm = self.charmap_codes()
         applied = skipped = filled = wrapped = 0
         with self.lock:
             for row in rd:
@@ -720,9 +936,10 @@ class Project:
                     continue
                 e = f["_idx"][key]
                 val = row[ct].replace("\r\n", "\n").replace("\r", "\n").strip("\n")
-                if val and not text.is_menu(e["body"]):
-                    val, ch = text.wrap(val, cols, maxl, cm, self.eu)
-                    wrapped += ch
+                if val:
+                    nv = self.fit(e, val)
+                    wrapped += nv != val
+                    val = nv
                 st = row[cs].strip() if cs >= 0 and len(row) > cs else None
                 ft = self.tr.setdefault(f["name"], {})
                 cur = ft.get(key, {})
@@ -734,7 +951,7 @@ class Project:
                     applied += 1
                 # falas identicas em outros lugares: preenche as que ainda nao tem traducao propria
                 if val:
-                    for of, ok in self.same.get(e["body"], ()):
+                    for of, ok in self.same.get(self._skey(e), ()):
                         if of == f["name"] and ok == key:
                             continue
                         oft = self.tr.setdefault(of, {})
@@ -761,8 +978,6 @@ class Project:
         other = Project.open(other_dir)
         rep = {"same": 0, "changed": 0, "kept": 0, "missing": 0, "names": 0, "files": 0,
                "missing_list": [], "changed_list": []}
-        cols = int(self.settings.get("cols", 48))
-        maxl = int(self.settings.get("lines", 3))
         with self.lock:
             for fname, items in other.tr.items():
                 f = self.by_name.get(fname)
@@ -776,20 +991,27 @@ class Project:
                 for key, t in items.items():
                     if not t.get("t") or t.get("auto"):
                         continue
-                    e = f["_idx"].get(key) if f else None
+                    tf = f
+                    e = tf["_idx"].get(key) if tf else None
+                    oe0 = of["_idx"].get(key) if of else None
+                    if e is None and oe0 is not None and oe0.get("virt"):
+                        # itens e menus: as chaves mudam entre as versoes; liga pelo texto ingles
+                        hits = self.same.get(self._skey(oe0), [])
+                        if hits:
+                            tf = self.by_name[hits[0][0]]
+                            key = hits[0][1]
+                            e = tf["_idx"][key]
                     if e is None:
                         rep["missing"] += 1
                         if len(rep["missing_list"]) < 200:
                             rep["missing_list"].append(f"{fname}/{key}")
                         continue
-                    ft = self.tr.setdefault(f["name"], {})
+                    ft = self.tr.setdefault(tf["name"], {})
                     if (ft.get(key) or {}).get("t") and not ft[key].get("auto"):
                         rep["kept"] += 1
                         continue
-                    oe = of["_idx"].get(key) if of else None
-                    val = t["t"]
-                    if not text.is_menu(e["body"]):
-                        val, _ = text.wrap(val, cols, maxl, self.charmap_codes(), self.eu)
+                    oe = oe0 if oe0 is not None and oe0.get("virt") else (of["_idx"].get(key) if of else None)
+                    val = self.fit(e, t["t"])
                     st = t.get("st", "")
                     if oe is not None and oe.get("body") == e["body"]:
                         rep["same"] += 1
@@ -797,11 +1019,11 @@ class Project:
                         rep["changed"] += 1
                         st = "rev"
                         if len(rep["changed_list"]) < 200:
-                            rep["changed_list"].append(f"{f['name']}/{key}")
+                            rep["changed_list"].append(f"{tf['name']}/{key}")
                     ft[key] = {"t": val, "st": st}
                     touched = True
-                    for sf, sk in self.same.get(e["body"], ()):
-                        if (sf, sk) == (f["name"], key):
+                    for sf, sk in self.same.get(self._skey(e), ()):
+                        if (sf, sk) == (tf["name"], key):
                             continue
                         oft = self.tr.setdefault(sf, {})
                         o = oft.get(sk)
@@ -821,6 +1043,9 @@ class Project:
         f = self.by_name.get(fname)
         if f is None or key not in f["_idx"]:
             raise ProjectError("texto desconhecido")
+        if f.get("virt"):
+            e = f["_idx"][key]
+            return {"body": e["body"], "who": None, "prev": None, "menu": False, "note": self._mt_note(f, e)}
         prev = None
         for e in f["entries"]:
             if e["k"] == key:
@@ -836,8 +1061,41 @@ class Project:
     def _mt_extra_glossary(self) -> List[List[str]]:
         return [[n, t] for n, t in self.names.items() if t]
 
+    def _mt_note(self, f: dict, e: dict) -> str:
+        if f.get("virt") == "intro":
+            return ("introdução do jogo, texto poético mostrado em uma página; responda com 2 linhas "
+                    "curtas separadas por quebra de linha, no mesmo tom do original")
+        lim = e.get("lim") or {}
+        what = f"{f.get('label', '')}, {e.get('sec', '')}".strip(", ")
+        note = f"menu do jogo ({what}). Não é fala de personagem."
+        if lim.get("bytes"):
+            note += f" Use no máximo {lim['bytes']} letras: abrevie se precisar."
+        elif lim.get("lines", 1) == 1 and lim.get("cols"):
+            note += f" Texto curto, de preferência até {lim['cols']} letras."
+        if e["body"] != e["body"].strip(" "):
+            note += " Os espaços no começo e no fim do original servem para centralizar; não os inclua."
+        return note
+
     def mt_suggest(self, tr: "mt.Translator", fname: str, key: str) -> str:
         c = self.mt_context(fname, key)
+        if c.get("note"):
+            f = self.by_name[fname]
+            e = f["_idx"][key]
+            body = c["body"].strip(" ")
+            out = tr.translate(body, None, None, False, self._mt_extra_glossary(), note=c["note"])
+            if f.get("virt") == "intro":
+                if "\n" not in out:
+                    out, _ = text.wrap(out, max(14, len(out) // 2 + 2), 3)
+                return out
+            out = out.replace("\n", " ") if (e.get("lim") or {}).get("lines", 1) == 1 else out
+            pad = len(e["body"]) - len(e["body"].lstrip(" "))
+            if pad and (e.get("lim") or {}).get("cols"):
+                # original centralizado com espacos: centraliza a traducao na mesma largura
+                w = len(e["body"])
+                if len(out) < w:
+                    left = (w - len(out)) // 2
+                    out = " " * left + out + " " * (w - len(out) - left)
+            return self.fit(e, out)
         out = tr.translate(c["body"], c["who"], c["prev"], c["menu"], self._mt_extra_glossary())
         if not c["menu"]:
             out, _ = text.wrap(out, int(self.settings.get("cols", 48)), int(self.settings.get("lines", 3)),
@@ -893,7 +1151,7 @@ class Project:
                 continue
             # a mesma fala ja' traduzida em outro lugar: reaproveita
             reuse = None
-            for of, ok in self.same.get(e["body"], ()):
+            for of, ok in self.same.get(self._skey(e), ()):
                 t = (self.translated(of, ok) or {}).get("t")
                 if t:
                     reuse = t
@@ -936,6 +1194,64 @@ class Project:
                 "stopped": stopped, "remaining": remaining,
                 "per_line": round(spent / asked, 1) if asked else None}
 
+    def intro_page(self, n: int, t: Optional[str] = None, font: Optional[str] = None) -> bytes:
+        """Imagem (PNG) de uma pagina da introducao: a original ou, com t, desenhada com t."""
+        if not intro.have_pillow():
+            raise ProjectError("Falta o Pillow para mostrar a introdução (o .exe já vem com ele).")
+        raw = self._extra_orig(intro.file_for(self.eu, (self.settings.get("eu_slot") or "en") if self.eu else ""))
+        if raw is None:
+            raw = self._extra_orig(intro.file_for(self.eu, "en"))
+        if raw is None:
+            raise ProjectError("A introdução não foi encontrada na pasta do jogo.")
+        m = intro.Mld(raw)
+        if not 0 <= n < len(m.tex):
+            raise ProjectError("página inexistente")
+        if t:
+            return intro.preview_png(m.page(n), t, font or self.settings.get("intro_font") or "uncial")
+        return intro.page_png(m, n)
+
+    MT_NAME_NOTE = ("nome de quem fala, mostrado acima da caixa de diálogo. Nomes próprios de pessoas, "
+                    "navios e lugares ficam iguais; traduza cargos, profissões e descrições (ex.: "
+                    "'Valuan Soldier' = 'Soldado Valuano', 'Old Man' = 'Velho'). Responda só com o nome.")
+
+    def mt_names(self, tr: "mt.Translator", progress=None, cancelled=lambda: False) -> dict:
+        """Traducao automatica dos nomes de quem fala que ainda nao tem traducao. Quando o
+        servico devolve o mesmo nome (nome proprio), ele continua sem traducao."""
+        todo = [n["name"] for n in self.name_list() if not n["t"] and not text.has_japanese(n["name"])
+                and n["name"].strip()]
+        done = same = 0
+        errors: List[str] = []
+        in_a_row = no_answer = 0
+        stopped = ""
+        for i, name in enumerate(todo):
+            if cancelled():
+                break
+            if progress:
+                progress(f"Traduzindo nomes ({i + 1} de {len(todo)}): {name}", i, len(todo))
+            try:
+                out = tr.translate(name, None, None, False, self._mt_extra_glossary(), note=self.MT_NAME_NOTE)
+            except mt.MTError as exc:
+                errors.append(f"{name}: {exc}")
+                in_a_row += 1
+                no_answer = no_answer + 1 if getattr(exc, "kind", "") == "conexao" else 0
+                if getattr(exc, "kind", "") == "fatal":
+                    stopped = f"o serviço recusou o pedido: {exc}"
+                elif no_answer >= self.MT_MAX_SEM_RESPOSTA or in_a_row >= self.MT_MAX_ERROS:
+                    stopped = f"o serviço falhou em {in_a_row} nomes seguidos: {exc}"
+                if stopped:
+                    break
+                continue
+            in_a_row = no_answer = 0
+            out = out.replace("\n", " ").strip().strip('"“”')
+            if not out or out.casefold() == name.casefold() or len(out) > max(30, 2 * len(name)):
+                same += 1
+                continue
+            self.set_name(name, out)
+            done += 1
+        self.save()
+        return {"translated": done, "kept": same, "total": len(todo), "errors": errors[-10:],
+                "error_count": len(errors), "stopped": stopped, "cancelled": cancelled()}
+
     # ------------------------------------------- traducao automatica pela historia
     def story_groups(self) -> List[list]:
         """Capitulos da historia com os arquivos que existem neste projeto; o que sobra vai em
@@ -947,9 +1263,13 @@ class Project:
             used.update(fs)
             if fs:
                 out.append([title, fs])
-        rest = sorted(n for n in self.by_name if n not in used)
+        rest = sorted(n for n in self.by_name if n not in used and not self.by_name[n].get("virt"))
         if rest:
             out.append(["Outros", rest])
+        for cat, label in CATEGORIES:
+            fs = [f["name"] for f in self.files if f.get("virt") and f["cat"] == cat]
+            if fs:
+                out.append([label, fs])
         return out
 
     def _pending(self, fname: str) -> List[dict]:
@@ -1174,8 +1494,9 @@ class Project:
                 states.append({"t": t, "m": m, "first": bool(m.pop("first", False)),
                                "r": {"root": t["root"], "recomp": t["recomp"], "written": 0, "restored": 0,
                                      "unchanged": 0, "kept": 0, "font": "", "fst": "", "note": ""}})
-            n = len(self.files)
-            for i, f in enumerate(self.files):
+            sct_files = [f for f in self.files if not f.get("virt")]
+            n = len(sct_files)
+            for i, f in enumerate(sct_files):
                 if progress:
                     progress("Gravando " + f["name"], i, n)
                 name = f["name"]
@@ -1220,6 +1541,10 @@ class Project:
                         r["written"] += 1
                 except (sct.SctError, ProjectError, OSError, ValueError) as exc:
                     report["errors"].append({"file": name, "error": str(exc)})
+            # itens, menus e introducao
+            if progress:
+                progress("Gravando itens, menus e a introdução", n, n)
+            self._build_extras(states, report, cm)
             # fonte
             of = self.orig_font
             fdata = fnew = None
@@ -1259,10 +1584,125 @@ class Project:
                     report["errors"].append({"file": t["root"], "error": str(exc)})
                 report["targets"].append(r)
             report["stripped"] = enc.stripped
-            report["missing"] = enc.missing
+            for ch, k in (report.pop("stripped_sys", None) or {}).items():
+                report["stripped"][ch] = report["stripped"].get(ch, 0) + k
+            extra_missing = report.get("missing") or {}
+            report["missing"] = dict(enc.missing)
+            for ch, k in extra_missing.items():
+                report["missing"][ch] = report["missing"].get(ch, 0) + k
             if progress:
                 progress("Pronto", n, n)
             return report
+
+    def _extra_outputs(self, report: dict, cm: Dict[str, int]) -> List[Tuple[str, str, Optional[bytes]]]:
+        """(nome do original, caminho relativo no jogo, conteudo novo ou None = original)."""
+        out = []
+        sys_tr: Dict[str, str] = {}
+        sys_entries: Dict[str, dict] = {}
+        intro_tr: Dict[int, str] = {}
+        for f in self.files:
+            v = f.get("virt")
+            if not v:
+                continue
+            tr = self.tr.get(f["name"], {})
+            for e in f["entries"]:
+                t = tr.get(e["k"], {}).get("t", "")
+                if not t:
+                    continue
+                if v == "intro":
+                    intro_tr[e["page"]] = t
+                else:
+                    sys_tr[e["tab"] if self.eu else e["k"]] = t
+                    sys_entries[e["tab"] if self.eu else e["k"]] = (f, e)
+        long = report["long"]
+        # sistema
+        if self.eu:
+            slot = self.settings.get("eu_slot") or "en"
+            en = self._extra_orig("english.sot")
+            for lang, name in sistema.EU_SOT_FILES.items():
+                orig = self._extra_orig(name)
+                if orig is None or en is None:
+                    continue
+                new = None
+                if lang == slot and sys_tr:
+                    r = {"entries": 0, "missing": {}}
+                    new = sistema.build_eu(orig, en, sys_tr, r)
+                    report["entries"] += r["entries"]
+                    for ch, k in r["missing"].items():
+                        report.setdefault("missing", {})
+                        report["missing"][ch] = report["missing"].get(ch, 0) + k
+                    if len(new) > 135308:
+                        report["errors"].append({"file": name, "error": "ficou maior que o maior .sot original "
+                                                 "(o alemão); se o jogo travar nos menus, encurte os textos"})
+                out.append((name, "files/" + name, new))
+        else:
+            orig = self._extra_orig("main.dol")
+            if orig is not None:
+                new = None
+                if sys_tr:
+                    enc = sistema.UsEncoder(cm)
+                    r = {"entries": 0, "long": []}
+                    new = sistema.build_us(orig, sys_tr, enc, r)
+                    report["entries"] += r["entries"]
+                    for x in r["long"]:
+                        f, e = sys_entries[x["k"]]
+                        long.append({"file": f["name"], "k": x["k"], "issue": x["issue"] + " (ficou em inglês)"})
+                    for ch, k in enc.stripped.items():
+                        report.setdefault("stripped_sys", {})
+                        report["stripped_sys"][ch] = report["stripped_sys"].get(ch, 0) + k
+                out.append(("main.dol", "sys/main.dol", new))
+        # introducao
+        slot = (self.settings.get("eu_slot") or "en") if self.eu else ""
+        names = intro.EU_FILES.items() if self.eu else [("", intro.US_FILE)]
+        for lang, name in names:
+            orig = self._extra_orig(name)
+            if orig is None:
+                continue
+            new = None
+            if intro_tr and lang == slot:
+                if not intro.have_pillow():
+                    report["errors"].append({"file": name, "error": "falta o Pillow para desenhar a introdução"})
+                else:
+                    new = intro.build(orig, intro_tr, self.settings.get("intro_font") or "uncial")
+                    report["intro"] = len(intro_tr)
+            out.append((name, "files/field/" + name, new))
+        return out
+
+    def _build_extras(self, states: List[dict], report: dict, cm: Dict[str, int]):
+        try:
+            outs = self._extra_outputs(report, cm)
+        except (sistema.SistemaError, intro.IntroError, OSError, ValueError) as exc:
+            report["errors"].append({"file": "itens, menus e introdução", "error": str(exc)})
+            return
+        for name, rel, new in outs:
+            orig = self._extra_orig(name)
+            digest = hashlib.sha1(new).hexdigest() if new is not None else None
+            for st in states:
+                t, mf, r = st["t"], st["m"]["files"], st["r"]
+                try:
+                    dst = self._extra_path(t["root"], rel)
+                except ProjectError:
+                    continue
+                if not os.path.isdir(os.path.dirname(dst)):
+                    continue
+                try:
+                    if st["first"] and self._keep_copy(t, rel, dst, orig):
+                        r["kept"] += 1
+                    if new is None:
+                        if mf.pop(rel, None) or (os.path.exists(dst) and
+                                                 self._sha1_file(dst) != hashlib.sha1(orig).hexdigest()):
+                            _atomic_write(dst, orig)
+                            r["restored"] += 1
+                        continue
+                    old = mf.get(rel) or {}
+                    if old.get("plain") == digest and self._sha1_file(dst) == digest:
+                        r["unchanged"] += 1
+                        continue
+                    _atomic_write(dst, new)
+                    mf[rel] = {"plain": digest, "out": digest, "pad": False}
+                    r["written"] += 1
+                except OSError as exc:
+                    report["errors"].append({"file": rel, "error": str(exc)})
 
     def _update_fst(self, t: dict) -> str:
         """Atualiza no sys/fst.bin do destino o tamanho dos arquivos que a traducao mexe.
@@ -1280,6 +1720,11 @@ class Project:
                  if f.lower().endswith(".sct")]
         if t["font"]:
             paths.append((os.path.basename(t["font"]), t["font"]))
+        for name, rel in self.extra_sources():
+            if rel.startswith("files/"):
+                full = os.path.join(files_dir, *rel[len("files/"):].split("/"))
+                if os.path.exists(full):
+                    paths.append((rel[len("files/"):], full))
         for rel, full in paths:
             size = os.path.getsize(full)
             old = fst.size(rel)
@@ -1311,6 +1756,18 @@ class Project:
                 if of and t["font"]:
                     kept = os.path.join(t["backup"], os.path.basename(t["font"]))
                     shutil.copy2(kept if os.path.exists(kept) else of, t["font"])
+                for name, rel in self.extra_sources():
+                    src = os.path.join(self.orig_extra, name)
+                    if not os.path.exists(src):
+                        continue
+                    try:
+                        dst = self._extra_path(t["root"], rel)
+                    except ProjectError:
+                        continue
+                    kept = os.path.join(t["backup"], *rel.split("/"))
+                    if os.path.isdir(os.path.dirname(dst)):
+                        shutil.copy2(kept if os.path.exists(kept) else src, dst)
+                        n += 1
                 keep_fst = os.path.join(t["backup"], "fst.bin.original")
                 if t["fst"] and os.path.exists(keep_fst):
                     shutil.copy2(keep_fst, t["fst"])

@@ -19,11 +19,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import iso, janela, mt, recomp, text
+from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.7.1"
+VERSION = "0.8.0"
 
 
 class App:
@@ -184,6 +184,11 @@ class App:
         tr = self.translator()
         self.start_job("mt", lambda: p.mt_file(tr, fname, progress=self._progress,
                                                cancelled=lambda: self.cancel))
+
+    def mt_names(self):
+        p = self.need()
+        tr = self.translator()
+        self.start_job("mt", lambda: p.mt_names(tr, progress=self._progress, cancelled=lambda: self.cancel))
 
     def mt_story(self, first: int, last: int):
         p = self.need()
@@ -364,6 +369,11 @@ def make_handler(app: App):
                     return self._json(mt.public_config(app.mt_cfg()))
                 if u.path == "/api/glyphs":
                     return self._json(app.glyphs())
+                if u.path == "/api/intro":
+                    n = int(q.get("n", ["0"])[0])
+                    t = q.get("t", [""])[0]
+                    png = app.need().intro_page(n, t or None, q.get("font", [""])[0] or None)
+                    return self._send(200, png, "image/png", {"Cache-Control": "no-store"})
                 if u.path == "/api/export_unicas.csv":
                     data = app.need().export_unique_csv()
                     return self._send(200, data, "text/csv; charset=utf-8",
@@ -425,6 +435,8 @@ def make_handler(app: App):
                             st["keep_states"] = bool(data["keep_states"])
                         if data.get("eu_slot") in pj.EU_SLOTS:
                             st["eu_slot"] = data["eu_slot"]
+                        if data.get("intro_font") in intro.FONTS:
+                            st["intro_font"] = data["intro_font"]
                         if isinstance(data.get("charmap"), dict):
                             cm = {}
                             used = set()
@@ -477,6 +489,9 @@ def make_handler(app: App):
                     return self._json({"chapters": app.need().story_info()})
                 if u.path == "/api/mt/story":
                     app.mt_story(int(data.get("from", 0)), int(data.get("to", 0)))
+                    return self._json({"ok": True})
+                if u.path == "/api/mt/names":
+                    app.mt_names()
                     return self._json({"ok": True})
                 if u.path == "/api/mt/file":
                     app.mt_file(data["file"])

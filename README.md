@@ -1,10 +1,11 @@
 # SOAL Tradutor
 
-Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versões americana e
-europeia).
-Ela lê os textos direto dos arquivos de script `.sct` do jogo, mostra tudo organizado numa interface
-numa janela própria e grava a tradução de volta, **sem limite de tamanho por fala**. Também monta a
-imagem de disco (`.iso`) já traduzida.
+Ferramenta para traduzir **Skies of Arcadia Legends** (GameCube, versões americana e europeia): os
+diálogos, os nomes e descrições de itens, armas, magias e peças do navio, os menus e mensagens, e as
+páginas da introdução do começo do jogo.
+Ela lê os textos direto dos arquivos do jogo, mostra tudo organizado numa interface numa janela
+própria e grava a tradução de volta; nos diálogos, **sem limite de tamanho por fala**. Também monta
+a imagem de disco (`.iso`) já traduzida.
 
 Funciona com o jogo extraído para o **Dolphin** e com o port nativo
 **[Skies of Arcadia Legends: Recompiled](https://github.com/ogdanimal/SkiesOfArcadiaLegends-Recomp)**.
@@ -52,6 +53,15 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
   filtros.
 - Exportar e importar planilha CSV, com uma linha por fala diferente; na importação as repetições
   são preenchidas e as linhas longas são quebradas sozinhas.
+- **Itens, menus e sistema**: nomes e descrições de armas, armaduras, acessórios, itens, magias,
+  supergolpes, peças do navio e tripulantes, golpes dos inimigos, descobertas, diário de bordo,
+  lugares, lojas, procurados, menus e mensagens do cartão de memória. Na versão americana eles ficam
+  no `main.dol` e cada texto tem um espaço máximo (a tela mostra quanto sobra); na europeia ficam nos
+  arquivos `.sot` e não têm limite.
+- **Introdução**: as 11 páginas do começo do jogo são imagens. A tradução é desenhada com uma fonte
+  parecida com a original, e a tela mostra como a página fica.
+- Tradução automática dos **nomes de quem fala** que faltam (cargos como “Valuan Soldier” são
+  traduzidos; nomes próprios ficam iguais).
 - Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos. Na
   europeia, a fonte já tem todas as letras do português.
 - **Versão europeia**: mostra só as falas em inglês (francês, alemão e espanhol ficam intactos) e
@@ -79,21 +89,24 @@ europeu: 258 arquivos, 98.942 textos (quatro idiomas) e 241.488 referências.
 
 ## Estado
 
-Versão 0.7, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
+Versão 0.8, em teste. A leitura e a reconstrução dos arquivos foram conferidas em todos os
 arquivos do jogo, e a geração da ISO foi conferida extraindo a imagem de volta. O jogo traduzido
 ainda precisa ser testado rodando, principalmente as letras acentuadas e a ISO num console.
 Relatos são bem-vindos em [Issues](../../issues).
 
 As mudanças de cada versão estão nas notas de cada [release](../../releases).
 
-Limites: só os diálogos dos `.sct` (itens, magias e menus ficam no `main.dol` e ainda não são
-editados); versões americana (GEAE8P) e europeia (GEAP8P); o recomp só roda a americana.
+Limites: na versão americana, os textos de itens e menus precisam caber no espaço do `main.dol`;
+nomes de inimigos não aparecem como texto no jogo; versões americana (GEAE8P) e europeia (GEAP8P);
+o recomp só roda a americana.
 
 ## Créditos
 
 Veja **[CREDITOS.md](CREDITOS.md)**. Em resumo: a tabela de instruções de script vem do projeto
 [SALSA](https://github.com/jahorta/SALSA), de jahorta, e o suporte ao recomp segue a documentação e
-o código do port de [ogdanimal](https://github.com/ogdanimal/SkiesOfArcadiaLegends-Recomp).
+o código do port de [ogdanimal](https://github.com/ogdanimal/SkiesOfArcadiaLegends-Recomp), e as
+posições das tabelas de itens no `main.dol` vêm do [ALX](https://github.com/Taikocuya/ALX), de
+Marcel Renner.
 
 ## Licença
 

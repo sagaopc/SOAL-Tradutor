@@ -13,6 +13,17 @@ recompilação. Obrigado a todas elas.
   com segurança. O formato dos arquivos `.sct` e a compressão AKLZ também foram estudados no código
   do SALSA.
 
+- **[ALX – Skies of Arcadia Legends Examiner](https://github.com/Taikocuya/ALX)**, de **Marcel Renner
+  (Taikocuya)** (GPL-3.0): as posições e os tamanhos das tabelas de armas, armaduras, acessórios,
+  itens, magias, navios e tripulantes no `main.dol` americano, e as faixas onde ficam os textos,
+  vêm das descrições do ALX. Foram usadas para gerar `soal/data/sistema_us.json`.
+
+## Fontes da introdução
+
+- **Uncial Antiqua**, de Astigmatic (Brian J. Bonislawsky), e **UnifrakturMaguntia**, de j. 'mach'
+  wust e Peter Wiegel, ambas sob a SIL Open Font License 1.1 (licenças em `soal/data/fontes`). São
+  usadas para desenhar a tradução das páginas da introdução.
+
 ## Documentação e código consultados
 
 - **[Skies of Arcadia Legends: Recompiled](https://github.com/ogdanimal/SkiesOfArcadiaLegends-Recomp)**,

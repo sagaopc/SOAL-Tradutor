@@ -50,7 +50,7 @@ DEFAULTS = {
 # carregar e para responder, entao o tempo de espera sem receber nada e' maior.
 LOCAL_TIMEOUT = 300
 
-CODE_RE = re.compile(r"\\[a-z]")
+CODE_RE = re.compile(r"\\[a-z]|%[-0-9]*[sdxc]")
 
 
 class MTError(Exception):
@@ -195,8 +195,10 @@ STYLE = (
 
 
 def build_prompt(text: str, who: Optional[str], prev: Optional[str], menu: bool,
-                 extra_glossary: Optional[List[List[str]]] = None) -> str:
+                 extra_glossary: Optional[List[List[str]]] = None, note: Optional[str] = None) -> str:
     parts = []
+    if note:
+        parts.append("Onde o texto aparece: " + note)
     if who:
         g = GENDER.get(who)
         parts.append(f"Quem fala: {who}" + (f" ({'homem' if g == 'M' else 'mulher'})" if g in ("M", "F") else ""))
@@ -239,7 +241,8 @@ class Translator:
         self.timeout_explicit = bool((cfg or {}).get("timeout"))
 
     def translate(self, text: str, who: Optional[str] = None, prev: Optional[str] = None,
-                  menu: bool = False, extra_glossary: Optional[List[List[str]]] = None) -> str:
+                  menu: bool = False, extra_glossary: Optional[List[List[str]]] = None,
+                  note: Optional[str] = None) -> str:
         """text vem com as quebras de linha do jogo como '\\n'. Devolve no mesmo formato."""
         if not text.strip():
             return ""
@@ -248,6 +251,7 @@ class Translator:
             lines = src.split("\n")
         else:
             lines = [" ".join(l.strip() for l in src.split("\n"))]
+        self._note = note
         fn = getattr(self, "_" + self.provider)
         if self.provider in ("openai", "anthropic"):
             out = fn("\n".join(lines), who, prev, menu, extra_glossary)
@@ -273,6 +277,8 @@ class Translator:
             ctx.append(f"{who} is speaking in a fantasy pirate role-playing game.")
         if prev:
             ctx.append(f"Previous line: {prev}")
+        if getattr(self, "_note", None):
+            ctx.append(self._note)
         payload = {"text": lines, "source_lang": "EN", "target_lang": "PT-BR",
                    "formality": "prefer_less", "preserve_formatting": True}
         if ctx:
@@ -324,7 +330,7 @@ class Translator:
         local = _is_local(base)
         payload = {"model": model, "temperature": 0.3, "max_tokens": 2048,
                    "messages": [{"role": "system", "content": STYLE},
-                                {"role": "user", "content": build_prompt(text, who, prev, menu, extra)}]}
+                                {"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None))}]}
         if local:
             # Em pedacos: enquanto o modelo gera, a conexao nao fica parada esperando.
             payload["stream"] = True
@@ -374,7 +380,7 @@ class Translator:
         base = (self.cfg.get("url") or "").strip().rstrip("/") or "https://api.anthropic.com"
         model = (self.cfg.get("model") or "").strip() or "claude-sonnet-5-5"
         payload = {"model": model, "max_tokens": 1024, "system": STYLE,
-                   "messages": [{"role": "user", "content": build_prompt(text, who, prev, menu, extra)}]}
+                   "messages": [{"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None))}]}
         r = _post(base + "/v1/messages", payload,
                   {"x-api-key": key, "anthropic-version": "2023-06-01"}, self.timeout)
         try:

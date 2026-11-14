@@ -19,6 +19,14 @@ def _avisar(msg: str) -> None:
         pass
 
 
+def _sot_teste() -> bytes:
+    import struct
+    blob = b"Yes\0No\0"
+    head = struct.pack("<I", 1) + b"\0" * 12
+    rec = b"gMsgTbl".ljust(32, b"\0") + struct.pack("<IIHHI", 16 + 48, 0xFFFFFFFF, 2, 0xFFFF, len(blob))
+    return head + rec + blob
+
+
 def verificar_instalacao(out_path: str) -> int:
     """Confere se o pacote (inclusive o .exe) tem tudo o que precisa. Usado na compilacao."""
     linhas, ok = [], True
@@ -31,7 +39,7 @@ def verificar_instalacao(out_path: str) -> int:
         except Exception as exc:
             ok = False
             linhas.append(f"FALHA {nome}: {exc!r}")
-    from soal import aklz, font, mt, project, recomp, sct, server, text  # noqa: F401
+    from soal import aklz, font, intro, mt, project, recomp, sct, server, sistema, text  # noqa: F401
     item("interface", lambda: os.path.getsize(os.path.join(server.WEB_DIR, "index.html")))
     item("tabela de instrucoes", lambda: len(sct.instruction_table()))
     item("glossario", lambda: len(mt.GLOSSARY))
@@ -39,6 +47,17 @@ def verificar_instalacao(out_path: str) -> int:
                                                                     "originais_geae8p.json"), encoding="utf-8"))["files"]))
     item("compressao AKLZ", lambda: aklz.decompress(aklz.compress(b"Skies of Arcadia " * 50)) == b"Skies of Arcadia " * 50 or 1 / 0)
     item("texto do jogo", lambda: text.decode(b"\\h(\x81\x73Vyse\x81\x74)Hey\x7fFina.\\e").body)
+    item("textos de itens e menus", lambda: len(sistema.us_map()["entries"]))
+    item("arquivo .sot", lambda: (sistema.Sot(_sot_teste()).build() == _sot_teste() or 1 / 0) and "")
+
+    def intro_teste():
+        from PIL import Image  # noqa: F401
+        bg = bytes([230, 228, 230]) * (intro.W * intro.H)
+        cmpr = intro.encode_cmpr(bg)
+        out = intro.render_page(cmpr, "Num mundo envolto\nem mistério…", "uncial")
+        intro.render_page(cmpr, "Teste", "gotica")
+        return len(out)
+    item("introducao (Pillow e fontes)", intro_teste)
     item("tkinter", lambda: __import__("tkinter.filedialog") and "")
     item("ssl", lambda: __import__("ssl").create_default_context() and "")
     item("versao", lambda: server.VERSION)

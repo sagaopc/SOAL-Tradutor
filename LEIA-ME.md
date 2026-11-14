@@ -1,6 +1,6 @@
-# SOAL Tradutor 0.5
+# SOAL Tradutor 0.8
 
-Ferramenta para traduzir os diálogos de **Skies of Arcadia Legends** (GameCube, versões americana e europeia).
+Ferramenta para traduzir os diálogos, os itens e menus e a introdução de **Skies of Arcadia Legends** (GameCube, versões americana e europeia).
 Lê os textos direto dos arquivos `.sct` do jogo, mostra tudo organizado numa interface no
 navegador e grava a tradução de volta, sem limite de tamanho por fala.
 
@@ -103,7 +103,7 @@ Ao abrir a pasta `X`, o programa cria ao lado dela a pasta `X_traducao`:
 | Arquivo | Conteúdo |
 |---|---|
 | `projeto.json` | suas traduções, nomes de personagens e ajustes (faça backup deste) |
-| `originais/` | cópia dos `.sct` e da fonte originais, feita uma única vez |
+| `originais/` | cópia dos `.sct` e da fonte originais, feita uma única vez; em `originais/extras`, o `main.dol` (ou os `.sot` da versão europeia) e a introdução |
 | `textos.json` | textos extraídos (pode apagar; é refeito) |
 | `copias_do_destino/` | cópia do `fst.bin` do recomp e de qualquer arquivo do destino que já não fosse o original |
 
@@ -199,10 +199,47 @@ Nesse caso, libere o símbolo em Ajustes ou escolha "Gravar sem acento".
 - O fim da fala (`\e` ou `\c`) é recolocado sozinho; não precisa digitar.
 - Aspas `"assim"` viram as aspas curvas da fonte do jogo.
 
+## Itens, menus e sistema
+
+No fim da lista de arquivos, o grupo **Itens, menus e sistema** traz os textos que não são
+diálogos: nomes e descrições de armas, armaduras, acessórios, itens, itens especiais, magias e
+supergolpes, peças e itens do navio, tripulantes, golpes dos inimigos, descobertas, diário de
+bordo, lugares, lojas, procurados e lendas, menus, mensagens de batalha e do cartão de memória, e os
+nomes dos seis personagens. Eles se traduzem como as falas: texto ao lado do original, filtros,
+planilha e tradução automática (que recebe a informação de onde o texto aparece e do tamanho).
+
+- **Versão americana**: esses textos ficam no executável (`sys/main.dol`), que é gravado junto com
+  os diálogos. Cada nome de item tem um campo de tamanho fixo (em geral 16 letras), e a tela mostra
+  quantas letras ainda cabem. As descrições e as mensagens ficam em blocos: um texto pode crescer
+  desde que outro do mesmo bloco encurte, e a tela mostra quanto do bloco está ocupado. O que não
+  couber fica em inglês e aparece no relatório da gravação. Reticências (…) contam 2 letras.
+- **Versão europeia**: ficam nos arquivos `english.sot`, `spanish.sot`, `french.sot` e
+  `german.sot`. A tradução vai para o idioma escolhido em Ajustes, sem limite de tamanho por texto.
+- Alguns textos do original têm espaços nas pontas para ficar centralizados na tela; faça o mesmo
+  na tradução. Códigos como `%s` (um valor que o jogo preenche) e `\c` precisam continuar no texto.
+- Nomes de inimigos comuns não aparecem como texto no jogo, por isso não estão na lista; os nomes
+  dos navios inimigos e dos golpes, sim.
+
+## Introdução
+
+A **Introdução** (“In a world shrouded in mystery…”) são 11 páginas que o jogo mostra como imagens.
+Cada página aparece ao lado do campo da tradução, e o painel da direita mostra como ela fica com o
+texto novo. Quebre a linha onde quiser (2 linhas, como no original). Na gravação, a tradução é
+desenhada com a fonte escolhida em **Ajustes → Fonte da introdução**: Uncial, parecida com a da
+versão americana, ou Gótica, parecida com a da europeia. Na versão europeia, as páginas vão para o
+idioma escolhido em Ajustes.
+
+## Nomes de quem fala
+
+Em **Nomes**, o botão **Traduzir automático os nomes que faltam** traduz os cargos e descrições
+(“Valuan Soldier”, “Old Man”, “Merchant Ship”...) com o serviço escolhido em Ajustes. Nomes
+próprios (Vyse, Aika, Drachma) ficam iguais e continuam em branco na lista. Revise o resultado: o
+nome traduzido vale para todas as falas daquele personagem.
+
 ## Limites desta versão
 
-- Só os diálogos dos `.sct` (pasta `field`). Nomes de itens, magias, menus e textos de batalha
-  ficam no executável (`main.dol`) e ainda não são editados.
+- Na versão americana, os textos de itens e menus precisam caber no espaço do `main.dol`.
+- O recomp não foi testado com o `main.dol` traduzido.
 - Versões americana (GEAE8P) e europeia (GEAP8P). A japonesa não é aceita.
 - O recomp (port nativo) só roda a versão americana.
 
@@ -237,6 +274,9 @@ script seguem apontando para o lugar certo depois que os textos mudam de tamanho
 
 - A tabela de parâmetros das instruções de script (`soal/data/instructions.json`) vem do projeto
   **SALSA**, de jahorta (https://github.com/jahorta/SALSA), licença GPL-3.0.
+- As posições das tabelas de itens no `main.dol` americano vêm do **ALX**, de Marcel Renner
+  (https://github.com/Taikocuya/ALX), licença GPL-3.0.
+- A introdução usa as fontes livres Uncial Antiqua e UnifrakturMaguntia (SIL Open Font License).
 - O suporte ao recomp segue a documentação e o código do port de ogdanimal
   (https://github.com/ogdanimal/SkiesOfArcadiaLegends-Recomp, GPL-3.0) e do ModernGekko / RecompCore.
 - Lista completa em `CREDITOS.md`.
