@@ -126,6 +126,10 @@ dl.facts dt{color:var(--muted)} dl.facts dd{margin:0;overflow-wrap:anywhere}
 .steps b{color:var(--ink)}
 .recent{margin-top:22px;font-size:14px}
 .recent a{color:var(--sea);cursor:pointer;font-family:var(--mono);font-size:13px;display:block;padding:2px 0}
+.gopt{display:grid;grid-template-columns:auto 1fr auto;gap:2px 12px;align-items:center;width:100%;text-align:left;margin:6px 0;padding:10px 12px}
+.gopt .rg{font-weight:650}
+.gopt .pt{font-family:var(--mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.gopt.on{border-color:var(--sea);background:color-mix(in srgb,var(--sea) 10%,var(--paper));cursor:default}
 .err{color:var(--alert);margin:8px 0;min-height:20px}
 #warn{flex:none;padding:8px 16px;background:color-mix(in srgb,var(--alert) 12%,var(--paper));border-bottom:1px solid var(--alert);font-size:13.5px}
 
@@ -164,6 +168,7 @@ table.grid input{width:100%}
   <input type="search" id="search" placeholder="Buscar em todos os textos (original ou tradução)" aria-label="Buscar em todos os textos">
   <div class="meter" title="Falas traduzidas no jogo inteiro"><span id="meterTxt"></span><div class="track"><i id="meterBar"></i></div></div>
   <span id="saved"></span>
+  <button id="btnGame" title="Trocar de jogo: versão americana, europeia ou outra pasta"></button>
   <button id="btnNames">Nomes</button>
   <button id="btnSheet">Planilha</button>
   <button id="btnSettings">Ajustes</button>
@@ -230,6 +235,16 @@ table.grid input{width:100%}
 </main>
 
 <div id="busy" class="hidden"><div class="card"><b id="busyLabel">Trabalhando</b><div class="progress"><i id="busyBar"></i></div><span class="note" id="busyNote"></span><div><button id="busyCancel" class="hidden">Parar</button></div></div></div>
+
+<dialog id="dlgGame"><div class="dh"><h2>Trocar de jogo</h2></div>
+  <div class="db">
+    <p class="note">Cada versão do jogo tem o próprio projeto. Trocar aqui salva o projeto aberto e abre o outro; nada se perde.</p>
+    <div id="gameList"></div>
+    <p style="margin-top:16px"><b>Abrir outra pasta de jogo</b><br><span class="note">A pasta do jogo extraído (com <span class="kbd">files</span> e <span class="kbd">sys</span>), americana ou europeia.</span></p>
+    <div class="pick"><input type="text" id="gamePath2" placeholder="Ex.: F:\Downloads\SOAL EU" spellcheck="false"><button id="btnPick2">Escolher pasta</button><button class="primary" id="btnOpen2">Abrir</button></div>
+    <p class="err" id="gameErr"></p>
+  </div>
+  <div class="df"><button data-close>Fechar</button></div></dialog>
 
 <dialog id="dlgNames"><div class="dh"><h2>Nomes dos personagens</h2><input type="search" id="nameFilter" placeholder="Filtrar"></div>
   <div class="db"><p class="note">O nome traduzido aqui é usado em todas as falas daquele personagem. Deixe em branco para manter o original.</p>
@@ -368,6 +383,8 @@ async function refreshState() {
   w.textContent = "";
   if (xs.length || xe.length) w.textContent = (xs.length ? xs.join(", ") + (xs.length === 1 ? " não é o original do disco; " : " não são os originais do disco; ") + "os itens, menus ou a introdução desse arquivo ficam de fora. Reextraia o disco para traduzi-los. " : "") + xe.join(" ");
   if (no.length) w.textContent += no.length + (no.length === 1 ? " arquivo desta pasta não é" : " arquivos desta pasta não são") + " o original do disco americano (" + no.slice(0, 4).join(", ") + (no.length > 4 ? "…" : "") + "). A pasta já tinha uma tradução ou um romhack gravado, e o programa vai tratar esse conteúdo como texto original. Para traduzir a partir do jogo original, reextraia o disco e abra a pasta de novo.";
+  S.recent = st.recent || [];
+  $("#btnGame").textContent = (st.project.region === "eu" ? "Europeia" : "Americana") + " ▾";
   if (!S.mt) await loadMt();
   if (!S.glyphs) { try { S.glyphs = await api("/api/glyphs"); } catch (e) { S.glyphs = { ok:false, glyphs:{} }; } }
   renderMeter(); renderFiles();
@@ -979,6 +996,38 @@ $("#btnSaveSettings").onclick = async () => {
   try { if ($("#mtProv").value !== ((S.mt && S.mt.provider) || "") || $("#mtKey").value || $("#mtUrl").value !== ((S.mt && S.mt.url) || "") || $("#mtModel").value !== ((S.mt && S.mt.model) || "")) await saveMt();
     const r = await api("/api/settings", { cols:+$("#stCols").value, lines:+$("#stLines").value, autofill:$("#stAuto").checked, accents:$("#stAcc").value, keep_states:$("#stKeep").checked, charmap:cm, eu_slot:$("#stSlot").value, intro_font:$("#stIntro").value }); S.project.settings = r.settings; $("#dlgSettings").close(); if (S.file && !S.searchMode) renderWork(); }
   catch (e) { alertInline(e.message); }
+};
+const REGION = { us:"Americana", eu:"Europeia" };
+$("#btnGame").onclick = async () => {
+  await flushAll();
+  const st = await api("/api/state"); S.recent = st.recent || [];
+  const box = $("#gameList"); box.textContent = ""; $("#gameErr").textContent = ""; $("#gamePath2").value = "";
+  const norm = d => (d || "").replace(/[\\/]+$/, "").toLowerCase();
+  for (const r of S.recent) {
+    if (!r.exists) continue;
+    const cur = norm(r.dir) === norm(S.project.dir);
+    const b = el("button", "gopt" + (cur ? " on" : ""));
+    b.append(el("span", "rg", REGION[r.region] || "Jogo"), el("span", "pt", r.game || r.dir), el("span", "note", cur ? "aberto agora" : "abrir"));
+    if (!cur) b.onclick = () => switchGame({ project_dir:r.dir });
+    box.append(b);
+  }
+  if (!box.children.length) box.append(el("p", "note", "Nenhum outro projeto ainda."));
+  $("#dlgGame").showModal();
+};
+async function switchGame(body) {
+  $("#gameErr").textContent = "";
+  try {
+    await flushAll();
+    await api("/api/open", body); $("#dlgGame").close();
+    await waitJob(); S.file = null; S.glyphs = null; S.nameMap = null; S.entries = []; await refreshState();
+  } catch (e) { $("#busy").classList.add("hidden"); $("#gameErr").textContent = e.message; if (!$("#dlgGame").open) { $("#dlgGame").showModal(); $("#gameErr").textContent = e.message; } }
+}
+$("#btnOpen2").onclick = () => { const v = $("#gamePath2").value.trim(); if (!v) { $("#gameErr").textContent = "Escolha ou cole o caminho da pasta do jogo."; return; } switchGame({ game_root:v }); };
+$("#gamePath2").onkeydown = e => { if (e.key === "Enter") $("#btnOpen2").click(); };
+$("#btnPick2").onclick = async () => {
+  $("#btnPick2").disabled = true;
+  try { const r = await api("/api/pick", {}); if (r.path) $("#gamePath2").value = r.path; } catch (e) { $("#gameErr").textContent = e.message; }
+  $("#btnPick2").disabled = false;
 };
 $("#btnCloseProject").onclick = async () => { await flushAll(); await api("/api/close", {}); S.file = null; S.glyphs = null; S.nameMap = null; $("#dlgSettings").close(); refreshState(); };
 function alertInline(msg) { setSaved(msg, true); }

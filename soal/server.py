@@ -23,7 +23,7 @@ from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.8.0"
+VERSION = "0.8.1"
 
 
 class App:
@@ -58,7 +58,7 @@ class App:
 
     def _remember(self, p: pj.Project):
         rec = [r for r in self.config.get("recent", []) if r.get("dir") != p.dir]
-        rec.insert(0, {"dir": p.dir, "game": p.meta.get("game_root", "")})
+        rec.insert(0, {"dir": p.dir, "game": p.meta.get("game_root", ""), "region": p.meta.get("region", "us")})
         self.config["recent"] = rec[:6]
         self._save_config()
 
@@ -208,7 +208,15 @@ class App:
             found = recomp.find_install(self.config.get("recomp_hint"))
         except OSError:
             found = None
-        out = {"version": VERSION, "job": dict(self.job), "recent": self.config.get("recent", []),
+        recent = []
+        for r in self.config.get("recent", []):
+            r = dict(r)
+            if not r.get("region"):
+                gid = recomp.game_id(r.get("game") or "") if r.get("game") and os.path.isdir(r["game"]) else None
+                r["region"] = pj.REGIONS.get(gid or "", "")
+            r["exists"] = pj.is_project_dir(r.get("dir") or "")
+            recent.append(r)
+        out = {"version": VERSION, "job": dict(self.job), "recent": recent,
                "project": None, "recomp": found}
         if p is not None:
             if found and found["supported"] and not p.meta.get("recomp_root") and not p.eu:

@@ -246,7 +246,8 @@ nome traduzido vale para todas as falas daquele personagem.
 ## Versão europeia
 
 Escolha a pasta da versão europeia extraída (com `files` e `sys`) como se fosse a americana: o
-programa reconhece o disco (GEAP8P) e cria um projeto separado.
+programa reconhece o disco (GEAP8P) e cria um projeto separado. Com um projeto aberto, use o botão
+da versão na barra de cima (“Americana ▾” ou “Europeia ▾”) para trocar de jogo ou abrir outra pasta.
 
 - Cada fala do disco europeu existe em inglês, francês, alemão e espanhol. O programa mostra a
   inglesa para você traduzir. Em **Ajustes → Idioma que recebe a tradução** você escolhe em qual
