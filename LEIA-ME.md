@@ -237,6 +237,25 @@ de tradução: “Valuan Soldier” → **Soldado Valuano**, “Boomerang” →
 - O vocabulário fica em `tools/vocabulario_fonte.txt`; para acrescentar palavras, edite o arquivo e
   rode `python tools/gerar_vocabulario.py`.
 
+## Termos padronizados
+
+Expressões que se repetem no jogo devem ter sempre a mesma tradução: “Blue Rogues” é sempre
+**Piratas Azuis**, “Black Pirates” é **Piratas Negros**, “Moon Stone” é **Pedra da Lua**. O botão
+**Termos**, no topo, abre a lista. O projeto já vem com os termos mais comuns do jogo, e você pode
+mudar, apagar ou acrescentar os seus.
+
+- **Inglês** e **Português**: separe singular e plural com “/” (`Blue Rogue / Blue Rogues` →
+  `Pirata Azul / Piratas Azuis`).
+- **Traduções a trocar**: as traduções diferentes que podem ter aparecido (Ladinos Azuis, Rogues
+  Azuis…), separadas por vírgula.
+- **Conferir as traduções** mostra, para cada termo, quantas falas estão no padrão, quantas usam uma
+  das traduções a trocar e quantas usam outra coisa. **Padronizar** troca as conhecidas pelo termo
+  escolhido, respeitando singular, plural e letra maiúscula, sem mudar o estado das falas. As demais
+  aparecem numa lista; clique para abrir e corrigir à mão.
+- Uma fala cujo original tem o termo e cuja tradução não segue o padrão ganha um **aviso** (filtro
+  **Com aviso**).
+- A tradução automática recebe os termos e usa as formas escolhidas.
+
 ## Introdução
 
 A **Introdução** (“In a world shrouded in mystery…”) são 11 páginas que o jogo mostra como imagens.

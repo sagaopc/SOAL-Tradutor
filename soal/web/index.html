@@ -27,6 +27,12 @@ button.quiet{border-color:transparent;background:none;padding:4px 8px;color:var(
 button.quiet:hover{color:var(--ink);background:var(--panel)}
 button.sug{border-style:dashed;border-color:var(--sea);color:var(--sea);background:none;padding:4px 10px}
 button.sug b{font-weight:650}
+dialog.wide{width:min(1100px,96vw)}
+.grid.terms input{width:100%}
+.grid.terms td:nth-child(3){width:45%}
+#termReport ul{max-height:260px;overflow:auto;padding-left:18px}
+#termReport li{margin:4px 0}
+#termReport a{color:var(--sea);cursor:pointer}
 button:disabled{opacity:.5;cursor:default}
 :focus-visible{outline:2px solid var(--sea);outline-offset:1px}
 input[type=text],input[type=number],input[type=search],select{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:6px 10px}
@@ -173,6 +179,7 @@ table.grid input{width:100%}
   <span id="saved"></span>
   <button id="btnGame" title="Trocar de jogo: versão americana, europeia ou outra pasta"></button>
   <button id="btnNames">Nomes</button>
+  <button id="btnTerms" title="Expressões que devem ter sempre a mesma tradução">Termos</button>
   <button id="btnSheet">Planilha</button>
   <button id="btnSettings">Ajustes</button>
   <button class="primary" id="btnBuild">Gravar no jogo</button>
@@ -253,6 +260,15 @@ table.grid input{width:100%}
   <div class="db"><p class="note">O nome traduzido aqui é usado em todas as falas daquele personagem. Deixe em branco para manter o original.</p>
   <p><button id="btnSugNames" type="button">Usar as sugestões nos nomes vazios</button> <button id="btnMtNames" type="button">Traduzir automático os nomes que faltam</button> <span class="note" id="mtNamesMsg"></span></p>
   <table class="grid"><thead><tr><th>Original</th><th>Falas</th><th>Tradução</th></tr></thead><tbody id="nameRows"></tbody></table></div>
+  <div class="df"><button data-close>Fechar</button></div></dialog>
+
+<dialog id="dlgTerms" class="wide"><div class="dh"><h2>Termos padronizados</h2></div>
+  <div class="db">
+    <p class="note">Expressões que se repetem e devem ter sempre a mesma tradução. Separe singular e plural com “/”. Em <b>Traduções a trocar</b>, liste as traduções diferentes (separadas por vírgula) que o botão <b>Padronizar</b> troca pela escolhida. Os termos também vão para a tradução automática, e as falas fora do padrão aparecem no filtro <b>Com aviso</b>.</p>
+    <table class="grid terms"><thead><tr><th>Inglês</th><th>Português</th><th>Traduções a trocar</th><th></th></tr></thead><tbody id="termRows"></tbody></table>
+    <p><button type="button" id="btnTermAdd">Acrescentar termo</button> <button type="button" id="btnTermSave">Salvar termos</button> <button type="button" class="primary" id="btnTermCheck">Conferir as traduções</button> <span class="note" id="termMsg"></span></p>
+    <div id="termReport"></div>
+  </div>
   <div class="df"><button data-close>Fechar</button></div></dialog>
 
 <dialog id="dlgSheet"><div class="dh"><h2>Planilha</h2></div>
@@ -517,16 +533,31 @@ function virtIssues(t, e) {
   if (placeholders(t) !== placeholders(e.body)) out.push("Mantenha os códigos do original: " + (placeholders(e.body) || "nenhum") + ".");
   return out.concat(lostAccents(t));
 }
+let TERM_CACHE = { key:null, list:[] };
+function termRx(phrase) { return new RegExp("(?<![\\p{L}\\p{N}_])" + phrase.trim().split(/\s+/).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+") + "(?![\\p{L}\\p{N}_])", "iu"); }
+function termList() {
+  const ts = (S.project && S.project.settings.termos) || [], key = JSON.stringify(ts);
+  if (TERM_CACHE.key !== key) {
+    TERM_CACHE = { key, list: ts.map(x => ({ x, en: x.en.split("/").map(s => s.trim()).filter(Boolean).map(termRx), pt: x.pt.split("/").map(s => s.trim()).filter(Boolean).map(termRx) })) };
+  }
+  return TERM_CACHE.list;
+}
+function termIssues(t, e) {
+  if (!t || !e) return [];
+  const out = [];
+  for (const k of termList()) if (k.en.some(r => r.test(e.body)) && !k.pt.some(r => r.test(t))) out.push("Termo padronizado: “" + k.x.en + "” é “" + k.x.pt + "”.");
+  return out;
+}
 function issuesOf(t, e) {
   const st = S.project.settings, out = [];
   if (!t) return out;
-  if (e && e.virt) return virtIssues(t, e);
+  if (e && e.virt) return virtIssues(t, e).concat(termIssues(t, e));
   for (const page of t.split("\\c")) {
     const ls = page.split("\n");
     if (ls.length > st.lines) out.push(ls.length + " linhas nesta caixa; o jogo mostra " + st.lines + ".");
     ls.forEach((l, i) => { const w = lineCols(l); if (w > st.cols) out.push("Linha " + (i + 1) + " tem " + w + " colunas; o limite é " + st.cols + "."); });
   }
-  return out.concat(lostAccents(t));
+  return out.concat(lostAccents(t), termIssues(t, e));
 }
 
 /* ----------------------------------------------------------- previa na fonte do jogo */
@@ -909,6 +940,58 @@ function renderNames() {
   }
 }
 $("#dlgNames").addEventListener("close", () => { if (S.file && !S.searchMode) renderWork(); });
+function termRow(x) {
+  const tr = el("tr"), mk = (v, ph) => { const i = el("input"); i.type = "text"; i.value = v || ""; i.placeholder = ph; return i; };
+  const a = mk(x.en, "Blue Rogue / Blue Rogues"), b = mk(x.pt, "Pirata Azul / Piratas Azuis"), c = mk(x.trocar, "Ladinos Azuis, Rogues Azuis");
+  const del = el("button", "quiet", "×"); del.type = "button"; del.title = "Remover"; del.onclick = () => tr.remove();
+  for (const i of [a, b, c]) { const td = el("td"); td.append(i); tr.append(td); }
+  const td = el("td"); td.append(del); tr.append(td);
+  return tr;
+}
+function readTerms() { return [...$("#termRows").children].map(tr => { const i = tr.querySelectorAll("input"); return { en:i[0].value.trim(), pt:i[1].value.trim(), trocar:i[2].value.trim() }; }).filter(x => x.en && x.pt); }
+async function saveTerms() { const r = await api("/api/terms", { termos:readTerms() }); S.project.settings.termos = r.termos; return r.termos; }
+$("#btnTerms").onclick = async () => {
+  await flushAll();
+  const tb = $("#termRows"); tb.textContent = ""; $("#termReport").textContent = ""; $("#termMsg").textContent = "";
+  for (const x of S.project.settings.termos || []) tb.append(termRow(x));
+  $("#dlgTerms").showModal();
+};
+$("#btnTermAdd").onclick = () => { const r = termRow({}); $("#termRows").append(r); r.querySelector("input").focus(); };
+$("#btnTermSave").onclick = async () => { try { const t = await saveTerms(); $("#termMsg").textContent = t.length + " termos salvos."; } catch (e) { $("#termMsg").textContent = e.message; } };
+async function termCheck(apply) {
+  const box = $("#termReport"); $("#termMsg").textContent = apply ? "Padronizando…" : "Conferindo…";
+  try {
+    await saveTerms();
+    const r = await api("/api/terms/check", { apply });
+    $("#termMsg").textContent = "";
+    box.textContent = "";
+    const tb = el("table", "grid"); tb.innerHTML = "<thead><tr><th>Termo</th><th>Falas com o termo</th><th>No padrão</th><th>" + (r.applied ? "Trocadas agora" : "A trocar") + "</th><th>Para revisar</th></tr></thead>";
+    const body = el("tbody");
+    for (const t of r.terms) { if (!t.total) continue; const tr = el("tr"); for (const v of [t.en + " → " + t.pt, t.total, t.ok, t.fix, t.miss]) tr.append(el("td", "", String(v))); body.append(tr); }
+    tb.append(body); box.append(tb);
+    if (r.applied) box.append(el("p", "", r.fixes + " falas foram padronizadas."));
+    else if (r.fixes) {
+      const b = el("button", "primary", "Padronizar: trocar em " + r.fixes + " falas"); b.type = "button"; b.onclick = () => termCheck(true);
+      const p = el("p"); p.append(b, " ", el("span", "note", "Troca as traduções listadas em “Traduções a trocar” pelo termo escolhido. O estado das falas não muda.")); box.append(p);
+      const ul = el("ul"); for (const f of r.fix_list.slice(0, 40)) ul.append(el("li", "", f.before.replace(/\n/g, " ") + "  →  " + f.after.replace(/\n/g, " "))); box.append(ul);
+    }
+    if (r.missing) {
+      box.append(el("p", "", r.missing + " falas têm o termo no original, mas a tradução não usa o termo escolhido nem uma variante conhecida. Revise à mão (clique para abrir):"));
+      const ul = el("ul");
+      for (const m of r.missing_list.slice(0, 200)) {
+        const li = el("li"), fi = S.project.summary.files.find(y => y.name === m.file), a = el("a", "", (fi ? fileLabel(fi) : m.file) + " / " + m.k);
+        a.onclick = async () => { $("#dlgTerms").close(); await openFile(m.file, m.k); };
+        li.append(a, " — " + m.term + ": “" + m.t.replace(/\n/g, " ") + "”"); ul.append(li);
+      }
+      box.append(ul);
+      box.append(el("p", "note", "Se a tradução usa outra forma que você aceita, acrescente-a em “Traduções a trocar” do termo e confira de novo."));
+    }
+    if (!r.fixes && !r.missing) box.append(el("p", "", "Todas as traduções seguem os termos padronizados."));
+    if (r.applied && S.file && !S.searchMode) { const f = S.file; S.file = null; await openFile(f); }
+    await refreshState();
+  } catch (e) { $("#termMsg").textContent = e.message; }
+}
+$("#btnTermCheck").onclick = () => termCheck(false);
 $("#btnSugNames").onclick = async () => {
   const n = S.nameList.filter(x => !x.t && x.sug).length;
   if (!n) { $("#mtNamesMsg").textContent = "Não há sugestões para os nomes que faltam."; return; }

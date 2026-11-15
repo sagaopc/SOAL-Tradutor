@@ -1,0 +1,21 @@
+{
+  "_sobre": "Termos padronizados sugeridos para projetos novos. en e pt aceitam formas separadas por ' / ' (singular / plural). trocar: traducoes diferentes que o botao Padronizar troca pelo termo escolhido.",
+  "termos": [
+    {"en": "Blue Rogue / Blue Rogues", "pt": "Pirata Azul / Piratas Azuis", "trocar": "Ladino Azul, Ladinos Azuis, Rogue Azul, Rogues Azuis, Patife Azul, Patifes Azuis, Velhaco Azul, Velhacos Azuis, Bandido Azul, Bandidos Azuis, Trapaceiro Azul, Trapaceiros Azuis, Malandro Azul, Malandros Azuis, Blue Rogue, Blue Rogues"},
+    {"en": "Black Pirate / Black Pirates", "pt": "Pirata Negro / Piratas Negros", "trocar": "Pirata Preto, Piratas Pretos, Black Pirate, Black Pirates"},
+    {"en": "Air Pirate / Air Pirates", "pt": "pirata do ar / piratas do ar", "trocar": "pirata aéreo, piratas aéreos, pirata dos céus, piratas dos céus, pirata do céu, piratas do céu, air pirate, air pirates"},
+    {"en": "Little Jack", "pt": "Pequeno Jack", "trocar": "Jack Pequeno, Jaquinho, Little Jack"},
+    {"en": "Moon Stone / Moon Stones", "pt": "Pedra da Lua / Pedras da Lua", "trocar": "Pedra Lunar, Pedras Lunares, Pedra-da-lua, Pedras-da-lua, Moon Stone, Moon Stones, Moonstone, Moonstones"},
+    {"en": "Moon Crystal / Moon Crystals", "pt": "Cristal da Lua / Cristais da Lua", "trocar": "Cristal Lunar, Cristais Lunares, Moon Crystal"},
+    {"en": "Pirate Isle", "pt": "Ilha Pirata", "trocar": "Ilha dos Piratas, Ilha do Pirata, Pirate Isle"},
+    {"en": "Sailors' Guild", "pt": "Guilda dos Marujos", "trocar": "Guilda dos Marinheiros, Guilda de Marinheiros, Guilda dos Navegantes"},
+    {"en": "Grand Fortress", "pt": "Grande Fortaleza", "trocar": "Fortaleza Grandiosa, Grand Fortress"},
+    {"en": "Dark Rift", "pt": "Fenda Sombria", "trocar": "Fenda Escura, Fenda Negra, Dark Rift"},
+    {"en": "Crescent Isle", "pt": "Ilha Crescente", "trocar": "Ilha da Lua Crescente, Crescent Isle"},
+    {"en": "Lord Galcian", "pt": "Lorde Galcian", "trocar": "Senhor Galcian"},
+    {"en": "Swashbuckler", "pt": "Destemido", "trocar": "Espadachim, Fanfarrão, Aventureiro"},
+    {"en": "Silvite / Silvites", "pt": "silvita / silvitas", "trocar": "silvito, silvitos, silvite, silvites"},
+    {"en": "Rains of Destruction", "pt": "Chuvas da Destruição", "trocar": "Chuva de Destruição, Chuvas de Destruição, Chuva da Destruição"},
+    {"en": "Delphinus", "pt": "Delphinus", "trocar": "Delfinus, Delfino"}
+  ]
+}

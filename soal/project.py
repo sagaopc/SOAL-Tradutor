@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import aklz
 from . import font as fontmod
-from . import intro, mt, recomp, sct, sistema, sugestao, text
+from . import intro, mt, recomp, sct, sistema, sugestao, termos, text
 
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
@@ -234,7 +234,8 @@ class Project:
             p._load_meta()
         else:
             p.meta = {"version": 1, "created": time.strftime("%Y-%m-%d %H:%M"),
-                      "settings": json.loads(json.dumps(DEFAULT_SETTINGS)), "names": {}, "tr": {}}
+                      "settings": dict(json.loads(json.dumps(DEFAULT_SETTINGS)), termos=termos.defaults()),
+                      "names": {}, "tr": {}}
         region = REGIONS.get(gid or "", "us")
         if p.meta.get("region", region) != region:
             raise ProjectError("Esse projeto e' de outra versao do jogo; escolha outra pasta de projeto.")
@@ -413,6 +414,8 @@ class Project:
             self.meta = json.load(fh)
         st = json.loads(json.dumps(DEFAULT_SETTINGS))
         st.update(self.meta.get("settings") or {})
+        if "termos" not in st:
+            st["termos"] = termos.defaults()
         self.meta["settings"] = st
         self.meta.setdefault("names", {})
         self.meta.setdefault("tr", {})
@@ -1112,7 +1115,61 @@ class Project:
                 "prev": prev, "menu": text.is_menu(e["body"])}
 
     def _mt_extra_glossary(self) -> List[List[str]]:
-        return [[n, t] for n, t in self.names.items() if t]
+        out = [[n, t] for n, t in self.names.items() if t]
+        for t in termos.clean(self.settings.get("termos")):
+            en, pt = termos.forms(t["en"]), termos.forms(t["pt"])
+            for i, e in enumerate(en):
+                out.append([e, pt[min(i, len(pt) - 1)]])
+        return out
+
+    # ------------------------------------------------------------ termos padronizados
+    def set_terms(self, terms) -> List[dict]:
+        with self.lock:
+            self.settings["termos"] = termos.clean(terms)
+            self.touch()
+        self.save()
+        return self.settings["termos"]
+
+    def standardize(self, apply: bool = False) -> dict:
+        """Confere os termos padronizados em todas as traducoes. Com apply, troca as
+        variantes conhecidas pelo termo escolhido (o estado da fala nao muda)."""
+        ck = termos.Checker(self.settings.get("termos"))
+        stats = {t["t"]["en"]: {"en": t["t"]["en"], "pt": t["t"]["pt"], "total": 0, "ok": 0, "fix": 0, "miss": 0}
+                 for t in ck.terms}
+        fixes, missing = [], []
+        for f in self.files:
+            tr = self.tr.get(f["name"], {})
+            for e in f["entries"]:
+                cur = (tr.get(e["k"]) or {}).get("t", "")
+                if not cur:
+                    continue
+                hits = [x for x in ck.terms if any(r.search(e["body"]) for r in x["en"])]
+                if not hits:
+                    continue
+                new, n = ck.fix(e["body"], cur)
+                before = ck.missing(e["body"], cur)
+                left = ck.missing(e["body"], new)
+                for x in hits:
+                    st = stats[x["t"]["en"]]
+                    st["total"] += 1
+                    if x["t"] in left:
+                        st["miss"] += 1
+                    elif x["t"] in before:
+                        st["fix"] += 1
+                    else:
+                        st["ok"] += 1
+                if n:
+                    fixes.append({"file": f["name"], "k": e["k"], "before": cur, "after": new})
+                    if apply:
+                        self.tr[f["name"]][e["k"]]["t"] = new
+                for m in left:
+                    missing.append({"file": f["name"], "k": e["k"], "term": m["en"], "pt": m["pt"],
+                                    "body": e["body"], "t": new if apply else cur})
+        if apply and fixes:
+            self.touch()
+            self.save()
+        return {"terms": list(stats.values()), "fixes": len(fixes), "fix_list": fixes[:300],
+                "missing": len(missing), "missing_list": missing[:500], "applied": bool(apply)}
 
     def mt_source(self) -> str:
         """Idioma do original mandado a traducao automatica (so' na versao europeia)."""

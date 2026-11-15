@@ -62,6 +62,8 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
   parecida com a original, e a tela mostra como a página fica.
 - **Sugestões de tradução** para nomes de itens, armas e NPCs genéricos, sem serviço externo
   (“Valuan Soldier” → “Soldado Valuano”, “Sacri Crystal” → “Cristal Sacri”).
+- **Termos padronizados**: “Blue Rogues” é sempre “Piratas Azuis”. O programa aponta as falas fora
+  do padrão, troca as variações conhecidas de uma vez e passa os termos à tradução automática.
 - Tradução automática dos **nomes de quem fala** que faltam (cargos como “Valuan Soldier” são
   traduzidos; nomes próprios ficam iguais).
 - Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos. Na
