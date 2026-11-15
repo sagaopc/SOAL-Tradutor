@@ -1,0 +1,3289 @@
+{
+"adjetivos": {
+"agile": [
+"Ágil",
+"Ágil",
+"pos"
+],
+"ancient": [
+"Antigo",
+"Antiga",
+"pos"
+],
+"angry": [
+"Zangado",
+"Zangada",
+"pos"
+],
+"artificial": [
+"Artificial",
+"Artificial",
+"pos"
+],
+"battle": [
+"de Batalha",
+"de Batalha",
+"pos"
+],
+"battleworn": [
+"Desgastado",
+"Desgastada",
+"pos"
+],
+"bearded": [
+"Barbudo",
+"Barbuda",
+"pos"
+],
+"big": [
+"Grande",
+"Grande",
+"pre"
+],
+"black": [
+"Negro",
+"Negra",
+"pos"
+],
+"blessed": [
+"Abençoado",
+"Abençoada",
+"pos"
+],
+"blue": [
+"Azul",
+"Azul",
+"pos"
+],
+"bold": [
+"Ousado",
+"Ousada",
+"pos"
+],
+"bottomless": [
+"Sem Fundo",
+"Sem Fundo",
+"pos"
+],
+"brave": [
+"Corajoso",
+"Corajosa",
+"pos"
+],
+"broken": [
+"Quebrado",
+"Quebrada",
+"pos"
+],
+"caravan": [
+"de Caravana",
+"de Caravana",
+"pos"
+],
+"cargo": [
+"de Carga",
+"de Carga",
+"pos"
+],
+"ceramic": [
+"de Cerâmica",
+"de Cerâmica",
+"pos"
+],
+"chief": [
+"Chefe",
+"Chefe",
+"pos"
+],
+"combat": [
+"de Combate",
+"de Combate",
+"pos"
+],
+"critical": [
+"Crítico",
+"Crítica",
+"pos"
+],
+"cursed": [
+"Amaldiçoado",
+"Amaldiçoada",
+"pos"
+],
+"custom": [
+"Personalizado",
+"Personalizada",
+"pos"
+],
+"dark": [
+"Sombrio",
+"Sombria",
+"pos"
+],
+"deep": [
+"Profundo",
+"Profunda",
+"pos"
+],
+"defensive": [
+"Defensivo",
+"Defensiva",
+"pos"
+],
+"drunken": [
+"Bêbado",
+"Bêbada",
+"pos"
+],
+"east": [
+"do Leste",
+"do Leste",
+"pos"
+],
+"eastern": [
+"do Leste",
+"do Leste",
+"pos"
+],
+"elderly": [
+"Idoso",
+"Idosa",
+"pos"
+],
+"elite": [
+"de Elite",
+"de Elite",
+"pos"
+],
+"eternal": [
+"Eterno",
+"Eterna",
+"pos"
+],
+"everlasting": [
+"Eterno",
+"Eterna",
+"pos"
+],
+"evil": [
+"Maligno",
+"Maligna",
+"pos"
+],
+"fallen": [
+"Caído",
+"Caída",
+"pos"
+],
+"famous": [
+"Famoso",
+"Famosa",
+"pos"
+],
+"fast": [
+"Rápido",
+"Rápida",
+"pos"
+],
+"fat": [
+"Gordo",
+"Gorda",
+"pos"
+],
+"final": [
+"Final",
+"Final",
+"pos"
+],
+"flying": [
+"Voador",
+"Voadora",
+"pos"
+],
+"foreign": [
+"Estrangeiro",
+"Estrangeira",
+"pos"
+],
+"former": [
+"Ex-",
+"Ex-",
+"pre"
+],
+"frozen": [
+"Congelado",
+"Congelada",
+"pos"
+],
+"gangly": [
+"Magricela",
+"Magricela",
+"pos"
+],
+"giant": [
+"Gigante",
+"Gigante",
+"pos"
+],
+"golden": [
+"Dourado",
+"Dourada",
+"pos"
+],
+"grand": [
+"Grande",
+"Grande",
+"pre"
+],
+"great": [
+"Grande",
+"Grande",
+"pre"
+],
+"green": [
+"Verde",
+"Verde",
+"pos"
+],
+"grieving": [
+"Enlutado",
+"Enlutada",
+"pos"
+],
+"happy": [
+"Feliz",
+"Feliz",
+"pos"
+],
+"head": [
+"Chefe",
+"Chefe",
+"pos"
+],
+"heavy": [
+"Pesado",
+"Pesada",
+"pos"
+],
+"hidden": [
+"Oculto",
+"Oculta",
+"pos"
+],
+"high": [
+"Alto",
+"Alta",
+"pos"
+],
+"hollow": [
+"Oco",
+"Oca",
+"pos"
+],
+"holy": [
+"Sagrado",
+"Sagrada",
+"pos"
+],
+"hunting": [
+"de Caça",
+"de Caça",
+"pos"
+],
+"imperial": [
+"Imperial",
+"Imperial",
+"pos"
+],
+"injured": [
+"Ferido",
+"Ferida",
+"pos"
+],
+"insulated": [
+"Isolante",
+"Isolante",
+"pos"
+],
+"inverse": [
+"Invertido",
+"Invertida",
+"pos"
+],
+"ixa'takan": [
+"Ixa'takano",
+"Ixa'takana",
+"pos"
+],
+"large": [
+"Grande",
+"Grande",
+"pre"
+],
+"legendary": [
+"Lendário",
+"Lendária",
+"pos"
+],
+"light": [
+"Leve",
+"Leve",
+"pos"
+],
+"little": [
+"Pequeno",
+"Pequena",
+"pre"
+],
+"living": [
+"Vivo",
+"Viva",
+"pos"
+],
+"local": [
+"Local",
+"Local",
+"pos"
+],
+"long": [
+"Longo",
+"Longa",
+"pos"
+],
+"lost": [
+"Perdido",
+"Perdida",
+"pos"
+],
+"lower": [
+"Baixo",
+"Baixa",
+"pos"
+],
+"lunar": [
+"Lunar",
+"Lunar",
+"pos"
+],
+"magic": [
+"Mágico",
+"Mágica",
+"pos"
+],
+"magical": [
+"Mágico",
+"Mágica",
+"pos"
+],
+"main": [
+"Principal",
+"Principal",
+"pos"
+],
+"merchant": [
+"Mercante",
+"Mercante",
+"pos"
+],
+"mighty": [
+"Poderoso",
+"Poderosa",
+"pos"
+],
+"mining": [
+"de Mineração",
+"de Mineração",
+"pos"
+],
+"miracle": [
+"Milagroso",
+"Milagrosa",
+"pos"
+],
+"mysterious": [
+"Misterioso",
+"Misteriosa",
+"pos"
+],
+"mystic": [
+"Místico",
+"Mística",
+"pos"
+],
+"nasrean": [
+"Nasreano",
+"Nasreana",
+"pos"
+],
+"national": [
+"Nacional",
+"Nacional",
+"pos"
+],
+"naval": [
+"Naval",
+"Naval",
+"pos"
+],
+"nervous": [
+"Nervoso",
+"Nervosa",
+"pos"
+],
+"new": [
+"Novo",
+"Nova",
+"pre"
+],
+"nocturnal": [
+"Noturno",
+"Noturna",
+"pos"
+],
+"nomadic": [
+"Nômade",
+"Nômade",
+"pos"
+],
+"north": [
+"do Norte",
+"do Norte",
+"pos"
+],
+"northern": [
+"do Norte",
+"do Norte",
+"pos"
+],
+"old": [
+"Velho",
+"Velha",
+"pre"
+],
+"ominous": [
+"Sinistro",
+"Sinistra",
+"pos"
+],
+"pirate": [
+"Pirata",
+"Pirata",
+"pos"
+],
+"plated": [
+"Blindado",
+"Blindada",
+"pos"
+],
+"poor": [
+"Pobre",
+"Pobre",
+"pos"
+],
+"powerful": [
+"Poderoso",
+"Poderosa",
+"pos"
+],
+"prototype": [
+"Protótipo",
+"Protótipo",
+"pos"
+],
+"purple": [
+"Roxo",
+"Roxa",
+"pos"
+],
+"quick": [
+"Rápido",
+"Rápida",
+"pos"
+],
+"radiant": [
+"Radiante",
+"Radiante",
+"pos"
+],
+"rapid": [
+"Rápido",
+"Rápida",
+"pos"
+],
+"red": [
+"Vermelho",
+"Vermelha",
+"pos"
+],
+"remodeled": [
+"Reformado",
+"Reformada",
+"pos"
+],
+"revered": [
+"Venerado",
+"Venerada",
+"pos"
+],
+"rich": [
+"Rico",
+"Rica",
+"pos"
+],
+"royal": [
+"Real",
+"Real",
+"pos"
+],
+"sacred": [
+"Sagrado",
+"Sagrada",
+"pos"
+],
+"sad": [
+"Triste",
+"Triste",
+"pos"
+],
+"scout": [
+"Batedor",
+"Batedora",
+"pos"
+],
+"sick": [
+"Doente",
+"Doente",
+"pos"
+],
+"silver": [
+"Prateado",
+"Prateada",
+"pos"
+],
+"silvite": [
+"Silvita",
+"Silvita",
+"pos"
+],
+"sleepy": [
+"Sonolento",
+"Sonolenta",
+"pos"
+],
+"small": [
+"Pequeno",
+"Pequena",
+"pre"
+],
+"south": [
+"do Sul",
+"do Sul",
+"pos"
+],
+"southern": [
+"do Sul",
+"do Sul",
+"pos"
+],
+"special": [
+"Especial",
+"Especial",
+"pos"
+],
+"standard": [
+"Padrão",
+"Padrão",
+"pos"
+],
+"strange": [
+"Estranho",
+"Estranha",
+"pos"
+],
+"strong": [
+"Forte",
+"Forte",
+"pos"
+],
+"suspicious": [
+"Suspeito",
+"Suspeita",
+"pos"
+],
+"swift": [
+"Veloz",
+"Veloz",
+"pos"
+],
+"terrible": [
+"Terrível",
+"Terrível",
+"pos"
+],
+"throwing": [
+"de Arremesso",
+"de Arremesso",
+"pos"
+],
+"tiny": [
+"Minúsculo",
+"Minúscula",
+"pos"
+],
+"tired": [
+"Cansado",
+"Cansada",
+"pos"
+],
+"twin": [
+"Gêmeo",
+"Gêmea",
+"pos"
+],
+"unseen": [
+"Invisível",
+"Invisível",
+"pos"
+],
+"upper": [
+"Alto",
+"Alta",
+"pos"
+],
+"valuan": [
+"Valuano",
+"Valuana",
+"pos"
+],
+"vice": [
+"Vice-",
+"Vice-",
+"pre"
+],
+"wandering": [
+"Errante",
+"Errante",
+"pos"
+],
+"war": [
+"de Guerra",
+"de Guerra",
+"pos"
+],
+"wealthy": [
+"Rico",
+"Rica",
+"pos"
+],
+"west": [
+"do Oeste",
+"do Oeste",
+"pos"
+],
+"western": [
+"do Oeste",
+"do Oeste",
+"pos"
+],
+"white": [
+"Branco",
+"Branca",
+"pos"
+],
+"wild": [
+"Selvagem",
+"Selvagem",
+"pos"
+],
+"wounded": [
+"Ferido",
+"Ferida",
+"pos"
+],
+"yafutoman": [
+"Yafutomano",
+"Yafutomana",
+"pos"
+],
+"yellow": [
+"Amarelo",
+"Amarela",
+"pos"
+],
+"young": [
+"Jovem",
+"Jovem",
+"pre"
+]
+},
+"expressoes": {
+"air pirate": "Pirata do Ar",
+"air pirates": "Piratas do Ar",
+"black pirate": "Pirata Negro",
+"black pirates": "Piratas Negros",
+"blue rogue": "Pirata Azul",
+"blue rogues": "Piratas Azuis",
+"crescent isle": "Ilha Crescente",
+"crow's nest": "Cesto da Gávea",
+"dark rift": "Fenda Sombria",
+"deck hand": "Marujo",
+"deckhand": "Marujo",
+"deep sky": "Céu Profundo",
+"female pirate": "Pirata",
+"female sailor": "Marinheira",
+"first mate": "Imediato",
+"grand fortress": "Grande Fortaleza",
+"imperial armada": "Armada Imperial",
+"little boy": "Menino",
+"little girl": "Menina",
+"lookout island": "Ilha da Vigia",
+"lower city": "Cidade Baixa",
+"moon crystal": "Cristal da Lua",
+"moon stone": "Pedra da Lua",
+"old lady": "Senhora",
+"old man": "Velho",
+"old sailor": "Velho Marujo",
+"old woman": "Velha",
+"pirate isle": "Ilha Pirata",
+"sailors' guild": "Guilda dos Marujos",
+"sailors' island": "Ilha dos Marujos",
+"shrine island": "Ilha do Santuário",
+"silver moon": "Lua Prateada",
+"silver moon stone": "Pedra da Lua Prateada",
+"upper city": "Cidade Alta",
+"vice captain": "Vice-Capitão",
+"young boy": "Menino",
+"young girl": "Menina",
+"young man": "Rapaz",
+"young woman": "Moça"
+},
+"materiais": [
+"silver",
+"gold",
+"iron",
+"steel",
+"bronze",
+"copper",
+"ice",
+"fire",
+"poison",
+"sand",
+"snow",
+"leather",
+"wood",
+"stone",
+"bone",
+"water",
+"paper",
+"jade",
+"coral",
+"crystal",
+"glass",
+"wax",
+"fur",
+"darkness",
+"shadow",
+"flame",
+"frost",
+"earth",
+"blood",
+"moonlight"
+],
+"nomes": {
+"academy": [
+"Academia",
+"f"
+],
+"admiral": [
+"Almirante",
+"m"
+],
+"adventurer": [
+"Aventureiro",
+"m",
+"Aventureira"
+],
+"airship": [
+"Aeronave",
+"f"
+],
+"airspace": [
+"Espaço Aéreo",
+"m"
+],
+"alloy": [
+"Liga",
+"f"
+],
+"altar": [
+"Altar",
+"m"
+],
+"amber": [
+"Âmbar",
+"m"
+],
+"amulet": [
+"Amuleto",
+"m"
+],
+"anchor": [
+"Âncora",
+"f"
+],
+"anemone": [
+"Anêmona",
+"f"
+],
+"angel": [
+"Anjo",
+"m"
+],
+"apprentice": [
+"Aprendiz",
+"m",
+"Aprendiz"
+],
+"arc": [
+"Arco",
+"m"
+],
+"arcwhale": [
+"Arcobaleia",
+"f"
+],
+"arm": [
+"Braço",
+"m"
+],
+"armada": [
+"Armada",
+"f"
+],
+"armor": [
+"Armadura",
+"f"
+],
+"armour": [
+"Armadura",
+"f"
+],
+"army": [
+"Exército",
+"m"
+],
+"arrow": [
+"Flecha",
+"f"
+],
+"assassin": [
+"Assassino",
+"m",
+"Assassina"
+],
+"attack": [
+"Ataque",
+"m"
+],
+"attendant": [
+"Atendente",
+"m",
+"Atendente"
+],
+"attic": [
+"Sótão",
+"m"
+],
+"aura": [
+"Aura",
+"f"
+],
+"aurora": [
+"Aurora",
+"f"
+],
+"axe": [
+"Machado",
+"m"
+],
+"balloon": [
+"Balão",
+"m"
+],
+"band": [
+"Faixa",
+"f"
+],
+"bar": [
+"Bar",
+"m"
+],
+"bartender": [
+"Taberneiro",
+"m",
+"Taberneira"
+],
+"base": [
+"Base",
+"f"
+],
+"basement": [
+"Porão",
+"m"
+],
+"bat": [
+"Morcego",
+"m"
+],
+"bath": [
+"Banho",
+"m"
+],
+"battle": [
+"Batalha",
+"f"
+],
+"bazaar": [
+"Bazar",
+"m"
+],
+"beak": [
+"Bico",
+"m"
+],
+"beast": [
+"Fera",
+"f"
+],
+"bedroom": [
+"Quarto",
+"m"
+],
+"beggar": [
+"Mendigo",
+"m",
+"Mendiga"
+],
+"belt": [
+"Cinto",
+"m"
+],
+"berry": [
+"Fruta Silvestre",
+"f"
+],
+"bird": [
+"Pássaro",
+"m"
+],
+"bistro": [
+"Bistrô",
+"m"
+],
+"bite": [
+"Mordida",
+"f"
+],
+"blacksmith": [
+"Ferreiro",
+"m",
+"Ferreira"
+],
+"blade": [
+"Lâmina",
+"f"
+],
+"blast": [
+"Rajada",
+"f"
+],
+"blaster": [
+"Disparador",
+"m"
+],
+"blessing": [
+"Bênção",
+"f"
+],
+"blimp": [
+"Dirigível",
+"m"
+],
+"blood": [
+"Sangue",
+"m"
+],
+"bodyguard": [
+"Guarda-costas",
+"m"
+],
+"bomb": [
+"Bomba",
+"f"
+],
+"bone": [
+"Osso",
+"m"
+],
+"book": [
+"Livro",
+"m"
+],
+"boomerang": [
+"Bumerangue",
+"m"
+],
+"boots": [
+"Botas",
+"f"
+],
+"boss": [
+"Chefe",
+"m",
+"Chefe"
+],
+"bottle": [
+"Garrafa",
+"f"
+],
+"boulder": [
+"Pedregulho",
+"m"
+],
+"bow": [
+"Arco",
+"m"
+],
+"box": [
+"Caixa",
+"f"
+],
+"boy": [
+"Garoto",
+"m"
+],
+"bracelet": [
+"Pulseira",
+"f"
+],
+"bracer": [
+"Braçadeira",
+"f"
+],
+"bread": [
+"Pão",
+"m"
+],
+"breath": [
+"Sopro",
+"m"
+],
+"bridge": [
+"Ponte",
+"f"
+],
+"bronze": [
+"Bronze",
+"m"
+],
+"brooch": [
+"Broche",
+"m"
+],
+"brother": [
+"Irmão",
+"m"
+],
+"buckler": [
+"Broquel",
+"m"
+],
+"burst": [
+"Explosão",
+"f"
+],
+"butler": [
+"Mordomo",
+"m"
+],
+"cabin": [
+"Cabine",
+"f"
+],
+"camp": [
+"Acampamento",
+"m"
+],
+"cannon": [
+"Canhão",
+"m"
+],
+"cannonball": [
+"Bala de Canhão",
+"f"
+],
+"cap": [
+"Gorro",
+"m"
+],
+"cape": [
+"Capa",
+"f"
+],
+"capital": [
+"Capital",
+"f"
+],
+"captain": [
+"Capitão",
+"m",
+"Capitã"
+],
+"carpenter": [
+"Carpinteiro",
+"m",
+"Carpinteira"
+],
+"castle": [
+"Castelo",
+"m"
+],
+"cave": [
+"Caverna",
+"f"
+],
+"cell": [
+"Cela",
+"f"
+],
+"chain": [
+"Corrente",
+"f"
+],
+"chamber": [
+"Câmara",
+"f"
+],
+"chameleon": [
+"Camaleão",
+"m"
+],
+"charm": [
+"Amuleto",
+"m"
+],
+"cheese": [
+"Queijo",
+"m"
+],
+"chef": [
+"Cozinheiro",
+"m",
+"Cozinheira"
+],
+"chest": [
+"Baú",
+"m"
+],
+"chief": [
+"Chefe",
+"m",
+"Chefe"
+],
+"child": [
+"Criança",
+"f"
+],
+"church": [
+"Igreja",
+"f"
+],
+"citizen": [
+"Cidadão",
+"m",
+"Cidadã"
+],
+"city": [
+"Cidade",
+"f"
+],
+"clan": [
+"Clã",
+"m"
+],
+"claw": [
+"Garra",
+"f"
+],
+"claymore": [
+"Claymore",
+"f"
+],
+"clerk": [
+"Atendente",
+"m",
+"Atendente"
+],
+"cloak": [
+"Capa",
+"f"
+],
+"clothes": [
+"Roupas",
+"f"
+],
+"clothing": [
+"Roupa",
+"f"
+],
+"cloud": [
+"Nuvem",
+"f"
+],
+"club": [
+"Clava",
+"f"
+],
+"coat": [
+"Casaco",
+"m"
+],
+"coin": [
+"Moeda",
+"f"
+],
+"commander": [
+"Comandante",
+"m",
+"Comandante"
+],
+"cook": [
+"Cozinheiro",
+"m",
+"Cozinheira"
+],
+"copper": [
+"Cobre",
+"m"
+],
+"coral": [
+"Coral",
+"m"
+],
+"corridor": [
+"Corredor",
+"m"
+],
+"council": [
+"Conselho",
+"m"
+],
+"counter": [
+"Contra-ataque",
+"m"
+],
+"court": [
+"Corte",
+"f"
+],
+"crab": [
+"Caranguejo",
+"m"
+],
+"creature": [
+"Criatura",
+"f"
+],
+"crest": [
+"Brasão",
+"m"
+],
+"crew": [
+"Tripulação",
+"f"
+],
+"crewman": [
+"Tripulante",
+"m"
+],
+"cross": [
+"Cruz",
+"f"
+],
+"cruiser": [
+"Cruzador",
+"m"
+],
+"crystal": [
+"Cristal",
+"m"
+],
+"cutlass": [
+"Sabre",
+"m"
+],
+"cutter": [
+"Cortador",
+"m"
+],
+"dagger": [
+"Adaga",
+"f"
+],
+"damage": [
+"Dano",
+"m"
+],
+"dance": [
+"Dança",
+"f"
+],
+"dancer": [
+"Dançarino",
+"m",
+"Dançarina"
+],
+"darkness": [
+"Escuridão",
+"f"
+],
+"daughter": [
+"Filha",
+"f"
+],
+"day": [
+"Dia",
+"m"
+],
+"death": [
+"Morte",
+"f"
+],
+"deck": [
+"Convés",
+"m"
+],
+"deckhand": [
+"Marujo",
+"m",
+"Maruja"
+],
+"demon": [
+"Demônio",
+"m"
+],
+"desert": [
+"Deserto",
+"m"
+],
+"destruction": [
+"Destruição",
+"f"
+],
+"diamond": [
+"Diamante",
+"m"
+],
+"diary": [
+"Diário",
+"m"
+],
+"discovery": [
+"Descoberta",
+"f"
+],
+"dock": [
+"Doca",
+"f"
+],
+"doctor": [
+"Médico",
+"m",
+"Médica"
+],
+"door": [
+"Porta",
+"f"
+],
+"dragon": [
+"Dragão",
+"m"
+],
+"dream": [
+"Sonho",
+"m"
+],
+"dress": [
+"Vestido",
+"m"
+],
+"drill": [
+"Broca",
+"f"
+],
+"drunk": [
+"Bêbado",
+"m",
+"Bêbada"
+],
+"dungeon": [
+"Masmorra",
+"f"
+],
+"dust": [
+"Pó",
+"m"
+],
+"earring": [
+"Brinco",
+"m"
+],
+"earth": [
+"Terra",
+"f"
+],
+"eclipse": [
+"Eclipse",
+"m"
+],
+"eel": [
+"Enguia",
+"f"
+],
+"egg": [
+"Ovo",
+"m"
+],
+"elder": [
+"Ancião",
+"m",
+"Anciã"
+],
+"elixir": [
+"Elixir",
+"m"
+],
+"emerald": [
+"Esmeralda",
+"f"
+],
+"emperor": [
+"Imperador",
+"m",
+"Imperatriz"
+],
+"empire": [
+"Império",
+"m"
+],
+"empress": [
+"Imperatriz",
+"f"
+],
+"engine": [
+"Motor",
+"m"
+],
+"engineer": [
+"Engenheiro",
+"m",
+"Engenheira"
+],
+"entrance": [
+"Entrada",
+"f"
+],
+"excavation": [
+"Escavação",
+"f"
+],
+"explorer": [
+"Explorador",
+"m",
+"Exploradora"
+],
+"eye": [
+"Olho",
+"m"
+],
+"face": [
+"Rosto",
+"m"
+],
+"factory": [
+"Fábrica",
+"f"
+],
+"faith": [
+"Fé",
+"f"
+],
+"family": [
+"Família",
+"f"
+],
+"fang": [
+"Presa",
+"f"
+],
+"farmer": [
+"Fazendeiro",
+"m",
+"Fazendeira"
+],
+"father": [
+"Pai",
+"m"
+],
+"fatigue": [
+"Fadiga",
+"f"
+],
+"feather": [
+"Pena",
+"f"
+],
+"fellow": [
+"Sujeito",
+"m"
+],
+"fiber": [
+"Fibra",
+"f"
+],
+"field": [
+"Campo",
+"m"
+],
+"figure": [
+"Figura",
+"f"
+],
+"fire": [
+"Fogo",
+"m"
+],
+"fish": [
+"Peixe",
+"m"
+],
+"fisherman": [
+"Pescador",
+"m",
+"Pescadora"
+],
+"fist": [
+"Punho",
+"m"
+],
+"flail": [
+"Mangual",
+"m"
+],
+"flame": [
+"Chama",
+"f"
+],
+"flash": [
+"Clarão",
+"m"
+],
+"fleet": [
+"Frota",
+"f"
+],
+"floor": [
+"Andar",
+"m"
+],
+"flower": [
+"Flor",
+"f"
+],
+"flutterfly": [
+"Borboleta",
+"f"
+],
+"focus": [
+"Foco",
+"m"
+],
+"forest": [
+"Floresta",
+"f"
+],
+"fort": [
+"Forte",
+"m"
+],
+"fortress": [
+"Fortaleza",
+"f"
+],
+"fortune": [
+"Fortuna",
+"f"
+],
+"fossil": [
+"Fóssil",
+"m"
+],
+"friend": [
+"Amigo",
+"m",
+"Amiga"
+],
+"frost": [
+"Geada",
+"f"
+],
+"fruit": [
+"Fruta",
+"f"
+],
+"fur": [
+"Pele",
+"f"
+],
+"fury": [
+"Fúria",
+"f"
+],
+"gambler": [
+"Apostador",
+"m",
+"Apostadora"
+],
+"garden": [
+"Jardim",
+"m"
+],
+"gas": [
+"Gás",
+"m"
+],
+"gate": [
+"Portão",
+"m"
+],
+"gear": [
+"Engrenagem",
+"f"
+],
+"gem": [
+"Gema",
+"f"
+],
+"gemstone": [
+"Pedra Preciosa",
+"f"
+],
+"ghost": [
+"Fantasma",
+"m"
+],
+"girl": [
+"Garota",
+"f"
+],
+"glass": [
+"Vidro",
+"m"
+],
+"glove": [
+"Luva",
+"f"
+],
+"gloves": [
+"Luvas",
+"f"
+],
+"glyph": [
+"Glifo",
+"m"
+],
+"god": [
+"Deus",
+"m"
+],
+"goddess": [
+"Deusa",
+"f"
+],
+"goggles": [
+"Óculos",
+"m"
+],
+"gold": [
+"Ouro",
+"m"
+],
+"golem": [
+"Golem",
+"m"
+],
+"grandma": [
+"Vovó",
+"f"
+],
+"grandpa": [
+"Vovô",
+"m"
+],
+"grave": [
+"Túmulo",
+"m"
+],
+"graveyard": [
+"Cemitério",
+"m"
+],
+"grease": [
+"Graxa",
+"f"
+],
+"grog": [
+"Grogue",
+"m"
+],
+"guard": [
+"Guarda",
+"m"
+],
+"guardian": [
+"Guardião",
+"m",
+"Guardiã"
+],
+"guide": [
+"Guia",
+"m",
+"Guia"
+],
+"guild": [
+"Guilda",
+"f"
+],
+"gun": [
+"Arma",
+"f"
+],
+"gunboat": [
+"Canhoneira",
+"f"
+],
+"gunner": [
+"Artilheiro",
+"m",
+"Artilheira"
+],
+"guy": [
+"Sujeito",
+"m"
+],
+"hall": [
+"Salão",
+"m"
+],
+"hammer": [
+"Martelo",
+"m"
+],
+"hand": [
+"Mão",
+"f"
+],
+"harbor": [
+"Porto",
+"m"
+],
+"harbour": [
+"Porto",
+"m"
+],
+"harpoon": [
+"Arpão",
+"m"
+],
+"hat": [
+"Chapéu",
+"m"
+],
+"heart": [
+"Coração",
+"m"
+],
+"helm": [
+"Leme",
+"m"
+],
+"helmet": [
+"Elmo",
+"m"
+],
+"helmsman": [
+"Timoneiro",
+"m",
+"Timoneira"
+],
+"herb": [
+"Erva",
+"f"
+],
+"hermit": [
+"Eremita",
+"m",
+"Eremita"
+],
+"hideout": [
+"Esconderijo",
+"m"
+],
+"historian": [
+"Historiador",
+"m",
+"Historiadora"
+],
+"hold": [
+"Porão",
+"m"
+],
+"hook": [
+"Gancho",
+"m"
+],
+"hope": [
+"Esperança",
+"f"
+],
+"horn": [
+"Chifre",
+"m"
+],
+"house": [
+"Casa",
+"f"
+],
+"hull": [
+"Casco",
+"m"
+],
+"hunter": [
+"Caçador",
+"m",
+"Caçadora"
+],
+"husband": [
+"Marido",
+"m"
+],
+"ice": [
+"Gelo",
+"m"
+],
+"idol": [
+"Ídolo",
+"m"
+],
+"inn": [
+"Pousada",
+"f"
+],
+"innkeeper": [
+"Estalajadeiro",
+"m",
+"Estalajadeira"
+],
+"iron": [
+"Ferro",
+"m"
+],
+"island": [
+"Ilha",
+"f"
+],
+"isle": [
+"Ilha",
+"f"
+],
+"item": [
+"Item",
+"m"
+],
+"ivy": [
+"Hera",
+"f"
+],
+"jacket": [
+"Jaqueta",
+"f"
+],
+"jade": [
+"Jade",
+"m"
+],
+"jail": [
+"Cadeia",
+"f"
+],
+"judgement": [
+"Julgamento",
+"m"
+],
+"judgment": [
+"Julgamento",
+"m"
+],
+"key": [
+"Chave",
+"f"
+],
+"kid": [
+"Garoto",
+"m",
+"Garota"
+],
+"king": [
+"Rei",
+"m",
+"Rainha"
+],
+"kingdom": [
+"Reino",
+"m"
+],
+"kit": [
+"Kit",
+"m"
+],
+"kitchen": [
+"Cozinha",
+"f"
+],
+"knife": [
+"Faca",
+"f"
+],
+"knight": [
+"Cavaleiro",
+"m",
+"Amazona"
+],
+"laborer": [
+"Operário",
+"m",
+"Operária"
+],
+"labyrinth": [
+"Labirinto",
+"m"
+],
+"ladder": [
+"Escada",
+"f"
+],
+"lady": [
+"Dama",
+"f"
+],
+"lake": [
+"Lago",
+"m"
+],
+"lance": [
+"Lança",
+"f"
+],
+"land": [
+"Terra",
+"f"
+],
+"laser": [
+"Laser",
+"m"
+],
+"leader": [
+"Líder",
+"m",
+"Líder"
+],
+"leaf": [
+"Folha",
+"f"
+],
+"leather": [
+"Couro",
+"m"
+],
+"legend": [
+"Lenda",
+"f"
+],
+"lens": [
+"Lente",
+"f"
+],
+"letter": [
+"Carta",
+"f"
+],
+"library": [
+"Biblioteca",
+"f"
+],
+"lieutenant": [
+"Tenente",
+"m",
+"Tenente"
+],
+"life": [
+"Vida",
+"f"
+],
+"light": [
+"Luz",
+"f"
+],
+"lighthouse": [
+"Farol",
+"m"
+],
+"lightning": [
+"Relâmpago",
+"m"
+],
+"lookout": [
+"Vigia",
+"m",
+"Vigia"
+],
+"looper": [
+"Looper",
+"m"
+],
+"lord": [
+"Lorde",
+"m"
+],
+"lover": [
+"Amante",
+"m",
+"Amante"
+],
+"lynx": [
+"Lince",
+"m"
+],
+"mace": [
+"Maça",
+"f"
+],
+"machine": [
+"Máquina",
+"f"
+],
+"mage": [
+"Mago",
+"m",
+"Maga"
+],
+"maid": [
+"Criada",
+"f"
+],
+"maiden": [
+"Donzela",
+"f"
+],
+"mail": [
+"Cota de Malha",
+"f"
+],
+"man": [
+"Homem",
+"m"
+],
+"manor": [
+"Solar",
+"m"
+],
+"mansion": [
+"Mansão",
+"f"
+],
+"mantle": [
+"Manto",
+"m"
+],
+"map": [
+"Mapa",
+"m"
+],
+"market": [
+"Mercado",
+"m"
+],
+"mask": [
+"Máscara",
+"f"
+],
+"mast": [
+"Mastro",
+"m"
+],
+"master": [
+"Mestre",
+"m",
+"Mestra"
+],
+"maw": [
+"Bocarra",
+"f"
+],
+"maze": [
+"Labirinto",
+"m"
+],
+"meat": [
+"Carne",
+"f"
+],
+"mechanic": [
+"Mecânico",
+"m",
+"Mecânica"
+],
+"medicine": [
+"Remédio",
+"m"
+],
+"meditation": [
+"Meditação",
+"f"
+],
+"member": [
+"Membro",
+"m",
+"Membro"
+],
+"men": [
+"Homens",
+"m"
+],
+"merchant": [
+"Mercador",
+"m",
+"Mercadora"
+],
+"messenger": [
+"Mensageiro",
+"m",
+"Mensageira"
+],
+"mine": [
+"Mina",
+"f"
+],
+"miner": [
+"Mineiro",
+"m",
+"Mineira"
+],
+"minister": [
+"Ministro",
+"m",
+"Ministra"
+],
+"mirage": [
+"Miragem",
+"f"
+],
+"mirror": [
+"Espelho",
+"m"
+],
+"missile": [
+"Míssil",
+"m"
+],
+"monk": [
+"Monge",
+"m"
+],
+"monster": [
+"Monstro",
+"m"
+],
+"moon": [
+"Lua",
+"f"
+],
+"moonlight": [
+"Luar",
+"m"
+],
+"moonstone": [
+"Pedra da Lua",
+"f"
+],
+"moss": [
+"Musgo",
+"m"
+],
+"mother": [
+"Mãe",
+"f"
+],
+"mount": [
+"Monte",
+"m"
+],
+"mountain": [
+"Montanha",
+"f"
+],
+"museum": [
+"Museu",
+"m"
+],
+"mushroom": [
+"Cogumelo",
+"m"
+],
+"mystery": [
+"Mistério",
+"m"
+],
+"nation": [
+"Nação",
+"f"
+],
+"navigator": [
+"Navegador",
+"m",
+"Navegadora"
+],
+"navy": [
+"Marinha",
+"f"
+],
+"necklace": [
+"Colar",
+"m"
+],
+"nest": [
+"Ninho",
+"m"
+],
+"night": [
+"Noite",
+"f"
+],
+"noble": [
+"Nobre",
+"m",
+"Nobre"
+],
+"nobleman": [
+"Nobre",
+"m"
+],
+"note": [
+"Bilhete",
+"m"
+],
+"nun": [
+"Freira",
+"f"
+],
+"oasis": [
+"Oásis",
+"m"
+],
+"observatory": [
+"Observatório",
+"m"
+],
+"ocean": [
+"Oceano",
+"m"
+],
+"office": [
+"Escritório",
+"m"
+],
+"officer": [
+"Oficial",
+"m",
+"Oficial"
+],
+"oil": [
+"Óleo",
+"m"
+],
+"orb": [
+"Orbe",
+"m"
+],
+"orchard": [
+"Pomar",
+"m"
+],
+"outfit": [
+"Traje",
+"m"
+],
+"overalls": [
+"Macacão",
+"m"
+],
+"owner": [
+"Dono",
+"m",
+"Dona"
+],
+"palace": [
+"Palácio",
+"m"
+],
+"pan": [
+"Frigideira",
+"f"
+],
+"paper": [
+"Papel",
+"m"
+],
+"paradise": [
+"Paraíso",
+"m"
+],
+"part": [
+"Peça",
+"f"
+],
+"passage": [
+"Passagem",
+"f"
+],
+"path": [
+"Caminho",
+"m"
+],
+"pearl": [
+"Pérola",
+"f"
+],
+"pendant": [
+"Pingente",
+"m"
+],
+"people": [
+"Pessoas",
+"f"
+],
+"person": [
+"Pessoa",
+"f"
+],
+"phantom": [
+"Fantasma",
+"m"
+],
+"pier": [
+"Píer",
+"m"
+],
+"pirate": [
+"Pirata",
+"m",
+"Pirata"
+],
+"pirates": [
+"Piratas",
+"m"
+],
+"pistol": [
+"Pistola",
+"f"
+],
+"pit": [
+"Fosso",
+"m"
+],
+"plant": [
+"Planta",
+"f"
+],
+"plate": [
+"Placa",
+"f"
+],
+"point": [
+"Ponta",
+"f"
+],
+"poison": [
+"Veneno",
+"m"
+],
+"pole": [
+"Polo",
+"m"
+],
+"port": [
+"Porto",
+"m"
+],
+"potion": [
+"Poção",
+"f"
+],
+"powder": [
+"Pó",
+"m"
+],
+"power": [
+"Poder",
+"m"
+],
+"priest": [
+"Sacerdote",
+"m",
+"Sacerdotisa"
+],
+"priestess": [
+"Sacerdotisa",
+"f"
+],
+"prince": [
+"Príncipe",
+"m",
+"Princesa"
+],
+"princess": [
+"Princesa",
+"f"
+],
+"prison": [
+"Prisão",
+"f"
+],
+"propeller": [
+"Hélice",
+"f"
+],
+"prophet": [
+"Profeta",
+"m",
+"Profetisa"
+],
+"purity": [
+"Pureza",
+"f"
+],
+"quarter": [
+"Alojamento",
+"m"
+],
+"queen": [
+"Rainha",
+"f"
+],
+"raider": [
+"Saqueador",
+"m",
+"Saqueadora"
+],
+"rainbow": [
+"Arco-Íris",
+"m"
+],
+"raincoat": [
+"Capa de Chuva",
+"f"
+],
+"ram": [
+"Aríete",
+"m"
+],
+"rapier": [
+"Florete",
+"m"
+],
+"rat": [
+"Rato",
+"m"
+],
+"ray": [
+"Raio",
+"m"
+],
+"recovery": [
+"Recuperação",
+"f"
+],
+"recruit": [
+"Recruta",
+"m",
+"Recruta"
+],
+"republic": [
+"República",
+"f"
+],
+"resident": [
+"Morador",
+"m",
+"Moradora"
+],
+"restaurant": [
+"Restaurante",
+"m"
+],
+"ribbon": [
+"Fita",
+"f"
+],
+"rift": [
+"Fenda",
+"f"
+],
+"ring": [
+"Anel",
+"m"
+],
+"river": [
+"Rio",
+"m"
+],
+"road": [
+"Estrada",
+"f"
+],
+"robe": [
+"Manto",
+"m"
+],
+"rock": [
+"Rocha",
+"f"
+],
+"rod": [
+"Bastão",
+"m"
+],
+"roof": [
+"Telhado",
+"m"
+],
+"room": [
+"Sala",
+"f"
+],
+"root": [
+"Raiz",
+"f"
+],
+"ruby": [
+"Rubi",
+"m"
+],
+"ruin": [
+"Ruína",
+"f"
+],
+"rum": [
+"Rum",
+"m"
+],
+"rune": [
+"Runa",
+"f"
+],
+"sail": [
+"Vela",
+"f"
+],
+"sailor": [
+"Marinheiro",
+"m",
+"Marinheira"
+],
+"salve": [
+"Pomada",
+"f"
+],
+"sanctuary": [
+"Santuário",
+"m"
+],
+"sand": [
+"Areia",
+"f"
+],
+"sapphire": [
+"Safira",
+"f"
+],
+"scale": [
+"Escama",
+"f"
+],
+"scarf": [
+"Cachecol",
+"m"
+],
+"scholar": [
+"Estudioso",
+"m",
+"Estudiosa"
+],
+"school": [
+"Escola",
+"f"
+],
+"scientist": [
+"Cientista",
+"m",
+"Cientista"
+],
+"scout": [
+"Batedor",
+"m",
+"Batedora"
+],
+"scroll": [
+"Pergaminho",
+"m"
+],
+"sea": [
+"Mar",
+"m"
+],
+"seed": [
+"Semente",
+"f"
+],
+"seer": [
+"Vidente",
+"m",
+"Vidente"
+],
+"sergeant": [
+"Sargento",
+"m",
+"Sargento"
+],
+"serpent": [
+"Serpente",
+"f"
+],
+"servant": [
+"Servo",
+"m",
+"Serva"
+],
+"sewer": [
+"Esgoto",
+"m"
+],
+"shadow": [
+"Sombra",
+"f"
+],
+"shaman": [
+"Xamã",
+"m",
+"Xamã"
+],
+"shark": [
+"Tubarão",
+"m"
+],
+"shell": [
+"Projétil",
+"m"
+],
+"shield": [
+"Escudo",
+"m"
+],
+"ship": [
+"Navio",
+"m"
+],
+"shipyard": [
+"Estaleiro",
+"m"
+],
+"shirt": [
+"Camisa",
+"f"
+],
+"shop": [
+"Loja",
+"f"
+],
+"shopkeeper": [
+"Lojista",
+"m",
+"Lojista"
+],
+"shorts": [
+"Shorts",
+"m"
+],
+"shrine": [
+"Santuário",
+"m"
+],
+"sight": [
+"Visão",
+"f"
+],
+"silver": [
+"Prata",
+"f"
+],
+"silvite": [
+"Silvita",
+"m"
+],
+"singer": [
+"Cantor",
+"m",
+"Cantora"
+],
+"sister": [
+"Irmã",
+"f"
+],
+"skewer": [
+"Espeto",
+"m"
+],
+"skull": [
+"Caveira",
+"f"
+],
+"sky": [
+"Céu",
+"m"
+],
+"slash": [
+"Corte",
+"m"
+],
+"smith": [
+"Ferreiro",
+"m",
+"Ferreira"
+],
+"snake": [
+"Cobra",
+"f"
+],
+"snow": [
+"Neve",
+"f"
+],
+"soldier": [
+"Soldado",
+"m",
+"Soldada"
+],
+"son": [
+"Filho",
+"m"
+],
+"soul": [
+"Alma",
+"f"
+],
+"spear": [
+"Lança",
+"f"
+],
+"specter": [
+"Espectro",
+"m"
+],
+"spectre": [
+"Espectro",
+"m"
+],
+"speed": [
+"Velocidade",
+"f"
+],
+"spell": [
+"Feitiço",
+"m"
+],
+"spellship": [
+"Navio-Feitiço",
+"m"
+],
+"spice": [
+"Especiaria",
+"f"
+],
+"spider": [
+"Aranha",
+"f"
+],
+"spike": [
+"Espinho",
+"m"
+],
+"spirit": [
+"Espírito",
+"m"
+],
+"spot": [
+"Ponto",
+"m"
+],
+"spray": [
+"Borrifo",
+"m"
+],
+"spring": [
+"Fonte",
+"f"
+],
+"spy": [
+"Espião",
+"m",
+"Espiã"
+],
+"square": [
+"Praça",
+"f"
+],
+"squid": [
+"Lula",
+"f"
+],
+"staff": [
+"Cajado",
+"m"
+],
+"stall": [
+"Barraca",
+"f"
+],
+"stance": [
+"Postura",
+"f"
+],
+"star": [
+"Estrela",
+"f"
+],
+"statue": [
+"Estátua",
+"f"
+],
+"steel": [
+"Aço",
+"m"
+],
+"stomp": [
+"Pisão",
+"m"
+],
+"stone": [
+"Pedra",
+"f"
+],
+"store": [
+"Loja",
+"f"
+],
+"storm": [
+"Tempestade",
+"f"
+],
+"strait": [
+"Estreito",
+"m"
+],
+"street": [
+"Rua",
+"f"
+],
+"strike": [
+"Golpe",
+"m"
+],
+"student": [
+"Aluno",
+"m",
+"Aluna"
+],
+"subcannon": [
+"Subcanhão",
+"m"
+],
+"suit": [
+"Traje",
+"m"
+],
+"sun": [
+"Sol",
+"m"
+],
+"swashbuckler": [
+"Destemido",
+"m"
+],
+"swirl": [
+"Redemoinho",
+"m"
+],
+"sword": [
+"Espada",
+"f"
+],
+"tablet": [
+"Tábua",
+"f"
+],
+"tackle": [
+"Investida",
+"f"
+],
+"tail": [
+"Cauda",
+"f"
+],
+"target": [
+"Alvo",
+"m"
+],
+"tavern": [
+"Taverna",
+"f"
+],
+"tea": [
+"Chá",
+"m"
+],
+"teacher": [
+"Professor",
+"m",
+"Professora"
+],
+"teahouse": [
+"Casa de Chá",
+"f"
+],
+"tempest": [
+"Tempestade",
+"f"
+],
+"temple": [
+"Templo",
+"m"
+],
+"tent": [
+"Tenda",
+"f"
+],
+"thief": [
+"Ladrão",
+"m",
+"Ladra"
+],
+"throne": [
+"Trono",
+"m"
+],
+"throw": [
+"Arremesso",
+"m"
+],
+"thunder": [
+"Trovão",
+"m"
+],
+"tomb": [
+"Tumba",
+"f"
+],
+"tonic": [
+"Tônico",
+"m"
+],
+"tooth": [
+"Dente",
+"m"
+],
+"topaz": [
+"Topázio",
+"m"
+],
+"torpedo": [
+"Torpedo",
+"m"
+],
+"tourist": [
+"Turista",
+"m",
+"Turista"
+],
+"tower": [
+"Torre",
+"f"
+],
+"train": [
+"Trem",
+"m"
+],
+"traveler": [
+"Viajante",
+"m",
+"Viajante"
+],
+"treasure": [
+"Tesouro",
+"m"
+],
+"tree": [
+"Árvore",
+"f"
+],
+"tribe": [
+"Tribo",
+"f"
+],
+"truth": [
+"Verdade",
+"f"
+],
+"tuna": [
+"Atum",
+"m"
+],
+"tundra": [
+"Tundra",
+"f"
+],
+"tunic": [
+"Túnica",
+"f"
+],
+"tunnel": [
+"Túnel",
+"m"
+],
+"turtle": [
+"Tartaruga",
+"f"
+],
+"type": [
+"Tipo",
+"m"
+],
+"uniform": [
+"Uniforme",
+"m"
+],
+"vault": [
+"Câmara",
+"f"
+],
+"veil": [
+"Véu",
+"m"
+],
+"vendor": [
+"Vendedor",
+"m",
+"Vendedora"
+],
+"vessel": [
+"Embarcação",
+"f"
+],
+"vest": [
+"Colete",
+"m"
+],
+"victory": [
+"Vitória",
+"f"
+],
+"village": [
+"Vila",
+"f"
+],
+"villager": [
+"Aldeão",
+"m",
+"Aldeã"
+],
+"vine": [
+"Vinha",
+"f"
+],
+"voice": [
+"Voz",
+"f"
+],
+"vortex": [
+"Vórtice",
+"m"
+],
+"waiter": [
+"Garçom",
+"m",
+"Garçonete"
+],
+"waitress": [
+"Garçonete",
+"f"
+],
+"walkway": [
+"Passarela",
+"f"
+],
+"wall": [
+"Muralha",
+"f"
+],
+"waltz": [
+"Valsa",
+"f"
+],
+"wand": [
+"Varinha",
+"f"
+],
+"wanderbird": [
+"Pássaro Errante",
+"m"
+],
+"warehouse": [
+"Armazém",
+"m"
+],
+"warrior": [
+"Guerreiro",
+"m",
+"Guerreira"
+],
+"watch": [
+"Vigia",
+"f"
+],
+"water": [
+"Água",
+"f"
+],
+"wave": [
+"Onda",
+"f"
+],
+"wax": [
+"Cera",
+"f"
+],
+"weapon": [
+"Arma",
+"f"
+],
+"weight": [
+"Peso",
+"m"
+],
+"well": [
+"Poço",
+"m"
+],
+"whale": [
+"Baleia",
+"f"
+],
+"wheel": [
+"Roda",
+"f"
+],
+"whip": [
+"Chicote",
+"m"
+],
+"wife": [
+"Esposa",
+"f"
+],
+"wind": [
+"Vento",
+"m"
+],
+"wine": [
+"Vinho",
+"m"
+],
+"wing": [
+"Asa",
+"f"
+],
+"wisp": [
+"Fogo-Fátuo",
+"m"
+],
+"witch": [
+"Bruxa",
+"f"
+],
+"wizard": [
+"Mago",
+"m",
+"Maga"
+],
+"wolf": [
+"Lobo",
+"m"
+],
+"woman": [
+"Mulher",
+"f"
+],
+"women": [
+"Mulheres",
+"f"
+],
+"wood": [
+"Madeira",
+"f"
+],
+"worker": [
+"Trabalhador",
+"m",
+"Trabalhadora"
+],
+"workshop": [
+"Oficina",
+"f"
+],
+"world": [
+"Mundo",
+"m"
+],
+"wrath": [
+"Ira",
+"f"
+],
+"wreck": [
+"Destroço",
+"m"
+],
+"wreckage": [
+"Destroços",
+"m"
+]
+}
+}

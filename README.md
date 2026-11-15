@@ -60,6 +60,8 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
   arquivos `.sot` e não têm limite.
 - **Introdução**: as 11 páginas do começo do jogo são imagens. A tradução é desenhada com uma fonte
   parecida com a original, e a tela mostra como a página fica.
+- **Sugestões de tradução** para nomes de itens, armas e NPCs genéricos, sem serviço externo
+  (“Valuan Soldier” → “Soldado Valuano”, “Sacri Crystal” → “Cristal Sacri”).
 - Tradução automática dos **nomes de quem fala** que faltam (cargos como “Valuan Soldier” são
   traduzidos; nomes próprios ficam iguais).
 - Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos. Na

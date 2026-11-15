@@ -25,6 +25,8 @@ button:hover{border-color:var(--sea)}
 button.primary{background:var(--sea);color:var(--sea-ink);border-color:var(--sea);font-weight:600}
 button.quiet{border-color:transparent;background:none;padding:4px 8px;color:var(--muted)}
 button.quiet:hover{color:var(--ink);background:var(--panel)}
+button.sug{border-style:dashed;border-color:var(--sea);color:var(--sea);background:none;padding:4px 10px}
+button.sug b{font-weight:650}
 button:disabled{opacity:.5;cursor:default}
 :focus-visible{outline:2px solid var(--sea);outline-offset:1px}
 input[type=text],input[type=number],input[type=search],select{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:6px 10px}
@@ -249,7 +251,7 @@ table.grid input{width:100%}
 
 <dialog id="dlgNames"><div class="dh"><h2>Nomes dos personagens</h2><input type="search" id="nameFilter" placeholder="Filtrar"></div>
   <div class="db"><p class="note">O nome traduzido aqui é usado em todas as falas daquele personagem. Deixe em branco para manter o original.</p>
-  <p><button id="btnMtNames" type="button">Traduzir automático os nomes que faltam</button> <span class="note" id="mtNamesMsg"></span></p>
+  <p><button id="btnSugNames" type="button">Usar as sugestões nos nomes vazios</button> <button id="btnMtNames" type="button">Traduzir automático os nomes que faltam</button> <span class="note" id="mtNamesMsg"></span></p>
   <table class="grid"><thead><tr><th>Original</th><th>Falas</th><th>Tradução</th></tr></thead><tbody id="nameRows"></tbody></table></div>
   <div class="df"><button data-close>Fechar</button></div></dialog>
 
@@ -644,6 +646,8 @@ function renderWork(focusKey) {
   }
   head.append(seg);
   const missing = S.entries.filter(e => !e.t && !e.dbg && e.body.trim()).length;
+  const nSug = S.entries.filter(e => e.sug && !e.t).length;
+  if (nSug) { const bS = el("button", "", "Usar as " + nSug + " sugestões de nomes"); bS.title = "Preenche os nomes ainda vazios com as sugestões do vocabulário do programa; ficam marcados para revisar"; bS.onclick = () => applySug(nSug); head.append(bS); }
   if (missing) { const bAll = el("button", "", "Traduzir automático as " + missing + " que faltam"); bAll.title = "Usa o serviço escolhido em Ajustes; as falas ficam marcadas para revisar"; bAll.onclick = () => mtFile(missing); head.append(bAll); }
   const rows = $("#rows"); rows.textContent = ""; S.rendered = 0; S.view = visibleEntries();
   if (S.fileError) rows.append(el("p", "err", "Este arquivo teve um problema na leitura: " + S.fileError));
@@ -663,6 +667,12 @@ function renderMore(n) {
 }
 $("#work").addEventListener("scroll", () => { const w = $("#work"); if (!S.searchMode && S.rendered < S.view.length && w.scrollTop + w.clientHeight > w.scrollHeight - 900) renderMore(120); });
 
+async function applySug(n) {
+  if (!confirm("Preencher os " + n + " nomes sem tradução desta lista com as sugestões?\n\nAs sugestões vêm de um vocabulário do programa (ex.: Valuan Soldier → Soldado Valuano). Elas ficam marcadas como “tradução automática” para você revisar.")) return;
+  await flushAll();
+  try { const r = await api("/api/suggest/apply", { file:S.file }); setSaved(r.filled + " nomes preenchidos"); const f = S.file; S.file = null; await openFile(f); await refreshState(); }
+  catch (err) { setSaved(err.message, true); }
+}
 function rowFor(e) {
   const row = el("div", "row" + (e.cont ? " cont" : "")); row.dataset.k = e.k;
   const meta = el("div", "meta");
@@ -683,6 +693,8 @@ function rowFor(e) {
   const under = el("div", "under"), cols = el("span", "cols"), sp = el("span", "sp");
   const bCopy = el("button", "quiet", "Copiar original"), bRev = el("button", "quiet", "Revisar depois"), bMt = el("button", "quiet", "Traduzir automático");
   bMt.title = "Alt+T";
+  let bSug = null;
+  if (e.sug) { bSug = el("button", "sug"); bSug.title = "Sugestão do vocabulário do programa; clique para usar e depois ajuste se quiser"; bSug.append("Sugestão: ", el("b", "", e.sug.trim())); sp.append(bSug); bSug.onclick = () => { ta.value = e.sug; ta.dispatchEvent(new Event("input")); ta.focus(); }; }
   if (!e.dbg) sp.append(bMt);
   sp.append(bCopy, bRev); under.append(cols, sp); tr.append(ta, under);
   row.append(meta, orig, tr);
@@ -696,6 +708,7 @@ function rowFor(e) {
     if (e.st === "rev") tags.append(el("span", "tag rev", "revisar"));
     if (e.st === "mt") tags.append(el("span", "tag mt", "tradução automática"));
     ta.classList.toggle("auto", !!e.auto);
+    if (bSug) bSug.classList.toggle("hidden", !!ta.value);
     ta.classList.toggle("mt", e.st === "mt");
     cols.textContent = "";
     if (ta.value && e.virt) {
@@ -888,11 +901,21 @@ function renderNames() {
   for (const n of S.nameList) {
     if (q && !(n.name.toLowerCase().includes(q) || (n.t || "").toLowerCase().includes(q))) continue;
     const tr = el("tr"), inp = el("input"); inp.type = "text"; inp.value = n.t || ""; inp.placeholder = n.name;
-    inp.onchange = async () => { n.t = inp.value.trim(); if (n.t && n.t !== n.name) S.nameMap[n.name] = n.t; else delete S.nameMap[n.name]; await api("/api/name", { name:n.name, t:n.t }); setSaved("Salvo"); };
-    const td = el("td"); td.append(inp); tr.append(el("td", "", n.name), el("td", "", String(n.count)), td); tb.append(tr);
+    const td = el("td"); td.append(inp);
+    let bs = null;
+    if (n.sug) { bs = el("button", "sug"); bs.type = "button"; bs.title = "Usar a sugestão"; bs.append("Sugestão: ", el("b", "", n.sug)); bs.style.marginTop = "4px"; bs.classList.toggle("hidden", !!n.t); td.append(bs); bs.onclick = () => { inp.value = n.sug; inp.dispatchEvent(new Event("change")); }; }
+    inp.onchange = async () => { n.t = inp.value.trim(); if (n.t && n.t !== n.name) S.nameMap[n.name] = n.t; else delete S.nameMap[n.name]; if (bs) bs.classList.toggle("hidden", !!n.t); await api("/api/name", { name:n.name, t:n.t }); setSaved("Salvo"); };
+    tr.append(el("td", "", n.name), el("td", "", String(n.count)), td); tb.append(tr);
   }
 }
 $("#dlgNames").addEventListener("close", () => { if (S.file && !S.searchMode) renderWork(); });
+$("#btnSugNames").onclick = async () => {
+  const n = S.nameList.filter(x => !x.t && x.sug).length;
+  if (!n) { $("#mtNamesMsg").textContent = "Não há sugestões para os nomes que faltam."; return; }
+  if (!confirm("Preencher os " + n + " nomes vazios que têm sugestão?\n\nEx.: Valuan Soldier → Soldado Valuano. Nomes próprios não recebem sugestão e continuam em branco. Revise depois: o nome vale para todas as falas do personagem.")) return;
+  try { const r = await api("/api/suggest/apply", {}); await loadNames(); renderNames(); $("#mtNamesMsg").textContent = r.filled + " nomes preenchidos com a sugestão."; }
+  catch (e) { $("#mtNamesMsg").textContent = e.message; }
+};
 $("#btnMtNames").onclick = async () => {
   if (!S.mt || !S.mt.provider) { alert("Escolha primeiro um serviço de tradução automática em Ajustes."); return; }
   const n = S.nameList.filter(x => !x.t).length;

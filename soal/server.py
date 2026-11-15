@@ -23,7 +23,7 @@ from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.8.3"
+VERSION = "0.8.4"
 
 
 class App:
@@ -500,6 +500,9 @@ def make_handler(app: App):
                 if u.path == "/api/mt/story":
                     app.mt_story(int(data.get("from", 0)), int(data.get("to", 0)))
                     return self._json({"ok": True})
+                if u.path == "/api/suggest/apply":
+                    p = app.need()
+                    return self._json(p.apply_suggestions(data.get("file") or None))
                 if u.path == "/api/mt/names":
                     app.mt_names()
                     return self._json({"ok": True})

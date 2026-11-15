@@ -39,7 +39,7 @@ def verificar_instalacao(out_path: str) -> int:
         except Exception as exc:
             ok = False
             linhas.append(f"FALHA {nome}: {exc!r}")
-    from soal import aklz, font, intro, mt, project, recomp, sct, server, sistema, text  # noqa: F401
+    from soal import aklz, font, intro, mt, project, recomp, sct, server, sistema, sugestao, text  # noqa: F401
     item("interface", lambda: os.path.getsize(os.path.join(server.WEB_DIR, "index.html")))
     item("tabela de instrucoes", lambda: len(sct.instruction_table()))
     item("glossario", lambda: len(mt.GLOSSARY))
@@ -47,6 +47,7 @@ def verificar_instalacao(out_path: str) -> int:
                                                                     "originais_geae8p.json"), encoding="utf-8"))["files"]))
     item("compressao AKLZ", lambda: aklz.decompress(aklz.compress(b"Skies of Arcadia " * 50)) == b"Skies of Arcadia " * 50 or 1 / 0)
     item("texto do jogo", lambda: text.decode(b"\\h(\x81\x73Vyse\x81\x74)Hey\x7fFina.\\e").body)
+    item("sugestoes de nomes", lambda: sugestao.suggest("Valuan Soldier")["t"])
     item("textos de itens e menus", lambda: len(sistema.us_map()["entries"]))
     item("arquivo .sot", lambda: (sistema.Sot(_sot_teste()).build() == _sot_teste() or 1 / 0) and "")
 

@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import aklz
 from . import font as fontmod
-from . import intro, mt, recomp, sct, sistema, text
+from . import intro, mt, recomp, sct, sistema, sugestao, text
 
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
@@ -672,6 +672,10 @@ class Project:
             st_ = self.source_text(e)
             if st_:
                 row["src"] = st_
+            if not row.get("t"):
+                sg = self.suggestion(e)
+                if sg:
+                    row["sug"] = sg
             row.pop("alt", None)
             rows.append(row)
         out = {"name": fname, "cat": f["cat"], "entries": rows, "error": f.get("error")}
@@ -765,8 +769,47 @@ class Project:
                 h = e.get("head")
                 if h and e.get("br") and not e.get("dbg"):
                     counts[h] = counts.get(h, 0) + 1
-        return [{"name": n, "count": c, "t": self.names.get(n, "")}
-                for n, c in sorted(counts.items(), key=lambda x: (-x[1], x[0]))]
+        out = []
+        for n, c in sorted(counts.items(), key=lambda x: (-x[1], x[0])):
+            row = {"name": n, "count": c, "t": self.names.get(n, "")}
+            if not row["t"]:
+                sg = sugestao.suggest(n, mt.GENDER, self.names)
+                if sg:
+                    row["sug"] = sg["t"]
+            out.append(row)
+        return out
+
+    def suggestion(self, e: dict) -> Optional[str]:
+        """Sugestao de traducao para nomes curtos de itens, armas, navio, lugares..."""
+        if e.get("virt") != "sistema" or e.get("sec") not in sugestao.NAME_SECS or "\n" in e["body"]:
+            return None
+        sg = sugestao.suggest(e["body"], mt.GENDER, self.names)
+        return sg["t"] if sg else None
+
+    def apply_suggestions(self, fname: Optional[str] = None) -> dict:
+        """Preenche com a sugestao os nomes ainda sem traducao: os nomes de quem fala
+        (fname None) ou os de uma lista de itens e menus. Ficam marcados para revisar."""
+        n = 0
+        if fname is None:
+            for row in self.name_list():
+                if not row["t"] and row.get("sug"):
+                    self.set_name(row["name"], row["sug"])
+                    n += 1
+            self.save()
+            return {"filled": n}
+        f = self.by_name.get(fname)
+        if f is None or not f.get("virt"):
+            raise ProjectError("lista desconhecida")
+        tr = self.tr.get(fname, {})
+        for e in f["entries"]:
+            if (tr.get(e["k"]) or {}).get("t"):
+                continue
+            sg = self.suggestion(e)
+            if sg:
+                self.set_translation(fname, e["k"], sg, "mt")
+                n += 1
+        self.save()
+        return {"filled": n}
 
     def set_name(self, name: str, value: str):
         with self.lock:

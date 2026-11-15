@@ -221,6 +221,22 @@ planilha e tradução automática (que recebe a informação de onde o texto apa
 - Nomes de inimigos comuns não aparecem como texto no jogo, por isso não estão na lista; os nomes
   dos navios inimigos e dos golpes, sim.
 
+## Sugestões de nomes
+
+Nos nomes curtos (itens, armas, armaduras, peças do navio, lugares, lojas) e nos nomes de quem
+fala, o programa sugere uma tradução tirada de um vocabulário próprio, sem precisar de serviço
+de tradução: “Valuan Soldier” → **Soldado Valuano**, “Boomerang” → **Bumerangue**, “Sacri Crystal”
+→ **Cristal Sacri**, “Iron Ring” → **Anel de Ferro**, “Aika's Shorts” → **Shorts da Aika**.
+
+- A sugestão aparece embaixo do campo vazio; clique nela para usar e ajuste se quiser.
+- **Usar as N sugestões de nomes**, no topo de cada lista de itens, preenche todos os vazios de uma
+  vez; em **Nomes**, o botão **Usar as sugestões nos nomes vazios** faz o mesmo com quem fala. O que
+  vem da sugestão fica marcado como “tradução automática”, no filtro **Revisar**.
+- Nomes próprios (Vyse, Drachma, Sacri, Yafutoma) ficam como estão. Palavra que o vocabulário não
+  conhece fica em inglês na sugestão.
+- O vocabulário fica em `tools/vocabulario_fonte.txt`; para acrescentar palavras, edite o arquivo e
+  rode `python tools/gerar_vocabulario.py`.
+
 ## Introdução
 
 A **Introdução** (“In a world shrouded in mystery…”) são 11 páginas que o jogo mostra como imagens.
