@@ -272,7 +272,7 @@ Na janela **Gravar no jogo**, clique em **Patch…**.
   - **Pasta do jogo extraído** ou **pasta do recomp** (a do programa ou a de dados): a tradução é
     gravada nos arquivos. O programa cria um projeto próprio para esse jogo, com os originais, que
     aparece na lista de recentes: por ele dá para devolver os originais ou reaplicar um patch novo.
-    No recomp europeu, o idioma do console é ajustado.
+    No recomp europeu, o idioma do jogo é ajustado.
 - Se o texto em inglês de alguma fala for diferente no jogo de destino, a tradução entra marcada
   para revisar.
 
@@ -318,9 +318,11 @@ quatro idiomas ficam no mesmo arquivo; a edição vai para a imagem do idioma es
 imagem do idioma é diferente da inglesa (outro tamanho, como o “FALLO” do espanhol no lugar do
 “MISS”), use **Editar a versão em …** para traduzir direto a cópia desse idioma.
 
-**Versão europeia: o jogo mostra o idioma do console.** Se a tradução foi gravada no lugar do
-espanhol, o console tem de estar em espanhol, senão o jogo mostra o inglês original (textos e
-imagens). No recomp, o programa ajusta o idioma sozinho ao gravar (no `Dolphin.ini` e na memória do console, `GC/SRAM.raw`). Se você mudar a pasta do recomp de lugar, use **Trocar a pasta do recomp** na janela **Gravar no jogo**. No Dolphin, escolha o idioma em
+**Versão europeia: o jogo tem de estar no idioma que recebeu a tradução.** Se a tradução foi
+gravada no lugar do espanhol e o jogo está em inglês, aparece o inglês original (textos e imagens).
+No recomp, o idioma é a opção da aba **Language** das configurações dele (`[Skies] Language` no
+`Dolphin.ini`); o programa ajusta sozinho ao gravar. Se você mudar a pasta do recomp de lugar, use
+**Trocar a pasta do recomp** na janela **Gravar no jogo**. No Dolphin, escolha o idioma em
 Configurações → GameCube → Idioma do sistema.
 
 ## Introdução

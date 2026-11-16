@@ -30,7 +30,7 @@ from typing import Dict, List, Optional, Tuple
 DATA_NAME = "Skies of Arcadia Legends"
 SUPPORTED_ID = "GEAE8P"
 SUPPORTED_IDS = ("GEAE8P", "GEAP8P")
-# idioma do console (GameCube) no Dolphin.ini do port: o jogo europeu mostra o idioma do console
+# idioma do jogo europeu no port: [Skies] Language no Dolphin.ini (aba Language do port)
 GC_LANG = {"en": 0, "de": 1, "fr": 2, "es": 3}
 GC_LANG_NAMES = {0: "inglês", 1: "alemão", 2: "francês", 3: "espanhol", 4: "italiano", 5: "holandês"}
 REGION_NAMES = {"GEAE8P": "americana", "GEAP8P": "europeia", "GEAJ8P": "japonesa"}
@@ -139,8 +139,7 @@ def _ini_path(data_dir: str) -> str:
     return os.path.join(data_dir, "Config", "Dolphin.ini")
 
 
-def gc_language(data_dir: str) -> int:
-    """Idioma do console configurado no port (0 = ingles, o padrao)."""
+def _ini_get(data_dir: str, section: str, key: str) -> Optional[str]:
     try:
         with open(_ini_path(data_dir), encoding="utf-8", errors="replace") as fh:
             sec = ""
@@ -148,64 +147,19 @@ def gc_language(data_dir: str) -> int:
                 t = line.strip()
                 if t.startswith("[") and t.endswith("]"):
                     sec = t[1:-1].strip().lower()
-                elif sec == "core" and "=" in t and t.split("=", 1)[0].strip().lower() == "selectedlanguage":
-                    return int(t.split("=", 1)[1].strip() or 0)
-    except (OSError, ValueError):
+                elif sec == section.lower() and "=" in t and t.split("=", 1)[0].strip().lower() == key.lower():
+                    return t.split("=", 1)[1].strip()
+    except OSError:
         pass
-    return 0
+    return None
 
 
-def _sram_path(data_dir: str) -> str:
-    return os.path.join(data_dir, "GC", "SRAM.raw")
-
-
-def sram_language(data_dir: str) -> Optional[int]:
-    """Idioma guardado na memoria do console (GC/SRAM.raw), ou None se nao houver o arquivo."""
-    try:
-        with open(_sram_path(data_dir), "rb") as fh:
-            d = fh.read(0x18)
-        return d[0x16] if len(d) >= 0x18 else None
-    except OSError:
-        return None
-
-
-def _set_sram_language(data_dir: str, value: int) -> bool:
-    """O port nao aplica o idioma do Dolphin.ini: o jogo le' o idioma da SRAM do console.
-    Muda o byte do idioma e refaz as somas de verificacao (palavras 0x10 a 0x17)."""
-    path = _sram_path(data_dir)
-    try:
-        with open(path, "rb") as fh:
-            d = bytearray(fh.read())
-    except OSError:
+def _ini_set(data_dir: str, values: Dict[Tuple[str, str], str]) -> bool:
+    """Grava chaves no Dolphin.ini do port, mantendo o resto do arquivo (e as quebras de linha).
+    Chave que ja' existe e' trocada no lugar; a que falta entra no fim da sua secao (ou numa
+    secao nova, no fim do arquivo). Devolve True se mudou alguma coisa."""
+    if all(_ini_get(data_dir, s_, k) == v for (s_, k), v in values.items()):
         return False
-    if len(d) < 0x18 or d[0x16] == value:
-        return False
-    d[0x16] = value
-    ck = inv = 0
-    for o in range(0x10, 0x18, 2):
-        v = (d[o] << 8) | d[o + 1]
-        ck = (ck + v) & 0xFFFF
-        inv = (inv + (~v & 0xFFFF)) & 0xFFFF
-    d[4:6] = ck.to_bytes(2, "big")
-    d[6:8] = inv.to_bytes(2, "big")
-    tmp = path + ".tmp"
-    with open(tmp, "wb") as fh:
-        fh.write(d)
-    os.replace(tmp, path)
-    return True
-
-
-def language_ok(data_dir: str, value: int) -> bool:
-    sr = sram_language(data_dir)
-    return gc_language(data_dir) == value and (sr is None or sr == value)
-
-
-def set_gc_language(data_dir: str, value: int) -> bool:
-    """Poe o console do port no idioma `value`: no Dolphin.ini ([Core] SelectedLanguage) e na
-    SRAM do console. Devolve True se mudou alguma coisa."""
-    changed = _set_sram_language(data_dir, value)
-    if gc_language(data_dir) == value:
-        return changed
     path = _ini_path(data_dir)
     nl = "\r\n" if sys.platform.startswith("win") else "\n"
     try:
@@ -216,32 +170,58 @@ def set_gc_language(data_dir: str, value: int) -> bool:
             nl = "\r\n" if "\r\n" in raw else "\n"
     except OSError:
         lines = []
-    out, sec, done, core_at = [], "", False, None
+    todo = {(s_.lower(), k.lower()): (s_, k, v) for (s_, k), v in values.items()}
+    out: List[str] = []
+    sec = ""
+
+    def add_missing(section: str):
+        for key in [x for x in todo if x[0] == section]:
+            _s, k, v = todo.pop(key)
+            out.append("%s = %s" % (k, v))
+
     for line in lines:
         t = line.strip()
         if t.startswith("[") and t.endswith("]"):
-            if sec == "core" and not done:
-                out.append("SelectedLanguage = %d" % value)
-                done = True
+            add_missing(sec)
             sec = t[1:-1].strip().lower()
-            if sec == "core":
-                core_at = len(out)
-        elif sec == "core" and "=" in t and t.split("=", 1)[0].strip().lower() == "selectedlanguage":
-            out.append("SelectedLanguage = %d" % value)
-            done = True
+        elif "=" in t and (sec, t.split("=", 1)[0].strip().lower()) in todo:
+            _s, k, v = todo.pop((sec, t.split("=", 1)[0].strip().lower()))
+            out.append("%s = %s" % (k, v))
             continue
         out.append(line)
-    if not done:
-        if sec == "core":
-            out.append("SelectedLanguage = %d" % value)
-        elif core_at is None:
-            out += ["[Core]", "SelectedLanguage = %d" % value]
+    add_missing(sec)
+    groups: Dict[str, List[Tuple[str, str]]] = {}
+    for _s, k, v in todo.values():
+        groups.setdefault(_s, []).append((k, v))
+    for s_, kv in groups.items():
+        out.append("[%s]" % s_)
+        out += ["%s = %s" % (k, v) for k, v in kv]
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8", newline="") as fh:
         fh.write(nl.join(out) + nl)
     os.replace(tmp, path)
     return True
+
+
+def gc_language(data_dir: str) -> int:
+    """Idioma do jogo europeu no port: [Skies] Language (0 ingles, 1 alemao, 2 frances,
+    3 espanhol), a opcao da aba Language do proprio port. O port roda o disco europeu como NTSC
+    e tira o idioma so' dai (ignora o idioma do console)."""
+    try:
+        return int(_ini_get(data_dir, "Skies", "Language") or 0)
+    except ValueError:
+        return 0
+
+
+def language_ok(data_dir: str, value: int) -> bool:
+    return gc_language(data_dir) == value
+
+
+def set_gc_language(data_dir: str, value: int) -> bool:
+    """Poe o jogo europeu do port no idioma `value` (a mesma opcao da aba Language do port).
+    Devolve True se mudou."""
+    return _ini_set(data_dir, {("Skies", "Language"): str(int(value))})
 
 
 def _describe(game_root: str) -> dict:

@@ -1945,7 +1945,7 @@ class Project:
                         data_dir = os.path.dirname(os.path.dirname(t["root"]))
                         r["states"] = recomp.count_states(data_dir)
                         if self.eu:
-                            # o jogo europeu mostra o idioma do console: o recomp tem de estar no
+                            # o jogo europeu mostra o idioma escolhido no port (aba Language): tem de ser o
                             # idioma onde a traducao foi gravada
                             lang = recomp.GC_LANG.get(self.settings.get("eu_slot") or "en", 0)
                             if self.settings.get("recomp_lang", True):

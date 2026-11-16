@@ -331,7 +331,7 @@ table.grid input{width:100%}
     <div class="field"><label for="stAuto">Falas repetidas</label><label><input type="checkbox" id="stAuto"> Preencher sozinho as falas idênticas ainda não traduzidas</label></div>
     <div class="field hidden" id="euSlotRow"><label for="stSlot">Idioma que recebe a tradução</label>
       <select id="stSlot"><option value="en">Inglês</option><option value="es">Espanhol</option><option value="fr">Francês</option><option value="de">Alemão</option></select>
-      <small>Versão europeia: você traduz a partir do inglês, e a tradução é gravada no lugar do idioma escolhido. O jogo mostra o idioma do console: no recomp, o programa ajusta isso sozinho ao gravar; no Dolphin, escolha esse idioma em Configurações → GameCube → Idioma do sistema. Os outros idiomas ficam como estão; falas ainda não traduzidas aparecem no idioma original desse lugar.</small></div>
+      <small>Versão europeia: você traduz a partir do inglês, e a tradução é gravada no lugar do idioma escolhido. O jogo tem de estar nesse idioma: no recomp, o programa ajusta sozinho ao gravar (é a opção da aba Language do recomp); no Dolphin, escolha esse idioma em Configurações → GameCube → Idioma do sistema. Os outros idiomas ficam como estão; falas ainda não traduzidas aparecem no idioma original desse lugar.</small></div>
     <div class="field"><label for="stIntro">Fonte da introdução</label>
       <select id="stIntro"><option value="uncial">Uncial (parecida com a da versão americana)</option><option value="gotica">Gótica (parecida com a da versão europeia)</option></select>
       <small>As 11 páginas do começo do jogo (“In a world shrouded in mystery…”) são imagens. A tradução é desenhada com esta fonte no lugar do texto original.</small></div>
@@ -391,7 +391,7 @@ table.grid input{width:100%}
     <div class="field"><label for="patchTarget">Jogo que recebe a tradução</label><input type="text" id="patchTarget" spellcheck="false" placeholder="ISO, pasta do jogo extraído ou pasta do recomp"></div>
     <p><button type="button" id="btnPatchIso">Escolher ISO…</button> <button type="button" id="btnPatchDir">Escolher pasta…</button></p>
     <div class="field hidden" id="patchIsoRow"><label for="patchIsoOut">Salvar a ISO traduzida como</label><input type="text" id="patchIsoOut" spellcheck="false"></div>
-    <p class="note" id="patchHint">Numa ISO, a original não é alterada: o programa monta uma ISO nova, traduzida (precisa de cerca de 3 GB livres enquanto trabalha). Numa pasta ou no recomp, a tradução é gravada nos arquivos, e o programa guarda os originais num projeto próprio, que aparece na lista de recentes para devolver os originais ou reaplicar depois. No recomp europeu, o idioma do console também é ajustado.</p>
+    <p class="note" id="patchHint">Numa ISO, a original não é alterada: o programa monta uma ISO nova, traduzida (precisa de cerca de 3 GB livres enquanto trabalha). Numa pasta ou no recomp, a tradução é gravada nos arquivos, e o programa guarda os originais num projeto próprio, que aparece na lista de recentes para devolver os originais ou reaplicar depois. No recomp europeu, o idioma do jogo (aba Language do recomp) também é ajustado.</p>
     <p><button type="button" class="primary" id="btnPatchApply">Aplicar patch</button></p>
     <p class="err" id="patchMsg"></p>
   </div>
@@ -1587,8 +1587,8 @@ function showReport(r, err) {
       if (t.kept) ul.append(el("li", "", t.kept + " arquivos desta pasta eram diferentes do original; uma cópia deles foi guardada no projeto, em copias_do_destino."));
       if (t.font) ul.append(el("li", "", "Fonte: " + t.font + "."));
       if (t.fst) ul.append(el("li", "", "Recomp: " + t.fst + "." + (t.states ? " Os " + t.states + " save states existentes ficam guardados, mas só os feitos com esta gravação aparecem no jogo." : "")));
-      if (t.lang) ul.append(el("li", "", "O idioma do console no recomp foi mudado para " + t.lang + ", o idioma onde a tradução foi gravada. A versão europeia mostra os textos e as imagens no idioma do console."));
-      if (t.lang_warn) ul.append(el("li", "err", "O recomp não está com o console em " + t.lang_warn + ": a tradução não vai aparecer."));
+      if (t.lang) ul.append(el("li", "", "No recomp, o idioma do jogo (aba Language) foi mudado para " + t.lang + ", o idioma onde a tradução foi gravada. A versão europeia mostra os textos e as imagens nesse idioma."));
+      if (t.lang_warn) ul.append(el("li", "err", "O recomp não está em " + t.lang_warn + " (aba Language das configurações dele): a tradução não vai aparecer."));
       body.append(ul);
     }
     const ul = el("ul", "report");
@@ -1689,7 +1689,7 @@ $("#btnPatchApply").onclick = async () => {
     for (const x of p.erros_imagens) ul.append(el("li", "err", "Imagem " + x));
     if (r.build) ul.append(el("li", "", pl(r.build.entries || 0, "fala gravada", "falas gravadas") + " no jogo" + (r.build.imagens ? ", " + pl(r.build.imagens, "arquivo de imagens", "arquivos de imagens") : "") + "."));
     for (const t of (r.build && r.build.targets) || []) {
-      if (t.lang) ul.append(el("li", "", "O idioma do console no recomp foi mudado para " + t.lang + "."));
+      if (t.lang) ul.append(el("li", "", "No recomp, o idioma do jogo (aba Language) foi mudado para " + t.lang + "."));
       if (t.fst) ul.append(el("li", "", "Recomp: " + t.fst + "."));
     }
     for (const e of (r.build && r.build.errors) || []) ul.append(el("li", "err", e.file + ": " + e.error));
