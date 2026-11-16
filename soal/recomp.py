@@ -160,9 +160,13 @@ def set_gc_language(data_dir: str, value: int) -> bool:
     if gc_language(data_dir) == value:
         return False
     path = _ini_path(data_dir)
+    nl = "\r\n" if sys.platform.startswith("win") else "\n"
     try:
-        with open(path, encoding="utf-8", errors="replace") as fh:
-            lines = fh.read().splitlines()
+        with open(path, "rb") as fh:
+            raw = fh.read().decode("utf-8", errors="replace")
+        lines = raw.splitlines()
+        if raw:
+            nl = "\r\n" if "\r\n" in raw else "\n"
     except OSError:
         lines = []
     out, sec, done, core_at = [], "", False, None
@@ -187,8 +191,8 @@ def set_gc_language(data_dir: str, value: int) -> bool:
             out += ["[Core]", "SelectedLanguage = %d" % value]
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
-        fh.write("\n".join(out) + "\n")
+    with open(tmp, "w", encoding="utf-8", newline="") as fh:
+        fh.write(nl.join(out) + nl)
     os.replace(tmp, path)
     return True
 
