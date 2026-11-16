@@ -1513,15 +1513,25 @@ $("#btnBuild").onclick = async () => {
   let chk = null;
   if (!S.project.is_recomp) {
     const box = el("p");
+    const pick = el("span"); pick.style.display = "block";
+    const showPick = (txt) => {
+      pick.textContent = "";
+      pick.append(el("span", "note", txt));
+      const inp = el("input"); inp.type = "text"; inp.style.width = "100%"; inp.placeholder = "Ex.: D:\\Jogos\\recomps\\Skies Of Arcadia Legends  ou  C:\\Users\\voce\\AppData\\Local\\Skies of Arcadia Legends";
+      const b = el("button", "", "Usar esta pasta"); const msg = el("span", "err");
+      b.onclick = async () => { try { await api("/api/recomp", { root: inp.value, use: true }); $("#dlgBuild").close(); $("#btnBuild").click(); } catch (e) { msg.textContent = " " + e.message; } };
+      inp.onkeydown = ev => { if (ev.key === "Enter") b.click(); };
+      pick.append(inp, b, msg); inp.focus();
+    };
     if (S.project.recomp_root) {
       const lab = el("label"); chk = el("input"); chk.type = "checkbox"; chk.checked = S.project.use_recomp;
       lab.append(chk, " Gravar também no recomp: "); lab.append(el("span", "secname", S.project.recomp_root)); box.append(lab);
+      const chg = el("button", "quiet", "Trocar a pasta do recomp"); chg.type = "button";
+      chg.onclick = () => showPick("Cole a pasta do programa do recomp ou a pasta de dados dele (a que tem “games” e “StateSaves”): ");
+      box.append(" ", chg, pick);
     } else {
-      box.append(el("span", "note", "Para gravar também no recomp (port nativo), cole aqui a pasta de dados dele ou a pasta do programa: "));
-      const inp = el("input"); inp.type = "text"; inp.style.width = "100%"; inp.placeholder = "Ex.: C:\\Users\\voce\\AppData\\Local\\Skies of Arcadia Legends";
-      const b = el("button", "", "Usar esta pasta"); const msg = el("span", "err");
-      b.onclick = async () => { try { await api("/api/recomp", { root: inp.value, use: true }); $("#dlgBuild").close(); $("#btnBuild").click(); } catch (e) { msg.textContent = " " + e.message; } };
-      box.append(inp, b, msg);
+      box.append(pick);
+      showPick("Para gravar também no recomp (port nativo), cole aqui a pasta do programa ou a pasta de dados dele: ");
     }
     body.append(box);
   }

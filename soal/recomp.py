@@ -155,10 +155,57 @@ def gc_language(data_dir: str) -> int:
     return 0
 
 
-def set_gc_language(data_dir: str, value: int) -> bool:
-    """Grava [Core] SelectedLanguage no Dolphin.ini do port. Devolve True se mudou."""
-    if gc_language(data_dir) == value:
+def _sram_path(data_dir: str) -> str:
+    return os.path.join(data_dir, "GC", "SRAM.raw")
+
+
+def sram_language(data_dir: str) -> Optional[int]:
+    """Idioma guardado na memoria do console (GC/SRAM.raw), ou None se nao houver o arquivo."""
+    try:
+        with open(_sram_path(data_dir), "rb") as fh:
+            d = fh.read(0x18)
+        return d[0x16] if len(d) >= 0x18 else None
+    except OSError:
+        return None
+
+
+def _set_sram_language(data_dir: str, value: int) -> bool:
+    """O port nao aplica o idioma do Dolphin.ini: o jogo le' o idioma da SRAM do console.
+    Muda o byte do idioma e refaz as somas de verificacao (palavras 0x10 a 0x17)."""
+    path = _sram_path(data_dir)
+    try:
+        with open(path, "rb") as fh:
+            d = bytearray(fh.read())
+    except OSError:
         return False
+    if len(d) < 0x18 or d[0x16] == value:
+        return False
+    d[0x16] = value
+    ck = inv = 0
+    for o in range(0x10, 0x18, 2):
+        v = (d[o] << 8) | d[o + 1]
+        ck = (ck + v) & 0xFFFF
+        inv = (inv + (~v & 0xFFFF)) & 0xFFFF
+    d[4:6] = ck.to_bytes(2, "big")
+    d[6:8] = inv.to_bytes(2, "big")
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as fh:
+        fh.write(d)
+    os.replace(tmp, path)
+    return True
+
+
+def language_ok(data_dir: str, value: int) -> bool:
+    sr = sram_language(data_dir)
+    return gc_language(data_dir) == value and (sr is None or sr == value)
+
+
+def set_gc_language(data_dir: str, value: int) -> bool:
+    """Poe o console do port no idioma `value`: no Dolphin.ini ([Core] SelectedLanguage) e na
+    SRAM do console. Devolve True se mudou alguma coisa."""
+    changed = _set_sram_language(data_dir, value)
+    if gc_language(data_dir) == value:
+        return changed
     path = _ini_path(data_dir)
     nl = "\r\n" if sys.platform.startswith("win") else "\n"
     try:

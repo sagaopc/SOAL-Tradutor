@@ -25,7 +25,7 @@ from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.9.2"
+VERSION = "0.9.3"
 
 
 class App:
@@ -221,6 +221,12 @@ class App:
         out = {"version": VERSION, "job": dict(self.job), "recent": recent,
                "project": None, "recomp": found}
         if p is not None:
+            old = p.meta.get("recomp_root")
+            if old and not os.path.isdir(old):
+                # a pasta de dados do recomp foi movida: procura de novo (o port deixa um
+                # data-folder.txt apontando para o lugar novo)
+                p.meta["recomp_root"] = None
+                p.touch()
             if found and not p.meta.get("recomp_root"):
                 # lembra onde o recomp esta'; gravar nele continua sendo escolha do usuario
                 mine = recomp.find_region("GEAP8P" if p.eu else "GEAE8P", self.config.get("recomp_hint"))
@@ -555,6 +561,10 @@ def make_handler(app: App):
                     root = (data.get("root") or "").strip().strip('"')
                     if root:
                         found = recomp.find_install(root)
+                        if found:
+                            a_, b_ = os.path.normcase(os.path.abspath(root)), os.path.normcase(found["data_dir"])
+                            if not (a_.startswith(b_) or b_.startswith(a_)):
+                                found = None
                         if not found:
                             raise pj.ProjectError(
                                 "Nao achei um jogo importado pelo recomp nessa pasta. Indique a pasta de "

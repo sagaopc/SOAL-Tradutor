@@ -300,7 +300,7 @@ imagem do idioma é diferente da inglesa (outro tamanho, como o “FALLO” do e
 
 **Versão europeia: o jogo mostra o idioma do console.** Se a tradução foi gravada no lugar do
 espanhol, o console tem de estar em espanhol, senão o jogo mostra o inglês original (textos e
-imagens). No recomp, o programa ajusta o idioma sozinho ao gravar. No Dolphin, escolha o idioma em
+imagens). No recomp, o programa ajusta o idioma sozinho ao gravar (no `Dolphin.ini` e na memória do console, `GC/SRAM.raw`). Se você mudar a pasta do recomp de lugar, use **Trocar a pasta do recomp** na janela **Gravar no jogo**. No Dolphin, escolha o idioma em
 Configurações → GameCube → Idioma do sistema.
 
 ## Introdução

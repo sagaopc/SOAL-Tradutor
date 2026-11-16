@@ -1951,7 +1951,7 @@ class Project:
                             if self.settings.get("recomp_lang", True):
                                 if recomp.set_gc_language(data_dir, lang):
                                     r["lang"] = recomp.GC_LANG_NAMES[lang]
-                            elif recomp.gc_language(data_dir) != lang:
+                            elif not recomp.language_ok(data_dir, lang):
                                 r["lang_warn"] = recomp.GC_LANG_NAMES[lang]
                     _atomic_write(t["manifest"], json.dumps(st["m"]).encode("utf-8"))
                 except (recomp.FstError, OSError) as exc:
