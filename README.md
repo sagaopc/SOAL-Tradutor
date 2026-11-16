@@ -62,6 +62,8 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
   parecida com a original, e a tela mostra como a página fica.
 - **Sugestões de tradução** para nomes de itens, armas e NPCs genéricos, sem serviço externo
   (“Valuan Soldier” → “Soldado Valuano”, “Sacri Crystal” → “Cristal Sacri”).
+- **Patch de tradução** (`.soalpatch`): leva só o seu trabalho (traduções, nomes, termos, ajustes e
+  imagens editadas) para outra ISO, outra pasta extraída ou outro recomp, sem arquivos do jogo.
 - **Imagens com texto**: logotipo, GAME OVER, comandos de batalha, lojas e mapa-múndi. Editor
   embutido (apagar área, escrever texto com fonte, contorno e sombra) ou PNG editado em outro
   programa, com prévia de como fica no jogo.

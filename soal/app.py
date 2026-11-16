@@ -85,7 +85,7 @@ def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["--escolher-pasta"] and len(argv) > 1:
         from soal import picker
-        picker.run(argv[1])
+        picker.run(*argv[1:4])
         return 0
     if argv[:1] == ["--verificar-instalacao"] and len(argv) > 1:
         return verificar_instalacao(argv[1])

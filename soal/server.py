@@ -21,11 +21,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import intro, iso, janela, mt, recomp, text
+from . import intro, iso, janela, mt, patch, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.9.3"
+VERSION = "0.10.0"
 
 
 class App:
@@ -89,7 +89,7 @@ class App:
         def run():
             try:
                 self.job["result"] = fn()
-            except (pj.ProjectError, OSError, mt.MTError) as exc:
+            except (pj.ProjectError, OSError, mt.MTError, patch.PatchError, iso.IsoError) as exc:
                 self.job["error"] = str(exc)
             except Exception as exc:  # erro inesperado: mostra na tela em vez de sumir
                 traceback.print_exc()
@@ -145,6 +145,93 @@ class App:
     def iso_default(self, p: pj.Project) -> str:
         root = os.path.abspath(p.meta.get("game_root") or "").rstrip("\\/")
         return os.path.join(os.path.dirname(root), os.path.basename(root) + " (PT-BR).iso")
+
+    # ----------------------------------------------------------------- patch
+    def patch_default(self, p: pj.Project) -> str:
+        root = os.path.abspath(p.meta.get("game_root") or "").rstrip("\\/")
+        return os.path.join(os.path.dirname(root), patch.default_name(p.meta.get("region", "us")))
+
+    def patch_create(self, path: str):
+        p = self.need()
+
+        def fn():
+            p.save(force=True)
+            return {"created": patch.create(p, path or self.patch_default(p), VERSION)}
+        self.start_job("patch", fn)
+
+    def patch_apply(self, patch_path: str, target: str, iso_out: str):
+        data = patch.read(patch_path)
+        region = data["info"].get("regiao", "us")
+        want = "GEAP8P" if region == "eu" else "GEAE8P"
+        target = os.path.abspath((target or "").strip().strip('"'))
+        is_iso = target.lower().endswith((".iso", ".gcm"))
+        cur = self.project
+        if is_iso:
+            if not os.path.isfile(target):
+                raise pj.ProjectError("Arquivo ISO não encontrado.")
+            out = (iso_out or "").strip().strip('"') or os.path.splitext(target)[0] + " (PT-BR).iso"
+            if not out.lower().endswith((".iso", ".gcm")):
+                out += ".iso"
+            out = os.path.abspath(out)
+            if os.path.normcase(out) == os.path.normcase(target):
+                raise pj.ProjectError("Escolha outro nome para a ISO traduzida: a original não é alterada.")
+            d = os.path.dirname(out)
+            os.makedirs(d, exist_ok=True)
+            if shutil.disk_usage(d).free < 2 * iso.DISC_SIZE + 128 * 1024 * 1024:
+                raise pj.ProjectError("Não há espaço livre suficiente nesse disco: são precisos cerca de 3 GB "
+                                      "(a ISO extraída enquanto trabalha e a ISO nova).")
+        else:
+            if not os.path.isdir(target):
+                raise pj.ProjectError("Essa pasta não existe. Escolha a ISO, a pasta do jogo extraído ou a pasta do recomp.")
+            root = target
+            try:
+                pj.find_game(root)
+            except pj.ProjectError:
+                hit = recomp.find_region(want, target)
+                if not hit:
+                    raise pj.ProjectError("Não achei o jogo nessa pasta. Escolha a pasta do jogo extraído (com sys/ e files/), "
+                                          f"a pasta do recomp com a versão {recomp.REGION_NAMES[want]} importada, ou uma ISO.")
+                root = hit["game_root"]
+            gid = recomp.game_id(root)
+            if gid and gid != want:
+                raise pj.ProjectError(f"Esse jogo é da versão {recomp.REGION_NAMES.get(gid, gid)}; o patch é da "
+                                      f"versão {recomp.REGION_NAMES[want]}.")
+            if cur is not None and os.path.normcase(os.path.abspath(cur.meta.get("game_root") or "")) == os.path.normcase(os.path.abspath(root)):
+                raise pj.ProjectError("Esse é o jogo do projeto aberto agora. Para gravar nele, use Gravar no jogo.")
+
+        def fn():
+            if is_iso:
+                tmp = os.path.join(os.path.dirname(out), ".soal_patch_temporario")
+                shutil.rmtree(tmp, ignore_errors=True)
+                try:
+                    self._progress("Extraindo a ISO", 0, 0)
+                    game = os.path.join(tmp, "jogo")
+                    iso.extract(target, game)
+                    gid = recomp.game_id(game)
+                    if gid != want:
+                        raise pj.ProjectError(f"Essa ISO é da versão {recomp.REGION_NAMES.get(gid or '', gid)}; o patch é da "
+                                              f"versão {recomp.REGION_NAMES[want]}.")
+                    q = pj.Project.create_or_open(game, os.path.join(tmp, "projeto"), progress=self._progress)
+                    self._progress("Aplicando o patch", 0, 0)
+                    r = patch.apply(q, data)
+                    b = q.build(progress=self._progress)
+                    res = iso.build(game, out, progress=self._progress, cancelled=lambda: self.cancel)
+                    return {"patch": r, "build": b, "iso": res, "dest": out}
+                finally:
+                    shutil.rmtree(tmp, ignore_errors=True)
+            q = pj.Project.create_or_open(root, progress=self._progress)
+            self._progress("Aplicando o patch", 0, 0)
+            r = patch.apply(q, data)
+            b = q.build(progress=self._progress)
+            q.save(force=True)
+            # o projeto do destino fica na lista de recentes, para reaplicar ou devolver os originais
+            rec = [x for x in self.config.get("recent", []) if x.get("dir") != q.dir]
+            rec.insert(1 if self.project is not None else 0,
+                       {"dir": q.dir, "game": q.meta.get("game_root", ""), "region": q.meta.get("region", "us")})
+            self.config["recent"] = rec[:6]
+            self._save_config()
+            return {"patch": r, "build": b, "dest": root, "project": q.dir, "recomp": recomp.is_recomp_game(root)}
+        self.start_job("patch", fn)
 
     def make_iso(self, out_path: str, build_first: bool):
         p = self.need()
@@ -298,15 +385,17 @@ class App:
         return out
 
 
-def pick_folder() -> Optional[str]:
+def pick_folder(kind: str = "", title: str = "") -> Optional[str]:
     """Abre a janela de escolher pasta do sistema num processo separado (o tkinter precisa
     da linha principal do programa). No .exe, o proprio executavel faz esse papel."""
     import tempfile
     fd, out = tempfile.mkstemp(prefix="soal_pasta_", suffix=".txt")
     os.close(fd)
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform.startswith("win") else 0
+    kind = kind if kind in ("patch", "iso", "") else ""
+    title = (title or "")[:120]
     if getattr(sys, "frozen", False):
-        cmd = [sys.executable, "--escolher-pasta", out]
+        cmd = [sys.executable, "--escolher-pasta", out, kind, title]
     else:
         exe = sys.executable
         if sys.platform.startswith("win"):
@@ -314,8 +403,8 @@ def pick_folder() -> Optional[str]:
             if os.path.exists(w):
                 exe = w
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        cmd = [exe, "-c", "import sys; sys.path.insert(0, sys.argv[1]); from soal import picker; picker.run(sys.argv[2])",
-               root, out]
+        cmd = [exe, "-c", "import sys; sys.path.insert(0, sys.argv[1]); from soal import picker; picker.run(*sys.argv[2:])",
+               root, out, kind, title]
     try:
         subprocess.run(cmd, timeout=600, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL, creationflags=flags)
@@ -434,7 +523,7 @@ def make_handler(app: App):
                     return self._json(app.need().import_csv(raw))
                 data = json.loads(raw.decode("utf-8")) if raw else {}
                 if u.path == "/api/pick":
-                    return self._json({"path": pick_folder()})
+                    return self._json({"path": pick_folder(data.get("kind") or "", data.get("title") or "")})
                 if u.path == "/api/open":
                     if data.get("project_dir"):
                         app.open_project(data["project_dir"])
@@ -574,6 +663,14 @@ def make_handler(app: App):
                         root = found["game_root"]
                     app.need().set_recomp(root or None, bool(data.get("use")))
                     return self._json({"ok": True})
+                if u.path == "/api/patch/create":
+                    app.patch_create(data.get("path") or "")
+                    return self._json({"ok": True})
+                if u.path == "/api/patch/apply":
+                    app.patch_apply(data.get("patch") or "", data.get("target") or "", data.get("iso_out") or "")
+                    return self._json({"ok": True})
+                if u.path == "/api/patch/default":
+                    return self._json({"path": app.patch_default(app.need())})
                 if u.path == "/api/import_project":
                     pr = app.need()
                     r = pr.import_project(data.get("dir") or "")

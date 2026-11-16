@@ -256,6 +256,26 @@ mudar, apagar ou acrescentar os seus.
   **Com aviso**).
 - A tradução automática recebe os termos e usa as formas escolhidas.
 
+## Patch de tradução
+
+O patch leva a sua tradução para outro jogo da mesma versão: outra ISO, outra pasta extraída ou
+outro recomp (de outro computador, por exemplo). Ele guarda só o seu trabalho: as traduções, os
+nomes de quem fala, os termos, os ajustes e as imagens que você editou. Não leva arquivos do jogo.
+
+Na janela **Gravar no jogo**, clique em **Patch…**.
+
+- **Criar patch**: salva um arquivo `.soalpatch` com o projeto aberto. É pequeno (alguns
+  megabytes, mesmo com as imagens).
+- **Aplicar patch**: escolha o patch e o jogo que recebe a tradução.
+  - **ISO**: a original não muda. O programa monta uma ISO nova, traduzida (precisa de cerca de
+    3 GB livres enquanto trabalha).
+  - **Pasta do jogo extraído** ou **pasta do recomp** (a do programa ou a de dados): a tradução é
+    gravada nos arquivos. O programa cria um projeto próprio para esse jogo, com os originais, que
+    aparece na lista de recentes: por ele dá para devolver os originais ou reaplicar um patch novo.
+    No recomp europeu, o idioma do console é ajustado.
+- Se o texto em inglês de alguma fala for diferente no jogo de destino, a tradução entra marcada
+  para revisar.
+
 ## Imagens com texto
 
 Algumas palavras do jogo não são texto: estão desenhadas em imagens. O botão **Imagens**, no topo,

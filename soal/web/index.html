@@ -378,6 +378,25 @@ table.grid input{width:100%}
   </div>
   <div class="df"><button data-close>Cancelar</button><button class="primary" id="btnStyGo">Começar</button></div></dialog>
 
+<dialog id="dlgPatch" class="wide"><div class="dh"><h2>Patch de tradução</h2></div>
+  <div class="db">
+    <p>O patch guarda só o seu trabalho: as traduções, os nomes de quem fala, os termos, os ajustes e as imagens que você editou. Não leva arquivos do jogo. Com ele, o SOAL Tradutor coloca a tradução em outro jogo da mesma versão: uma ISO, uma pasta extraída ou outro recomp.</p>
+    <h3>Criar patch deste projeto</h3>
+    <div class="field"><label for="patchOut">Salvar como</label><input type="text" id="patchOut" spellcheck="false"></div>
+    <p><button type="button" id="btnPatchOutPick">Escolher pasta…</button> <button type="button" class="primary" id="btnPatchCreate">Criar patch</button></p>
+    <hr>
+    <h3>Aplicar um patch em outro jogo</h3>
+    <div class="field"><label for="patchIn">Patch (.soalpatch)</label><input type="text" id="patchIn" spellcheck="false"></div>
+    <p><button type="button" id="btnPatchInPick">Escolher patch…</button></p>
+    <div class="field"><label for="patchTarget">Jogo que recebe a tradução</label><input type="text" id="patchTarget" spellcheck="false" placeholder="ISO, pasta do jogo extraído ou pasta do recomp"></div>
+    <p><button type="button" id="btnPatchIso">Escolher ISO…</button> <button type="button" id="btnPatchDir">Escolher pasta…</button></p>
+    <div class="field hidden" id="patchIsoRow"><label for="patchIsoOut">Salvar a ISO traduzida como</label><input type="text" id="patchIsoOut" spellcheck="false"></div>
+    <p class="note" id="patchHint">Numa ISO, a original não é alterada: o programa monta uma ISO nova, traduzida (precisa de cerca de 3 GB livres enquanto trabalha). Numa pasta ou no recomp, a tradução é gravada nos arquivos, e o programa guarda os originais num projeto próprio, que aparece na lista de recentes para devolver os originais ou reaplicar depois. No recomp europeu, o idioma do console também é ajustado.</p>
+    <p><button type="button" class="primary" id="btnPatchApply">Aplicar patch</button></p>
+    <p class="err" id="patchMsg"></p>
+  </div>
+  <div class="df"><button data-close>Fechar</button></div></dialog>
+
 <dialog id="dlgIso"><div class="dh"><h2>Gerar ISO</h2></div>
   <div class="db">
     <p>Monta uma imagem de disco de GameCube (<code>.iso</code>) com os arquivos da pasta do jogo, para guardar, jogar no Dolphin ou usar num console. As posições dos arquivos que mudaram de tamanho com a tradução são ajustadas sozinhas. A pasta do jogo não é alterada.</p>
@@ -1545,6 +1564,7 @@ $("#btnBuild").onclick = async () => {
   bRestore.style.marginRight = "auto";
   bCancel.onclick = () => $("#dlgBuild").close();
   if (S.project.can_iso) { const bIso = el("button", "", "Gerar ISO…"); bIso.onclick = () => { $("#dlgBuild").close(); openIso(); }; foot.append(bIso); }
+  { const bP = el("button", "", "Patch…"); bP.title = "Criar um patch com a tradução ou aplicar um patch em outra ISO ou outro recomp"; bP.onclick = () => { $("#dlgBuild").close(); openPatch(); }; foot.append(bP); }
   const saveChoice = async () => { if (chk) await api("/api/recomp", { use: chk.checked }); };
   bRestore.onclick = async () => { try { await saveChoice(); const r = await api("/api/restore", {}); body.textContent = ""; body.append(el("p", "", "Arquivos originais devolvidos:")); const ul = el("ul", "report"); for (const t of r.targets) ul.append(el("li", "", t.root + " (" + t.files + " arquivos)")); body.append(ul); foot.textContent = ""; const c = el("button", "", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c); } catch (e) { body.append(el("p", "err", e.message)); } };
   bGo.onclick = async () => {
@@ -1584,6 +1604,7 @@ function showReport(r, err) {
     body.append(ul, el("p", "note", r.targets.some(t => t.recomp) ? "Abra o recomp e inicie o jogo para conferir. Se o launcher pedir o disco de novo (numa atualização, por exemplo), ele reextrai tudo: é só gravar a tradução outra vez." : "Agora abra o jogo pela pasta extraída no Dolphin para conferir." + (S.project.region === "eu" ? " No Dolphin, o idioma do GameCube tem de ser o idioma onde a tradução foi gravada (Configurações → GameCube)." : "")));
   }
   if (!err && S.project.can_iso) { const bIso = el("button", "", "Gerar ISO…"); bIso.onclick = () => { $("#dlgBuild").close(); openIso(false); }; foot.append(bIso); }
+  if (!err) { const bP = el("button", "", "Criar patch…"); bP.onclick = () => { $("#dlgBuild").close(); openPatch(); }; foot.append(bP); }
   const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);
   $("#dlgBuild").showModal();
 }
@@ -1612,6 +1633,72 @@ $("#btnIsoGo").onclick = async () => {
     const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);
     $("#dlgBuild").showModal();
   } catch (e) { $("#busy").classList.add("hidden"); setSaved("Não gerou a ISO: " + e.message, true); }
+};
+
+/* ----------------------------------------------------------------- patch */
+async function openPatch() {
+  $("#patchMsg").textContent = "";
+  try { const r = await api("/api/patch/default", {}); if (!$("#patchOut").value) $("#patchOut").value = r.path; } catch (e) {}
+  patchTargetChanged();
+  $("#dlgPatch").showModal();
+}
+function patchTargetChanged() {
+  const t = $("#patchTarget").value.trim(), isIso = /\.(iso|gcm)$/i.test(t);
+  $("#patchIsoRow").classList.toggle("hidden", !isIso);
+  if (isIso && !$("#patchIsoOut").dataset.touched) $("#patchIsoOut").value = t.replace(/\.(iso|gcm)$/i, "") + " (PT-BR).iso";
+}
+$("#patchTarget").oninput = patchTargetChanged;
+$("#patchIsoOut").oninput = () => { $("#patchIsoOut").dataset.touched = "1"; };
+const patchPick = async (sel, kind, title, keepName) => {
+  try {
+    const r = await api("/api/pick", { kind, title });
+    if (!r.path) return;
+    if (keepName) { const name = ($(sel).value || "").split(/[\\/]/).pop() || keepName; $(sel).value = r.path.replace(/[\\/]+$/, "") + "\\" + name; }
+    else $(sel).value = r.path;
+    if (sel === "#patchTarget") { delete $("#patchIsoOut").dataset.touched; patchTargetChanged(); }
+  } catch (e) {}
+};
+$("#btnPatchOutPick").onclick = () => patchPick("#patchOut", "", "Pasta onde salvar o patch", "traducao.soalpatch");
+$("#btnPatchInPick").onclick = () => patchPick("#patchIn", "patch", "Patch de tradução");
+$("#btnPatchIso").onclick = () => patchPick("#patchTarget", "iso", "ISO que recebe a tradução");
+$("#btnPatchDir").onclick = () => patchPick("#patchTarget", "", "Pasta do jogo extraído ou do recomp");
+$("#btnPatchCreate").onclick = async () => {
+  await flushAll(); $("#patchMsg").textContent = "";
+  try { await api("/api/patch/create", { path:$("#patchOut").value }); } catch (e) { $("#patchMsg").textContent = e.message; return; }
+  try {
+    const r = (await waitJob()).created;
+    $("#patchOut").value = r.path; $("#patchIn").value = $("#patchIn").value || r.path;
+    $("#patchMsg").textContent = "";
+    $("#patchMsg").append(el("span", "ok", "Patch criado: " + pl(r.falas, "fala", "falas") + ", " + pl(r.imagens, "imagem", "imagens") + ", " + pl(r.nomes, "nome", "nomes") + " (" + Math.max(1, Math.round(r.bytes / 1024)) + " KB)."));
+  } catch (e) { $("#busy").classList.add("hidden"); $("#patchMsg").textContent = e.message; }
+};
+$("#btnPatchApply").onclick = async () => {
+  await flushAll(); $("#patchMsg").textContent = "";
+  try { await api("/api/patch/apply", { patch:$("#patchIn").value, target:$("#patchTarget").value, iso_out:$("#patchIsoOut").value }); }
+  catch (e) { $("#patchMsg").textContent = e.message; return; }
+  $("#dlgPatch").close();
+  try {
+    const r = await waitJob(), p = r.patch;
+    const body = $("#buildBody"), foot = $("#buildFoot"); body.textContent = ""; foot.textContent = "";
+    body.append(el("p", "", r.iso ? "ISO traduzida pronta:" : "Patch aplicado em:"), el("p", "secname", r.dest));
+    const ul = el("ul", "report");
+    ul.append(el("li", "", pl(p.falas, "fala traduzida entrou", "falas traduzidas entraram") + " no projeto do jogo de destino" + (p.revisar ? "; " + pl(p.revisar, "tem", "têm") + " o texto em inglês diferente do jogo de origem e ficaram marcadas para revisar" : "") + "."));
+    if (p.faltam) ul.append(el("li", "", pl(p.faltam, "fala do patch não existe", "falas do patch não existem") + " neste jogo e ficaram de fora."));
+    if (p.imagens) ul.append(el("li", "", pl(p.imagens, "imagem editada entrou", "imagens editadas entraram") + "."));
+    if (!p.mesma_versao) ul.append(el("li", "err", "O patch é de outra versão do jogo: entraram só os textos."));
+    for (const x of p.erros_imagens) ul.append(el("li", "err", "Imagem " + x));
+    if (r.build) ul.append(el("li", "", pl(r.build.entries || 0, "fala gravada", "falas gravadas") + " no jogo" + (r.build.imagens ? ", " + pl(r.build.imagens, "arquivo de imagens", "arquivos de imagens") : "") + "."));
+    for (const t of (r.build && r.build.targets) || []) {
+      if (t.lang) ul.append(el("li", "", "O idioma do console no recomp foi mudado para " + t.lang + "."));
+      if (t.fst) ul.append(el("li", "", "Recomp: " + t.fst + "."));
+    }
+    for (const e of (r.build && r.build.errors) || []) ul.append(el("li", "err", e.file + ": " + e.error));
+    if (r.iso) ul.append(el("li", "", "ISO de " + (r.iso.bytes / 1073741824).toFixed(2).replace(".", ",") + " GB, conferida depois de gravada. A ISO original não foi alterada."));
+    body.append(ul);
+    if (r.project) body.append(el("p", "note", "O projeto desse jogo ficou em " + r.project + " e aparece na lista de recentes, para devolver os originais ou aplicar um patch novo depois."));
+    const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);
+    $("#dlgBuild").showModal();
+  } catch (e) { $("#busy").classList.add("hidden"); setSaved("Não aplicou o patch: " + e.message, true); }
 };
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 10000);
