@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import aklz
 from . import font as fontmod
-from . import intro, mt, recomp, sct, sistema, sugestao, termos, text
+from . import imagens, intro, mt, recomp, sct, sistema, sugestao, termos, text, textura
 
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
@@ -151,6 +151,25 @@ def find_game(root: str) -> Tuple[str, Optional[str]]:
     raise ProjectError(
         "Nao encontrei arquivos .sct nessa pasta. Escolha a pasta onde a ISO foi extraida "
         "(a que contem 'files' e 'sys', ou a que contem 'field').")
+
+
+IMG_PREFIX = "img__"
+
+
+def _img_check(rel: str) -> str:
+    rel = (rel or "").replace("\\", "/").strip("/")
+    parts = rel.split("/")
+    if not rel or any(p in ("", ".", "..") for p in parts) or not rel.lower().endswith((".mld", ".mll", ".gvr")):
+        raise ProjectError("Arquivo de imagem inválido.")
+    return rel
+
+
+def _img_name(rel: str) -> str:
+    return IMG_PREFIX + rel.replace("/", "__")
+
+
+def _img_rel(name: str) -> str:
+    return name[len(IMG_PREFIX):].replace("__", "/")
 
 
 def _atomic_write(path: str, data: bytes):
@@ -291,6 +310,10 @@ class Project:
             out += [(n, "files/field/" + n) for n in intro.EU_FILES.values()]
         else:
             out = [("main.dol", "sys/main.dol"), (intro.US_FILE, "files/field/" + intro.US_FILE)]
+        if os.path.isdir(self.orig_extra):
+            for f in sorted(os.listdir(self.orig_extra)):
+                if f.startswith(IMG_PREFIX):
+                    out.append((f, "files/" + _img_rel(f)))
         return out
 
     def _extra_path(self, root: str, rel: str) -> str:
@@ -329,6 +352,205 @@ class Project:
             self.meta["extras_not_original"] = sorted(set(self.meta.get("extras_not_original", []) + notes))
             changed = True
         return changed
+
+    # ------------------------------------------------------------ imagens com texto
+    @property
+    def img_dir(self) -> str:
+        return os.path.join(self.dir, "imagens")
+
+    def _img_files_dir(self) -> str:
+        root = self.meta.get("game_root")
+        if not root or not os.path.isdir(root):
+            raise ProjectError("A pasta do jogo não foi encontrada.")
+        return self._game_dirs(root)[0]
+
+    def _img_exists(self, rel: str) -> bool:
+        if os.path.exists(os.path.join(self.orig_extra, _img_name(rel))):
+            return True
+        try:
+            return os.path.isfile(os.path.join(self._img_files_dir(), *rel.split("/")))
+        except ProjectError:
+            return False
+
+    def _img_orig(self, rel: str) -> bytes:
+        """Arquivo original (guardado em originais/extras na primeira vez que e' usado)."""
+        rel = _img_check(rel)
+        dst = os.path.join(self.orig_extra, _img_name(rel))
+        if not os.path.exists(dst):
+            src = os.path.join(self._img_files_dir(), *rel.split("/"))
+            if not os.path.isfile(src):
+                raise ProjectError("Arquivo não encontrado no jogo: " + rel)
+            os.makedirs(self.orig_extra, exist_ok=True)
+            shutil.copy2(src, dst)
+        with open(dst, "rb") as fh:
+            return fh.read()
+
+    def _img_tex(self, rel: str) -> "textura.TexFile":
+        cache = self.__dict__.setdefault("_img_cache", {})
+        tf = cache.get(rel)
+        if tf is None:
+            if len(cache) > 12:
+                cache.clear()
+            tf = cache[rel] = textura.TexFile(self._img_orig(rel))
+        return tf
+
+    def img_catalog(self) -> dict:
+        if not textura.have_pillow():
+            raise ProjectError("Falta o Pillow para mostrar as imagens (o .exe já vem com ele).")
+        groups = imagens.catalog(self.eu, self._img_exists)
+        extra = [r for r in self.meta.get("img_extra", []) if self._img_exists(r)]
+        if extra:
+            groups.append({"label": "Outros arquivos", "items": [{"id": r, "label": r.rsplit("/", 1)[-1], "text": None,
+                                                                  "var": {}} for r in extra]})
+        ed = self.meta.get("imagens") or {}
+        for g in groups:
+            for it in g["items"]:
+                it["edited"] = sum(1 for v in ed.values() if (v.get("de") or [None])[0] == it["id"])
+                it["dst"] = it["var"].get(self.settings.get("eu_slot") or "en", it["id"]) if it["var"] else it["id"]
+        return {"groups": groups, "eu": self.eu, "slot": self.settings.get("eu_slot") or "en",
+                "edited": len(ed)}
+
+    def img_file(self, rel: str) -> dict:
+        rel = _img_check(rel)
+        tf = self._img_tex(rel)
+        ed = self.meta.get("imagens") or {}
+        out = []
+        for t in tf.tex:
+            x = t.info()
+            if t.ok:
+                x["key"] = imagens.tex_key(tf, t.n)
+                x["edited"] = x["key"] in ed
+            out.append(x)
+        return {"id": rel, "tex": out}
+
+    def img_png(self, rel: str, n: int, which: str) -> bytes:
+        rel = _img_check(rel)
+        tf = self._img_tex(rel)
+        if not 0 <= n < len(tf.tex) or not tf.tex[n].ok:
+            raise ProjectError("Imagem não encontrada.")
+        key = imagens.tex_key(tf, n)
+        if which in ("edit", "game"):
+            f = os.path.join(self.img_dir, key + (".jogo.png" if which == "game" else ".png"))
+            if os.path.exists(f):
+                with open(f, "rb") as fh:
+                    return fh.read()
+        buf = io.BytesIO()
+        tf.image(n).save(buf, "PNG")
+        return buf.getvalue()
+
+    def img_save(self, rel: str, n: int, png: bytes) -> dict:
+        from PIL import Image
+        rel = _img_check(rel)
+        tf = self._img_tex(rel)
+        if not 0 <= n < len(tf.tex) or not tf.tex[n].ok:
+            raise ProjectError("Imagem não encontrada.")
+        t = tf.tex[n]
+        try:
+            img = Image.open(io.BytesIO(png))
+            img.load()
+        except Exception:
+            raise ProjectError("Não consegui abrir essa imagem. Use PNG.")
+        if img.size != (t.w, t.h):
+            raise ProjectError(f"A imagem tem {img.size[0]}×{img.size[1]}; a do jogo tem {t.w}×{t.h}. "
+                               "Edite sem mudar o tamanho.")
+        img = img.convert("RGBA")
+        key = imagens.tex_key(tf, n)
+        os.makedirs(self.img_dir, exist_ok=True)
+        if img.tobytes() == tf.image(n).tobytes():
+            return self.img_reset(rel, n)
+        # como fica no jogo: grava no formato da textura e le' de volta
+        tmp = textura.TexFile(self._img_orig(rel))
+        tmp.set_image(n, img)
+        buf = io.BytesIO()
+        img.save(buf, "PNG")
+        _atomic_write(os.path.join(self.img_dir, key + ".png"), buf.getvalue())
+        buf = io.BytesIO()
+        tmp.image(n).save(buf, "PNG")
+        _atomic_write(os.path.join(self.img_dir, key + ".jogo.png"), buf.getvalue())
+        with self.lock:
+            self.meta.setdefault("imagens", {})[key] = {"de": [rel, n], "w": t.w, "h": t.h, "fmt": t.fmt_name,
+                                                        "t": int(time.time())}
+            self.touch()
+        self.save()
+        return {"ok": True, "key": key, "edited": True}
+
+    def img_reset(self, rel: str, n: int) -> dict:
+        rel = _img_check(rel)
+        tf = self._img_tex(rel)
+        key = imagens.tex_key(tf, n)
+        for ext in (".png", ".jogo.png"):
+            try:
+                os.remove(os.path.join(self.img_dir, key + ext))
+            except OSError:
+                pass
+        with self.lock:
+            if (self.meta.get("imagens") or {}).pop(key, None) is not None:
+                self.touch()
+        self.save()
+        return {"ok": True, "key": key, "edited": False}
+
+    def img_search(self, q: str) -> List[dict]:
+        base = self._img_files_dir()
+        q = (q or "").strip().lower()
+        out = []
+        for d, _dirs, fs in os.walk(base):
+            for f in fs:
+                if f.lower().endswith((".mld", ".mll", ".gvr")) and q in f.lower():
+                    full = os.path.join(d, f)
+                    out.append({"rel": os.path.relpath(full, base).replace(os.sep, "/"), "size": os.path.getsize(full)})
+        out.sort(key=lambda x: x["rel"])
+        return out[:80]
+
+    def img_add(self, rel: str) -> dict:
+        rel = _img_check(rel)
+        self._img_orig(rel)
+        if not self._img_tex(rel).tex:
+            raise ProjectError("Esse arquivo não tem imagens.")
+        with self.lock:
+            lst = self.meta.setdefault("img_extra", [])
+            if rel not in lst:
+                lst.append(rel)
+                self.touch()
+        self.save()
+        return {"ok": True, "id": rel}
+
+    def _img_outputs(self, report: dict) -> List[Tuple[str, str, Optional[bytes]]]:
+        ed = self.meta.get("imagens") or {}
+        out: List[Tuple[str, str, Optional[bytes]]] = []
+        done = set()
+        if ed:
+            from PIL import Image
+            edits = {}
+            for key in ed:
+                f = os.path.join(self.img_dir, key + ".png")
+                if os.path.exists(f):
+                    edits[key] = Image.open(f).convert("RGBA")
+            slot = self.settings.get("eu_slot") or "en"
+            items = [(it["id"], it["var"]) for g in imagens.catalog(self.eu, self._img_exists) for it in g["items"]]
+            items += [(r, {}) for r in imagens.SAME if self._img_exists(r)]
+            items += [(r, {}) for r in self.meta.get("img_extra", []) if self._img_exists(r)]
+            for src, var in items:
+                dst = var.get(slot, src) if var else src
+                if dst in done:
+                    continue
+                done.add(dst)
+                errs: List[str] = []
+                try:
+                    new = imagens.apply(self._img_orig(dst), None if dst == src else self._img_orig(src), edits, errs)
+                except (textura.TexError, ProjectError, ValueError) as exc:
+                    report["errors"].append({"file": dst, "error": str(exc)})
+                    continue
+                for e in errs:
+                    report["errors"].append({"file": dst, "error": e})
+                if new is not None:
+                    report["imagens"] = report.get("imagens", 0) + 1
+                out.append((_img_name(dst), "files/" + dst, new))
+        # o que foi gravado antes e agora voltou ao original
+        if os.path.isdir(self.orig_extra):
+            for f in sorted(os.listdir(self.orig_extra)):
+                if f.startswith(IMG_PREFIX) and _img_rel(f) not in done:
+                    out.append((f, "files/" + _img_rel(f), None))
+        return out
 
     def _extra_orig(self, name: str) -> Optional[bytes]:
         try:
@@ -1802,13 +2024,14 @@ class Project:
                     new = intro.build(orig, intro_tr, self.settings.get("intro_font") or "uncial")
                     report["intro"] = len(intro_tr)
             out.append((name, "files/field/" + name, new))
+        out += self._img_outputs(report)
         return out
 
     def _build_extras(self, states: List[dict], report: dict, cm: Dict[str, int]):
         try:
             outs = self._extra_outputs(report, cm)
-        except (sistema.SistemaError, intro.IntroError, OSError, ValueError) as exc:
-            report["errors"].append({"file": "itens, menus e introdução", "error": str(exc)})
+        except (sistema.SistemaError, intro.IntroError, textura.TexError, OSError, ValueError) as exc:
+            report["errors"].append({"file": "itens, menus, introdução e imagens", "error": str(exc)})
             return
         for name, rel, new in outs:
             orig = self._extra_orig(name)

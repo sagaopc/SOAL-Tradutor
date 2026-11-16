@@ -5,6 +5,8 @@ So' aceita conexoes da propria maquina (127.0.0.1).
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import shutil
@@ -23,7 +25,7 @@ from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.8.5"
+VERSION = "0.9.0"
 
 
 class App:
@@ -377,6 +379,22 @@ def make_handler(app: App):
                     return self._json(mt.public_config(app.mt_cfg()))
                 if u.path == "/api/glyphs":
                     return self._json(app.glyphs())
+                if u.path == "/api/font":
+                    from . import intro as _intro
+                    f = _intro.FONTS.get(q.get("n", [""])[0])
+                    if not f:
+                        return self._send(404, b"not found", "text/plain")
+                    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "fontes", f[0]), "rb") as fh:
+                        return self._send(200, fh.read(), "font/ttf", {"Cache-Control": "max-age=86400"})
+                if u.path == "/api/img/catalog":
+                    return self._json(app.need().img_catalog())
+                if u.path == "/api/img/file":
+                    return self._json(app.need().img_file(q.get("id", [""])[0]))
+                if u.path == "/api/img/search":
+                    return self._json({"results": app.need().img_search(q.get("q", [""])[0])})
+                if u.path == "/api/img/png":
+                    png = app.need().img_png(q.get("id", [""])[0], int(q.get("n", ["0"])[0]), q.get("v", ["orig"])[0])
+                    return self._send(200, png, "image/png", {"Cache-Control": "no-store"})
                 if u.path == "/api/intro":
                     n = int(q.get("n", ["0"])[0])
                     t = q.get("t", [""])[0]
@@ -500,6 +518,19 @@ def make_handler(app: App):
                 if u.path == "/api/mt/story":
                     app.mt_story(int(data.get("from", 0)), int(data.get("to", 0)))
                     return self._json({"ok": True})
+                if u.path == "/api/img/save":
+                    b64 = str(data.get("png") or "")
+                    if "," in b64[:80]:
+                        b64 = b64.split(",", 1)[1]
+                    try:
+                        png = base64.b64decode(b64, validate=False)
+                    except (ValueError, binascii.Error):
+                        raise pj.ProjectError("Imagem inválida.")
+                    return self._json(app.need().img_save(data.get("id"), int(data.get("n", 0)), png))
+                if u.path == "/api/img/reset":
+                    return self._json(app.need().img_reset(data.get("id"), int(data.get("n", 0))))
+                if u.path == "/api/img/add":
+                    return self._json(app.need().img_add(data.get("id")))
                 if u.path == "/api/terms":
                     p = app.need()
                     return self._json({"termos": p.set_terms(data.get("termos"))})

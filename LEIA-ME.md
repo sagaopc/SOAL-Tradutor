@@ -256,6 +256,43 @@ mudar, apagar ou acrescentar os seus.
   **Com aviso**).
 - A tradução automática recebe os termos e usa as formas escolhidas.
 
+## Imagens com texto
+
+Algumas palavras do jogo não são texto: estão desenhadas em imagens. O botão **Imagens**, no topo,
+reúne as que têm texto em inglês:
+
+- **Tela-título e abertura**: o logotipo com New Game, Continue e PRESS START, o “Presented by
+  SEGA” e o aviso de luzes piscando.
+- **Fim de jogo**: GAME OVER.
+- **Batalha** e **Batalha de navios**: os comandos (Attack, Guard, Run, Item, Focus…), MISS, Hp, Mp e Lv.
+- **Menus e lojas**: os rótulos da loja e do status (Attack, Agility, Next, Gold, LEVEL UP,
+  NEW RECORD…) e a tela de menu.
+- **Mapa-múndi**: os nomes das regiões (Mid Ocean, Valuan Empire, The Dark Rift…).
+- **Outro arquivo**: procure qualquer arquivo de imagens do jogo pelo nome (por exemplo um mapa
+  `a002a`) para editar as imagens dele.
+
+Clique numa imagem para abrir o editor:
+
+- **Apagar área**: arraste sobre o texto em inglês. Preencha com transparente, com a cor em volta
+  (bom para texto sobre fundo liso) ou com uma cor escolhida.
+- **Texto**: escreva, clique na imagem para posicionar e arraste para ajustar. Escolha fonte,
+  tamanho, cor, contorno, sombra e espaço entre letras. **Sem suavizar** deixa as letras com borda
+  dura, como nos rótulos pequenos do jogo. **Aplicar texto** fixa o texto na imagem.
+- **Conta-gotas**: pega uma cor da imagem para o texto.
+- **Original** (segure): mostra a imagem original para comparar. **Desfazer** (Ctrl+Z) volta um passo.
+- Para um trabalho mais caprichado, **Baixar PNG**, edite no seu programa de imagens (GIMP,
+  Photoshop, Krita…) sem mudar o tamanho e use **Abrir PNG editado…**.
+
+**Salvar no projeto** guarda a imagem e mostra **como fica no jogo**: o GameCube guarda muitas
+imagens comprimidas, e algumas perdem um pouco de qualidade. As imagens vão para o jogo ao clicar
+em **Gravar no jogo**, junto com o resto, e **Restaurar originais** também as desfaz.
+
+A mesma imagem que aparece em vários arquivos é traduzida uma vez só: os nomes das regiões se repetem
+em todos os arquivos do mapa-múndi, e todos recebem a sua versão.
+
+Na versão europeia, cada imagem tem uma cópia por idioma. Você edita a cópia em inglês, e ela é
+gravada no arquivo do idioma escolhido em **Ajustes** (o mesmo que recebe as falas).
+
 ## Introdução
 
 A **Introdução** (“In a world shrouded in mystery…”) são 11 páginas que o jogo mostra como imagens.

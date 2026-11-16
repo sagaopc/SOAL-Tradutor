@@ -28,6 +28,43 @@ button.quiet:hover{color:var(--ink);background:var(--panel)}
 button.sug{border-style:dashed;border-color:var(--sea);color:var(--sea);background:none;padding:4px 10px}
 button.sug b{font-weight:650}
 dialog.wide{width:min(1100px,96vw)}
+dialog.img{width:min(1500px,97vw);height:92vh;max-height:92vh}
+dialog.img[open]{display:flex;flex-direction:column}
+dialog.img .dh .note{margin-left:12px}
+.imgwrap{flex:1;display:flex;min-height:0}
+.imgside{width:230px;border-right:1px solid var(--line);overflow:auto;padding:10px 12px;background:var(--panel)}
+.imgside h3{font-size:13px;margin:14px 0 4px;color:var(--muted)}
+.imgside h3:first-child{margin-top:2px}
+.imgside button{display:flex;width:100%;text-align:left;margin:2px 0;border-color:transparent;background:none;padding:5px 8px;gap:6px}
+.imgside button:hover{background:var(--paper)}
+.imgside button.on{background:var(--paper);border-color:var(--sea)}
+.imgside button .n{margin-left:auto;color:var(--ok);font-weight:650;font-size:12px}
+.imgside input{width:100%}
+.imgmain{flex:1;display:flex;flex-direction:column;min-width:0;padding:10px 14px;overflow:hidden}
+.imgbar{display:flex;align-items:center;gap:14px;margin-bottom:8px;flex-wrap:wrap}
+.imggrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:10px;align-content:start}
+.imgcard{border:1px solid var(--line);border-radius:8px;background:var(--paper);padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:4px;text-align:left}
+.imgcard:hover,.imgcard:focus-visible{border-color:var(--sea)}
+.imgcard.ed{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.imgcard .chk{height:150px}
+.imgcard small{color:var(--muted);font-size:12px;line-height:1.3}
+.imgcard .tag{color:var(--ok);font-weight:650;font-size:12px}
+.chk{display:flex;align-items:center;justify-content:center;border-radius:4px;overflow:hidden;
+  background:repeating-conic-gradient(#8a8f96 0 25%,#b9bec4 0 50%) 0 0/16px 16px}
+.chk img{max-width:100%;max-height:100%;image-rendering:pixelated}
+.edtools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0 10px}
+.edtools .sep{width:1px;height:22px;background:var(--line)}
+.edtools #imgZoom{min-width:34px;text-align:center}
+.edbody{flex:1;display:flex;gap:14px;min-height:0}
+.edcanvas{flex:1;overflow:auto;border-radius:6px;background:repeating-conic-gradient(#8a8f96 0 25%,#b9bec4 0 50%) 0 0/16px 16px}
+.edcanvas canvas{display:block;image-rendering:pixelated;cursor:crosshair;margin:auto}
+.edopts{width:290px;overflow:auto}
+.edopts label{display:block;margin:6px 0 2px;font-size:13.5px}
+.edopts textarea,.edopts select,.edopts input[type=number]{width:100%;display:block}
+.edopts .row2{display:flex;gap:10px}.edopts .row2>label{flex:1}
+.edopts input[type=color]{width:100%;height:30px;padding:0;display:block}
+.edopts #imgGameBox .chk{margin-top:4px;min-height:60px;max-height:260px}
+.df .grow{flex:1}
 .grid.terms input{width:100%}
 .grid.terms td:nth-child(3){width:45%}
 #termReport ul{max-height:260px;overflow:auto;padding-left:18px}
@@ -180,6 +217,7 @@ table.grid input{width:100%}
   <button id="btnGame" title="Trocar de jogo: versão americana, europeia ou outra pasta"></button>
   <button id="btnNames">Nomes</button>
   <button id="btnTerms" title="Expressões que devem ter sempre a mesma tradução">Termos</button>
+  <button id="btnImg" title="Logotipo, GAME OVER, comandos de batalha, lojas, mapa-múndi">Imagens</button>
   <button id="btnSheet">Planilha</button>
   <button id="btnSettings">Ajustes</button>
   <button class="primary" id="btnBuild">Gravar no jogo</button>
@@ -350,6 +388,63 @@ table.grid input{width:100%}
     <p class="err" id="isoMsg"></p>
   </div>
   <div class="df"><button data-close>Cancelar</button><button class="primary" id="btnIsoGo">Gerar ISO</button></div></dialog>
+
+<dialog id="dlgImg" class="img"><div class="dh"><h2>Imagens com texto</h2><span class="note" id="imgSlot"></span></div>
+  <div class="imgwrap">
+    <aside class="imgside">
+      <div id="imgGroups"></div>
+      <h3>Outro arquivo</h3>
+      <input type="search" id="imgSearch" placeholder="Nome do arquivo (ex.: a002a)" aria-label="Procurar arquivo de imagens do jogo">
+      <div id="imgFound"></div>
+    </aside>
+    <section class="imgmain" id="imgList">
+      <div class="imgbar"><b id="imgFileLbl"></b><label><input type="checkbox" id="imgOnlyText" checked> Só as imagens com texto</label></div>
+      <p class="note" id="imgHelp">Escolha um grupo à esquerda. Clique numa imagem para editar: apague o texto em inglês e escreva o português aqui mesmo, ou baixe o PNG, edite no seu programa de imagens e envie de volta. O tamanho tem de ser o mesmo.</p>
+      <div class="imggrid" id="imgGrid"></div>
+    </section>
+    <section class="imgmain hidden" id="imgEd">
+      <div class="imgbar"><button type="button" class="quiet" id="imgBack">← Imagens</button><b id="imgEdLbl"></b><span class="note" id="imgEdHint"></span></div>
+      <div class="edtools" role="toolbar" aria-label="Ferramentas">
+        <label><input type="radio" name="imgTool" value="text" checked> Texto</label>
+        <label><input type="radio" name="imgTool" value="erase"> Apagar área</label>
+        <label><input type="radio" name="imgTool" value="pick"> Conta-gotas</label>
+        <span class="sep"></span>
+        <button type="button" id="imgZoomOut" title="Diminuir">−</button><span id="imgZoom"></span><button type="button" id="imgZoomIn" title="Aumentar">+</button>
+        <button type="button" id="imgUndo" title="Desfazer (Ctrl+Z)">Desfazer</button>
+        <button type="button" id="imgCmp" title="Segure para ver o original">Original</button>
+      </div>
+      <div class="edbody">
+        <div class="edcanvas" id="imgCanvasBox"><canvas id="imgCanvas"></canvas></div>
+        <div class="edopts">
+          <div id="optText">
+            <label>Texto<textarea id="txText" rows="3" placeholder="Clique na imagem para posicionar"></textarea></label>
+            <label>Fonte<select id="txFont"></select></label>
+            <div class="row2"><label>Tamanho<input type="number" id="txSize" min="4" max="300" value="16"></label><label>Espaço entre letras<input type="number" id="txSpace" min="-5" max="30" value="0"></label></div>
+            <div class="row2"><label><input type="checkbox" id="txBold"> Negrito</label><label><input type="checkbox" id="txItalic"> Itálico</label></div>
+            <div class="row2"><label>Cor<input type="color" id="txColor" value="#ffffff"></label><label>Contorno<input type="color" id="txStroke" value="#000000"></label></div>
+            <div class="row2"><label>Largura do contorno<input type="number" id="txStrokeW" min="0" max="20" value="0"></label><label>Linhas<select id="txAlign"><option value="left">à esquerda</option><option value="center">centralizadas</option><option value="right">à direita</option></select></label></div>
+            <div class="row2"><label><input type="checkbox" id="txShadow"> Sombra</label><label title="Letras sem borda suavizada, como nos textos pequenos do jogo"><input type="checkbox" id="txSharp"> Sem suavizar</label></div>
+            <label>Altura da linha (%)<input type="number" id="txLine" min="50" max="250" value="110"></label>
+            <p class="note">Clique na imagem para pôr o texto; arraste para mover. As setas do teclado ajustam de 1 em 1 pixel.</p>
+            <p><button type="button" class="primary" id="txApply">Aplicar texto</button> <button type="button" id="txCancel">Limpar</button></p>
+          </div>
+          <div id="optErase" class="hidden">
+            <label>Preencher com<select id="erMode"><option value="clear">transparente</option><option value="border">a cor em volta (média)</option><option value="color">esta cor:</option></select></label>
+            <input type="color" id="erColor" value="#000000">
+            <p class="note">Arraste sobre a área para apagar. “A cor em volta” serve para texto sobre fundo liso.</p>
+          </div>
+          <div id="optPick" class="hidden"><p class="note">Clique na imagem para pegar a cor. Ela vai para a cor do texto e para a cor de preencher.</p></div>
+          <hr>
+          <p><button type="button" class="primary" id="imgSave">Salvar no projeto</button></p>
+          <p><button type="button" id="imgDown">Baixar PNG</button> <button type="button" id="imgUp">Abrir PNG editado…</button><input type="file" id="imgFile" accept="image/png,image/*" hidden></p>
+          <p><button type="button" class="quiet" id="imgReset">Voltar à imagem original</button></p>
+          <p class="note" id="imgMsg"></p>
+          <div id="imgGameBox" class="hidden"><b>Como fica no jogo</b><div class="chk"><img id="imgGame" alt="Prévia de como a imagem fica no jogo"></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="df"><span class="note grow">As imagens salvas vão para o jogo ao clicar em <b>Gravar no jogo</b>.</span><button data-close>Fechar</button></div></dialog>
 
 <dialog id="dlgBuild"><div class="dh"><h2>Gravar no jogo</h2></div>
   <div class="db" id="buildBody"></div>
@@ -922,6 +1017,258 @@ async function runSearch() {
   $("#work").scrollTop = 0;
 }
 
+/* ----------------------------------------------------------------- imagens com texto */
+const IMG = { cat:null, item:null, file:null, tex:null, zoom:4, work:null, undo:[], txt:null, drag:null, sel:null, cmp:false, orig:null, dirty:false };
+const IMG_FONTS = [["Arial","Arial"],["Arial Black","Arial Black"],["Verdana","Verdana"],["Tahoma","Tahoma"],["Trebuchet MS","Trebuchet MS"],["Segoe UI","Segoe UI"],
+  ["Georgia","Georgia"],["Times New Roman","Times New Roman"],["Palatino Linotype","Palatino Linotype"],["Book Antiqua","Book Antiqua"],["Impact","Impact"],
+  ["Comic Sans MS","Comic Sans MS"],["Courier New","Courier New"],["SOAL Uncial","Uncial (da introdução)"],["SOAL Gotica","Gótica (da introdução)"]];
+let imgFontsLoaded = false;
+async function imgLoadFonts() {
+  if (imgFontsLoaded) return; imgFontsLoaded = true;
+  for (const [fam, n] of [["SOAL Uncial", "uncial"], ["SOAL Gotica", "gotica"]]) {
+    try { const f = new FontFace(fam, "url(/api/font?n=" + n + ")"); await f.load(); document.fonts.add(f); } catch (e) { /* sem a fonte, fica a do sistema */ }
+  }
+}
+const imgUrl = (id, n, v) => "/api/img/png?id=" + encodeURIComponent(id) + "&n=" + n + "&v=" + v + "&_=" + Date.now();
+const LANGS = { en:"inglês", fr:"francês", de:"alemão", es:"espanhol" };
+
+$("#btnImg").onclick = async () => {
+  await flushAll();
+  if (!$("#txFont").options.length) for (const [v, t] of IMG_FONTS) $("#txFont").append(new Option(t, v));
+  imgLoadFonts();
+  $("#dlgImg").showModal();
+  try { await imgCatalog(); } catch (e) { $("#imgHelp").textContent = e.message; }
+};
+$("#dlgImg").addEventListener("cancel", e => { if (IMG.dirty && !confirm("A imagem tem mudanças não salvas. Fechar mesmo assim?")) e.preventDefault(); });
+async function imgCatalog(keep) {
+  IMG.cat = await api("/api/img/catalog");
+  $("#imgSlot").textContent = IMG.cat.eu ? "Versão europeia: as imagens em inglês são editadas e gravadas no arquivo em " + LANGS[IMG.cat.slot] + " (o idioma escolhido em Ajustes)." : "";
+  const box = $("#imgGroups"); box.textContent = "";
+  for (const g of IMG.cat.groups) {
+    box.append(el("h3", "", g.label));
+    for (const it of g.items) {
+      const b = el("button"); b.type = "button"; b.dataset.id = it.id;
+      b.append(el("span", "", it.label));
+      if (it.edited) b.append(el("span", "n", String(it.edited)));
+      b.title = it.id + (it.dst !== it.id ? " → grava em " + it.dst : "");
+      b.onclick = () => imgOpenItem(it);
+      box.append(b);
+    }
+  }
+  if (keep && IMG.item) { const it = IMG.cat.groups.flatMap(g => g.items).find(x => x.id === IMG.item.id); if (it) { IMG.item = it; imgMarkSide(); } }
+  else if (!IMG.item && IMG.cat.groups.length) imgOpenItem(IMG.cat.groups[0].items[0]);
+}
+function imgMarkSide() { for (const b of $("#imgGroups").querySelectorAll("button")) b.classList.toggle("on", IMG.item && b.dataset.id === IMG.item.id); }
+async function imgOpenItem(it) {
+  if (IMG.dirty && !confirm("A imagem tem mudanças não salvas. Sair mesmo assim?")) return;
+  IMG.dirty = false; IMG.item = it; imgMarkSide();
+  $("#imgEd").classList.add("hidden"); $("#imgList").classList.remove("hidden");
+  $("#imgFileLbl").textContent = it.label + " — " + it.id;
+  $("#imgOnlyText").parentElement.classList.toggle("hidden", !it.text);
+  $("#imgGrid").textContent = "Carregando…";
+  try { IMG.file = await api("/api/img/file?id=" + encodeURIComponent(it.id)); } catch (e) { $("#imgGrid").textContent = e.message; return; }
+  imgRenderGrid();
+}
+$("#imgOnlyText").onchange = imgRenderGrid;
+function imgRenderGrid() {
+  const it = IMG.item, g = $("#imgGrid"); g.textContent = "";
+  const only = it.text && $("#imgOnlyText").checked;
+  for (const t of IMG.file.tex) {
+    if (!t.ok) continue;
+    const hint = it.text && it.text[String(t.n)];
+    if (only && !hint && !t.edited) continue;
+    if (!only && !hint && t.w < 16 && t.h < 16) continue;
+    const c = el("button", "imgcard" + (t.edited ? " ed" : "")); c.type = "button";
+    const box = el("div", "chk"), im = el("img"); im.loading = "lazy"; im.alt = "Imagem " + t.n; im.src = imgUrl(it.id, t.n, t.edited ? "game" : "orig");
+    if (t.w <= 64 && t.h <= 64) { im.style.width = (t.w * 2) + "px"; }
+    box.append(im); c.append(box);
+    c.append(el("small", "", "#" + t.n + " · " + t.w + "×" + t.h + " · " + t.fmt));
+    if (hint) c.append(el("small", "", hint));
+    if (t.edited) c.append(el("span", "tag", "traduzida"));
+    c.onclick = () => imgEdit(t);
+    g.append(c);
+  }
+  if (!g.children.length) g.append(el("p", "note", "Nenhuma imagem para mostrar."));
+}
+let imgSearchT = 0;
+$("#imgSearch").oninput = () => {
+  clearTimeout(imgSearchT);
+  imgSearchT = setTimeout(async () => {
+    const q = $("#imgSearch").value.trim(), box = $("#imgFound"); box.textContent = "";
+    if (q.length < 2) return;
+    try {
+      const r = await api("/api/img/search?q=" + encodeURIComponent(q));
+      for (const x of r.results) {
+        const b = el("button", "", x.rel); b.type = "button";
+        b.onclick = async () => { try { await api("/api/img/add", { id:x.rel }); await imgCatalog(); const it = IMG.cat.groups.flatMap(g => g.items).find(y => y.id === x.rel); if (it) imgOpenItem(it); } catch (e) { alert(e.message); } };
+        box.append(b);
+      }
+      if (!r.results.length) box.append(el("p", "note", "Nenhum arquivo com esse nome."));
+    } catch (e) { box.textContent = e.message; }
+  }, 250);
+};
+
+/* editor */
+function imgLoadImage(src) { return new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error("Não consegui abrir a imagem.")); i.src = src; }); }
+async function imgEdit(t) {
+  IMG.tex = t; IMG.undo = []; IMG.txt = null; IMG.sel = null; IMG.dirty = false;
+  $("#imgList").classList.add("hidden"); $("#imgEd").classList.remove("hidden");
+  $("#imgEdLbl").textContent = IMG.item.label + " · #" + t.n + " · " + t.w + "×" + t.h;
+  const hint = IMG.item.text && IMG.item.text[String(t.n)];
+  $("#imgEdHint").textContent = hint ? "No original: " + hint : "";
+  $("#imgMsg").textContent = "";
+  const [orig, cur] = await Promise.all([imgLoadImage(imgUrl(IMG.item.id, t.n, "orig")), imgLoadImage(imgUrl(IMG.item.id, t.n, "edit"))]);
+  IMG.orig = document.createElement("canvas"); IMG.orig.width = t.w; IMG.orig.height = t.h; IMG.orig.getContext("2d").drawImage(orig, 0, 0);
+  IMG.work = document.createElement("canvas"); IMG.work.width = t.w; IMG.work.height = t.h;
+  IMG.work.getContext("2d", { willReadFrequently:true }).drawImage(cur, 0, 0);
+  IMG.zoom = Math.max(1, Math.min(8, Math.floor(Math.min(900 / t.w, 620 / t.h))));
+  imgShowGame(t.edited);
+  imgDraw();
+}
+function imgShowGame(on) {
+  $("#imgGameBox").classList.toggle("hidden", !on);
+  if (on) $("#imgGame").src = imgUrl(IMG.item.id, IMG.tex.n, "game");
+}
+$("#imgBack").onclick = () => { if (IMG.dirty && !confirm("A imagem tem mudanças não salvas. Voltar mesmo assim?")) return; IMG.dirty = false; $("#imgEd").classList.add("hidden"); $("#imgList").classList.remove("hidden"); imgRenderGrid(); };
+function imgTool() { return document.querySelector("input[name=imgTool]:checked").value; }
+for (const r of document.querySelectorAll("input[name=imgTool]")) r.onchange = () => {
+  const t = imgTool(); $("#optText").classList.toggle("hidden", t !== "text"); $("#optErase").classList.toggle("hidden", t !== "erase"); $("#optPick").classList.toggle("hidden", t !== "pick");
+  IMG.sel = null; imgDraw();
+};
+$("#imgZoomIn").onclick = () => { IMG.zoom = Math.min(16, IMG.zoom + 1); imgDraw(); };
+$("#imgZoomOut").onclick = () => { IMG.zoom = Math.max(1, IMG.zoom - 1); imgDraw(); };
+$("#imgCmp").onpointerdown = () => { IMG.cmp = true; imgDraw(); };
+for (const ev of ["pointerup", "pointerleave"]) $("#imgCmp").addEventListener(ev, () => { if (IMG.cmp) { IMG.cmp = false; imgDraw(); } });
+function imgPush() { const c = IMG.work.getContext("2d"); IMG.undo.push(c.getImageData(0, 0, IMG.work.width, IMG.work.height)); if (IMG.undo.length > 40) IMG.undo.shift(); IMG.dirty = true; }
+$("#imgUndo").onclick = () => { const d = IMG.undo.pop(); if (d) { IMG.work.getContext("2d").putImageData(d, 0, 0); IMG.dirty = true; imgDraw(); } };
+
+function imgTextLayer() {
+  const T = IMG.txt, s = $("#txText").value;
+  if (!T || !s) return null;
+  const w = IMG.work.width, h = IMG.work.height, c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d"), size = +$("#txSize").value || 16;
+  g.font = ($("#txItalic").checked ? "italic " : "") + ($("#txBold").checked ? "bold " : "") + size + "px \"" + $("#txFont").value + "\", sans-serif";
+  try { g.letterSpacing = (+$("#txSpace").value || 0) + "px"; } catch (e) { /* navegador antigo */ }
+  g.textBaseline = "top"; const al = $("#txAlign").value; g.textAlign = al;
+  const lines = s.split("\n"), lh = size * (+$("#txLine").value || 110) / 100;
+  const widths = lines.map(l => g.measureText(l).width), maxw = Math.max(...widths);
+  const x0 = al === "center" ? T.x + maxw / 2 : al === "right" ? T.x + maxw : T.x;
+  const sw = +$("#txStrokeW").value || 0;
+  if ($("#txShadow").checked) { g.shadowColor = "rgba(0,0,0,.75)"; g.shadowOffsetX = Math.max(1, size / 14); g.shadowOffsetY = Math.max(1, size / 14); g.shadowBlur = size / 10; }
+  lines.forEach((l, i) => {
+    const y = T.y + i * lh;
+    if (sw) { g.lineJoin = "round"; g.lineWidth = sw * 2; g.strokeStyle = $("#txStroke").value; g.strokeText(l, x0, y); g.shadowColor = "transparent"; }
+    g.fillStyle = $("#txColor").value; g.fillText(l, x0, y);
+  });
+  if ($("#txSharp").checked) {
+    const d = g.getImageData(0, 0, w, h), a = d.data;
+    for (let i = 3; i < a.length; i += 4) a[i] = a[i] >= 128 ? 255 : 0;
+    g.putImageData(d, 0, 0);
+  }
+  T.box = { x:T.x, y:T.y, w:maxw, h:lh * (lines.length - 1) + size };
+  return c;
+}
+function imgDraw() {
+  if (!IMG.work) return;
+  const cv = $("#imgCanvas"), z = IMG.zoom, w = IMG.work.width, h = IMG.work.height;
+  cv.width = w * z; cv.height = h * z; $("#imgZoom").textContent = z + "×";
+  const g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
+  g.drawImage(IMG.cmp ? IMG.orig : IMG.work, 0, 0, w * z, h * z);
+  if (IMG.cmp) return;
+  const L = imgTool() === "text" ? imgTextLayer() : null;
+  if (L) {
+    g.drawImage(L, 0, 0, w * z, h * z);
+    const b = IMG.txt.box; g.setLineDash([4, 3]); g.strokeStyle = "#2aa7e0"; g.lineWidth = 1; g.strokeRect(b.x * z + .5, b.y * z + .5, b.w * z, b.h * z); g.setLineDash([]);
+  }
+  if (IMG.sel) { const s = IMG.sel, x = Math.min(s.x0, s.x1), y = Math.min(s.y0, s.y1); g.setLineDash([4, 3]); g.strokeStyle = "#e0402a"; g.lineWidth = 1.5; g.strokeRect(x * z, y * z, (Math.abs(s.x1 - s.x0) + 1) * z, (Math.abs(s.y1 - s.y0) + 1) * z); g.setLineDash([]); }
+}
+for (const id of ["txText", "txFont", "txSize", "txSpace", "txBold", "txItalic", "txColor", "txStroke", "txStrokeW", "txAlign", "txShadow", "txSharp", "txLine"]) {
+  $("#" + id).addEventListener("input", () => { if (!IMG.txt && $("#txText").value && IMG.work) IMG.txt = { x:2, y:2 }; imgDraw(); });
+}
+function imgPos(ev) { const r = $("#imgCanvas").getBoundingClientRect(); return { x:Math.floor((ev.clientX - r.left) / IMG.zoom), y:Math.floor((ev.clientY - r.top) / IMG.zoom) }; }
+$("#imgCanvas").onpointerdown = ev => {
+  if (!IMG.work) return;
+  const p = imgPos(ev), t = imgTool();
+  $("#imgCanvas").setPointerCapture(ev.pointerId);
+  if (t === "pick") {
+    const d = IMG.work.getContext("2d").getImageData(Math.min(p.x, IMG.work.width - 1), Math.min(p.y, IMG.work.height - 1), 1, 1).data;
+    const hex = "#" + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, "0")).join("");
+    $("#txColor").value = hex; $("#erColor").value = hex; $("#imgMsg").textContent = "Cor " + hex + (d[3] < 255 ? " (transparência " + Math.round(100 - d[3] / 2.55) + "%)" : "") + ".";
+    return;
+  }
+  if (t === "erase") { IMG.sel = { x0:p.x, y0:p.y, x1:p.x, y1:p.y }; imgDraw(); return; }
+  if (IMG.txt && IMG.txt.box) { const b = IMG.txt.box; if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) { IMG.drag = { dx:p.x - IMG.txt.x, dy:p.y - IMG.txt.y }; return; } }
+  IMG.txt = { x:p.x, y:p.y }; IMG.drag = { dx:0, dy:0 }; $("#txText").focus({ preventScroll:true }); imgDraw();
+};
+$("#imgCanvas").onpointermove = ev => {
+  if (!IMG.work) return;
+  const p = imgPos(ev);
+  if (IMG.sel && ev.buttons) { IMG.sel.x1 = Math.max(0, Math.min(IMG.work.width - 1, p.x)); IMG.sel.y1 = Math.max(0, Math.min(IMG.work.height - 1, p.y)); imgDraw(); }
+  else if (IMG.drag && ev.buttons) { IMG.txt.x = p.x - IMG.drag.dx; IMG.txt.y = p.y - IMG.drag.dy; imgDraw(); }
+};
+$("#imgCanvas").onpointerup = () => {
+  IMG.drag = null;
+  if (!IMG.sel) return;
+  const s = IMG.sel, x = Math.min(s.x0, s.x1), y = Math.min(s.y0, s.y1), w = Math.abs(s.x1 - s.x0) + 1, h = Math.abs(s.y1 - s.y0) + 1;
+  IMG.sel = null; imgPush();
+  const g = IMG.work.getContext("2d"), mode = $("#erMode").value;
+  if (mode === "clear") g.clearRect(x, y, w, h);
+  else {
+    let col = $("#erColor").value;
+    if (mode === "border") {
+      const W = IMG.work.width, H = IMG.work.height, d = g.getImageData(0, 0, W, H).data; let r = 0, gg = 0, b = 0, a = 0, n = 0;
+      const add = (px, py) => { if (px < 0 || py < 0 || px >= W || py >= H) return; const i = (py * W + px) * 4; r += d[i]; gg += d[i + 1]; b += d[i + 2]; a += d[i + 3]; n++; };
+      for (let i = x - 1; i <= x + w; i++) { add(i, y - 1); add(i, y + h); }
+      for (let j = y; j < y + h; j++) { add(x - 1, j); add(x + w, j); }
+      col = n ? "rgba(" + Math.round(r / n) + "," + Math.round(gg / n) + "," + Math.round(b / n) + "," + (a / n / 255).toFixed(3) + ")" : "rgba(0,0,0,0)";
+      g.clearRect(x, y, w, h);
+    }
+    g.fillStyle = col; g.fillRect(x, y, w, h);
+  }
+  imgDraw();
+};
+document.addEventListener("keydown", ev => {
+  if (!$("#dlgImg").open || $("#imgEd").classList.contains("hidden")) return;
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); $("#imgUndo").click(); return; }
+  if (ev.target.closest("textarea,input,select")) return;
+  const mv = { ArrowLeft:[-1, 0], ArrowRight:[1, 0], ArrowUp:[0, -1], ArrowDown:[0, 1] }[ev.key];
+  if (mv && IMG.txt) { ev.preventDefault(); IMG.txt.x += mv[0]; IMG.txt.y += mv[1]; imgDraw(); }
+});
+$("#txApply").onclick = () => {
+  const L = imgTextLayer(); if (!L) { $("#imgMsg").textContent = "Escreva o texto e clique na imagem para posicionar."; return; }
+  imgPush(); IMG.work.getContext("2d").drawImage(L, 0, 0); IMG.txt = null; $("#txText").value = ""; imgDraw();
+  $("#imgMsg").textContent = "Texto aplicado. Clique em Salvar no projeto quando terminar.";
+};
+$("#txCancel").onclick = () => { IMG.txt = null; $("#txText").value = ""; imgDraw(); };
+$("#imgDown").onclick = () => {
+  const a = el("a"); a.download = IMG.item.id.replace(/[\/.]/g, "_") + "_" + IMG.tex.n + ".png"; a.href = IMG.work.toDataURL("image/png"); a.click();
+};
+$("#imgUp").onclick = () => $("#imgFile").click();
+$("#imgFile").onchange = async () => {
+  const f = $("#imgFile").files[0]; $("#imgFile").value = ""; if (!f) return;
+  try {
+    const url = URL.createObjectURL(f), im = await imgLoadImage(url); URL.revokeObjectURL(url);
+    if (im.width !== IMG.work.width || im.height !== IMG.work.height) { $("#imgMsg").textContent = "Essa imagem tem " + im.width + "×" + im.height + "; a do jogo tem " + IMG.work.width + "×" + IMG.work.height + ". Edite sem mudar o tamanho."; return; }
+    imgPush(); const g = IMG.work.getContext("2d"); g.clearRect(0, 0, im.width, im.height); g.drawImage(im, 0, 0); imgDraw();
+    $("#imgMsg").textContent = "Imagem aberta. Clique em Salvar no projeto.";
+  } catch (e) { $("#imgMsg").textContent = e.message; }
+};
+$("#imgSave").onclick = async () => {
+  if (IMG.txt && $("#txText").value) $("#txApply").click();
+  $("#imgMsg").textContent = "Salvando…";
+  try {
+    const r = await api("/api/img/save", { id:IMG.item.id, n:IMG.tex.n, png:IMG.work.toDataURL("image/png") });
+    IMG.dirty = false; IMG.tex.edited = r.edited;
+    $("#imgMsg").textContent = r.edited ? "Salva. A prévia abaixo mostra como fica no jogo (algumas imagens perdem um pouco de qualidade no formato do GameCube)." : "Igual à original: nada a gravar.";
+    imgShowGame(r.edited); await imgCatalog(true);
+  } catch (e) { $("#imgMsg").textContent = e.message; }
+};
+$("#imgReset").onclick = async () => {
+  if (!confirm("Voltar à imagem original? A sua edição desta imagem será apagada.")) return;
+  try { await api("/api/img/reset", { id:IMG.item.id, n:IMG.tex.n }); IMG.tex.edited = false; IMG.dirty = false; await imgEdit(IMG.tex); await imgCatalog(true); $("#imgMsg").textContent = "Voltou à original."; }
+  catch (e) { $("#imgMsg").textContent = e.message; }
+};
+
 /* ----------------------------------------------------------------- janelas */
 document.querySelectorAll("dialog [data-close]").forEach(b => b.onclick = () => b.closest("dialog").close());
 
@@ -1207,6 +1554,7 @@ function showReport(r, err) {
     const ul = el("ul", "report");
     const lost = Object.entries(r.stripped || {}); if (lost.length) ul.append(el("li", "", "Gravadas sem acento por falta de lugar na fonte: " + lost.map(x => x[0] + " (" + x[1] + "×)").join(", ") + "."));
     const miss = Object.entries(r.missing || {}); if (miss.length) ul.append(el("li", "", "Caracteres que o jogo não tem, trocados por “?”: " + miss.map(x => x[0] + " (" + x[1] + "×)").join(", ") + "."));
+    if (r.imagens) ul.append(el("li", "", pl(r.imagens, "arquivo de imagens foi gravado", "arquivos de imagens foram gravados") + " com as suas edições."));
     if (r.intro) ul.append(el("li", "", pl(r.intro, "página da introdução foi desenhada", "páginas da introdução foram desenhadas") + " com a tradução."));
     const lname = x => { const f = S.project.summary.files.find(y => y.name === x.file); return (f ? fileLabel(f) : x.file.replace(/\.sct$/i, "")) + "/" + x.k; };
     const longD = r.long.filter(x => !/^sistema\//.test(x.file)), longS = r.long.filter(x => /^sistema\//.test(x.file));

@@ -19,6 +19,18 @@ def _avisar(msg: str) -> None:
         pass
 
 
+def _teste_textura() -> str:
+    from PIL import Image
+    from soal import textura
+    img = Image.new("RGBA", (16, 16), (200, 40, 20, 255))
+    for fmt in (14, 5):
+        data = textura.encode(img, fmt)
+        back = textura.decode(data, fmt, 16, 16)
+        if abs(back.getpixel((3, 3))[0] - 200) > 10:
+            raise ValueError("cor errada no formato %d" % fmt)
+    return "ok"
+
+
 def _sot_teste() -> bytes:
     import struct
     blob = b"Yes\0No\0"
@@ -39,7 +51,7 @@ def verificar_instalacao(out_path: str) -> int:
         except Exception as exc:
             ok = False
             linhas.append(f"FALHA {nome}: {exc!r}")
-    from soal import aklz, font, intro, mt, project, recomp, sct, server, sistema, sugestao, termos, text  # noqa: F401
+    from soal import aklz, font, intro, mt, project, recomp, sct, server, sistema, sugestao, termos, text, textura  # noqa: F401
     item("interface", lambda: os.path.getsize(os.path.join(server.WEB_DIR, "index.html")))
     item("tabela de instrucoes", lambda: len(sct.instruction_table()))
     item("glossario", lambda: len(mt.GLOSSARY))
@@ -49,6 +61,7 @@ def verificar_instalacao(out_path: str) -> int:
     item("texto do jogo", lambda: text.decode(b"\\h(\x81\x73Vyse\x81\x74)Hey\x7fFina.\\e").body)
     item("sugestoes de nomes", lambda: sugestao.suggest("Valuan Soldier")["t"])
     item("termos padronizados", lambda: termos.Checker(termos.defaults()).fix("Blue Rogues", "Ladinos Azuis")[0])
+    item("imagens (CMPR e RGB5A3)", _teste_textura)
     item("textos de itens e menus", lambda: len(sistema.us_map()["entries"]))
     item("arquivo .sot", lambda: (sistema.Sot(_sot_teste()).build() == _sot_teste() or 1 / 0) and "")
 
