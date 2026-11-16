@@ -294,7 +294,9 @@ em todos os arquivos do mapa-múndi, e todos recebem a sua versão.
 
 Na versão europeia, cada imagem tem uma cópia por idioma. Você edita a cópia em inglês, e ela é
 gravada no arquivo do idioma escolhido em **Ajustes** (o mesmo que recebe as falas). No prólogo, os
-quatro idiomas ficam no mesmo arquivo; a edição vai para a imagem do idioma escolhido.
+quatro idiomas ficam no mesmo arquivo; a edição vai para a imagem do idioma escolhido. Quando a
+imagem do idioma é diferente da inglesa (outro tamanho, como o “FALLO” do espanhol no lugar do
+“MISS”), use **Editar a versão em …** para traduzir direto a cópia desse idioma.
 
 **Versão europeia: o jogo mostra o idioma do console.** Se a tradução foi gravada no lugar do
 espanhol, o console tem de estar em espanhol, senão o jogo mostra o inglês original (textos e

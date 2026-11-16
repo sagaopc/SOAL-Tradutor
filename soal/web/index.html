@@ -398,7 +398,7 @@ table.grid input{width:100%}
       <div id="imgFound"></div>
     </aside>
     <section class="imgmain" id="imgList">
-      <div class="imgbar"><b id="imgFileLbl"></b><label><input type="checkbox" id="imgOnlyText" checked> Só as imagens com texto</label></div>
+      <div class="imgbar"><b id="imgFileLbl"></b><label><input type="checkbox" id="imgOnlyText" checked> Só as imagens com texto</label><button type="button" class="hidden" id="imgLangBtn"></button></div>
       <p class="note" id="imgHelp">Escolha um grupo à esquerda. Clique numa imagem para editar: apague o texto em inglês e escreva o português aqui mesmo, ou baixe o PNG, edite no seu programa de imagens e envie de volta. O tamanho tem de ser o mesmo.</p>
       <div class="imggrid" id="imgGrid"></div>
     </section>
@@ -1055,15 +1055,23 @@ async function imgCatalog(keep) {
       box.append(b);
     }
   }
-  if (keep && IMG.item) { const it = IMG.cat.groups.flatMap(g => g.items).find(x => x.id === IMG.item.id); if (it) { IMG.item = it; imgMarkSide(); } }
+  if (keep && IMG.item) { if (!IMG.item.base) { const it = IMG.cat.groups.flatMap(g => g.items).find(x => x.id === IMG.item.id); if (it) IMG.item = it; } imgMarkSide(); }
   else if (!IMG.item && IMG.cat.groups.length) imgOpenItem(IMG.cat.groups[0].items[0]);
 }
-function imgMarkSide() { for (const b of $("#imgGroups").querySelectorAll("button")) b.classList.toggle("on", IMG.item && b.dataset.id === IMG.item.id); }
+function imgMarkSide() { const id = IMG.item && (IMG.item.base ? IMG.item.base.id : IMG.item.id); for (const b of $("#imgGroups").querySelectorAll("button")) b.classList.toggle("on", b.dataset.id === id); }
 async function imgOpenItem(it) {
   if (IMG.dirty && !confirm("A imagem tem mudanças não salvas. Sair mesmo assim?")) return;
   IMG.dirty = false; IMG.item = it; imgMarkSide();
   $("#imgEd").classList.add("hidden"); $("#imgList").classList.remove("hidden");
   $("#imgFileLbl").textContent = it.label + " — " + it.id;
+  const lb = $("#imgLangBtn"), slotName = LANGS[IMG.cat.slot] || IMG.cat.slot;
+  lb.classList.add("hidden");
+  if (it.base) { lb.textContent = "Ver a versão em inglês"; lb.onclick = () => imgOpenItem(it.base); lb.classList.remove("hidden"); }
+  else if (IMG.cat.eu && it.dst && it.dst !== it.id) {
+    lb.textContent = "Editar a versão em " + slotName; lb.title = "Abre " + it.dst + ", o arquivo que vai para o jogo. Use quando a imagem do " + slotName + " for diferente da inglesa (outro tamanho ou outra ordem).";
+    lb.onclick = () => imgOpenItem({ id:it.dst, label:it.label + " (" + slotName + ")", text:null, var:{}, dst:it.dst, base:it });
+    lb.classList.remove("hidden");
+  }
   $("#imgOnlyText").parentElement.classList.toggle("hidden", !it.text);
   $("#imgGrid").textContent = "Carregando…";
   try { IMG.file = await api("/api/img/file?id=" + encodeURIComponent(it.id)); } catch (e) { $("#imgGrid").textContent = e.message; return; }

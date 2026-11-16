@@ -121,29 +121,69 @@ def tex_key(tf: "textura.TexFile", n: int) -> str:
     return h.hexdigest()[:20]
 
 
+def _counterparts(ref: "textura.TexFile", tf: "textura.TexFile") -> Dict[int, Optional[int]]:
+    """Para cada imagem do arquivo em ingles, a imagem correspondente no arquivo do outro
+    idioma. A ordem nem sempre e' a mesma (nos icones de estado o espanhol vem em outra
+    ordem): quando a imagem da mesma posicao nao tem o mesmo tamanho e formato, procura a
+    unica imagem do outro idioma com esse tamanho e formato que nao seja igual a nenhuma do
+    ingles (as iguais sao as que nao tem texto)."""
+    same = {bytes(ref.blob(t.n)) for t in ref.tex if t.ok}
+    own = [t for t in tf.tex if t.ok and bytes(tf.blob(t.n)) not in same]
+    out: Dict[int, Optional[int]] = {}
+    used = set()
+    for t in ref.tex:
+        if t.n < len(tf.tex):
+            d = tf.tex[t.n]
+            if d.ok and (d.w, d.h, d.fmt) == (t.w, t.h, t.fmt):
+                out[t.n] = t.n
+                used.add(t.n)
+    for t in ref.tex:
+        if t.n in out:
+            continue
+        cands = [d.n for d in own if (d.w, d.h, d.fmt) == (t.w, t.h, t.fmt) and d.n not in used]
+        out[t.n] = cands[0] if len(cands) == 1 else None
+        if out[t.n] is not None:
+            used.add(out[t.n])
+    return out
+
+
 def apply(orig: bytes, src: Optional[bytes], edits: Dict[str, "object"], errors: List[str],
-          nmap: Optional[Dict[int, int]] = None) -> Optional[bytes]:
+          nmap: Optional[Dict[int, int]] = None, lang: str = "") -> Optional[bytes]:
     """Aplica as imagens editadas (chave -> imagem do Pillow) ao arquivo `orig`.
     `src` e' o arquivo de onde vieram as chaves (o ingles, na versao europeia); None = o
     proprio orig. `nmap` leva a imagem n do ingles para outra imagem do mesmo arquivo (os
-    idiomas do prologo europeu). Devolve o arquivo novo, ou None se nada mudou."""
+    idiomas do prologo europeu). As imagens editadas direto no arquivo `orig` tambem entram
+    (e valem mais que as que vem do ingles). Devolve o arquivo novo, ou None se nada mudou."""
     tf = textura.TexFile(orig)
     before = bytes(tf.data)
+    own = {t.n: tex_key(tf, t.n) for t in tf.tex if t.ok}
+    done = set()
+    # editadas direto neste arquivo
+    for n, key in own.items():
+        img = edits.get(key)
+        if img is not None and img.size == (tf.tex[n].w, tf.tex[n].h):
+            tf.set_image(n, img)
+            done.add(n)
     ref = textura.TexFile(src if src is not None else orig)
-    nmap = nmap or {}
-    changed = False
-    for t in ref.tex:
-        if not t.ok:
-            continue
-        img = edits.get(tex_key(ref, t.n))
-        if img is None:
-            continue
-        d = nmap.get(t.n, t.n)
-        if d >= len(tf.tex) or (tf.tex[d].w, tf.tex[d].h) != (t.w, t.h) or not tf.tex[d].ok:
-            errors.append(f"imagem {t.n}: o arquivo deste idioma é diferente do inglês")
-            continue
-        tf.set_image(d, img)
-        changed = True
-    if not changed or bytes(tf.data) == before:
+    if src is not None or nmap:
+        pairs = _counterparts(ref, textura.TexFile(orig)) if src is not None else {t.n: t.n for t in ref.tex}
+        for a_, b_ in (nmap or {}).items():
+            pairs[a_] = b_
+        for t in ref.tex:
+            if not t.ok:
+                continue
+            img = edits.get(tex_key(ref, t.n))
+            if img is None:
+                continue
+            d = pairs.get(t.n)
+            if d is None:
+                errors.append(f"imagem {t.n}: no arquivo {lang or 'deste idioma'} ela é diferente da inglesa. "
+                              f"Em Imagens, abra este item e use “Editar a versão {lang or 'do idioma'}” para traduzir essa imagem direto.")
+                continue
+            if d in done:
+                continue
+            tf.set_image(d, img)
+            done.add(d)
+    if bytes(tf.data) == before:
         return None
     return tf.build()

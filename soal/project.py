@@ -154,6 +154,7 @@ def find_game(root: str) -> Tuple[str, Optional[str]]:
 
 
 IMG_PREFIX = "img__"
+LANG_NAMES = {"en": "inglês", "es": "espanhol", "fr": "francês", "de": "alemão"}
 
 
 def _img_check(rel: str) -> str:
@@ -538,7 +539,8 @@ class Project:
                 done.add(dst)
                 errs: List[str] = []
                 try:
-                    new = imagens.apply(self._img_orig(dst), None if dst == src else self._img_orig(src), edits, errs, nmap)
+                    new = imagens.apply(self._img_orig(dst), None if dst == src else self._img_orig(src), edits, errs, nmap,
+                                        "em " + LANG_NAMES.get(slot, slot) if dst != src else "")
                 except (textura.TexError, ProjectError, ValueError) as exc:
                     report["errors"].append({"file": dst, "error": str(exc)})
                     continue
