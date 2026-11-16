@@ -158,8 +158,12 @@ def apply(orig: bytes, src: Optional[bytes], edits: Dict[str, "object"], errors:
     before = bytes(tf.data)
     own = {t.n: tex_key(tf, t.n) for t in tf.tex if t.ok}
     done = set()
-    # editadas direto neste arquivo
+    # editadas direto neste arquivo (menos as que, pelo nmap, vao para outra imagem do mesmo
+    # arquivo: no prologo europeu a imagem em ingles fica como esta')
+    moved = {a_ for a_, b_ in (nmap or {}).items() if a_ != b_} if src is None else set()
     for n, key in own.items():
+        if n in moved:
+            continue
         img = edits.get(key)
         if img is not None and img.size == (tf.tex[n].w, tf.tex[n].h):
             tf.set_image(n, img)
