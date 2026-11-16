@@ -526,17 +526,19 @@ class Project:
                 if os.path.exists(f):
                     edits[key] = Image.open(f).convert("RGBA")
             slot = self.settings.get("eu_slot") or "en"
-            items = [(it["id"], it["var"]) for g in imagens.catalog(self.eu, self._img_exists) for it in g["items"]]
-            items += [(r, {}) for r in imagens.SAME if self._img_exists(r)]
-            items += [(r, {}) for r in self.meta.get("img_extra", []) if self._img_exists(r)]
-            for src, var in items:
+            items = [(it["id"], it["var"], it.get("texvar")) for g in imagens.catalog(self.eu, self._img_exists)
+                     for it in g["items"]]
+            items += [(r, {}, None) for r in imagens.SAME if self._img_exists(r)]
+            items += [(r, {}, None) for r in self.meta.get("img_extra", []) if self._img_exists(r)]
+            for src, var, texvar in items:
+                nmap = {texvar["en"]: texvar[slot]} if texvar and slot in texvar else None
                 dst = var.get(slot, src) if var else src
                 if dst in done:
                     continue
                 done.add(dst)
                 errs: List[str] = []
                 try:
-                    new = imagens.apply(self._img_orig(dst), None if dst == src else self._img_orig(src), edits, errs)
+                    new = imagens.apply(self._img_orig(dst), None if dst == src else self._img_orig(src), edits, errs, nmap)
                 except (textura.TexError, ProjectError, ValueError) as exc:
                     report["errors"].append({"file": dst, "error": str(exc)})
                     continue
@@ -1738,14 +1740,16 @@ class Project:
                 "backup": os.path.join(self.dir, "copias_do_destino", tag)}
 
     def set_recomp(self, root: Optional[str], use: bool):
-        if self.eu and (root or use):
-            raise ProjectError("O recomp so' roda a versao americana; a versao europeia e' gravada "
-                               "so' na pasta do jogo.")
+        want = "GEAP8P" if self.eu else "GEAE8P"
         with self.lock:
             if root:
                 gid = recomp.game_id(root)
-                if gid != recomp.SUPPORTED_ID:
-                    raise ProjectError("O jogo importado no recomp nao e' a versao americana (GEAE8P).")
+                if gid != want:
+                    hit = recomp.find_region(want, root)
+                    if not hit:
+                        raise ProjectError(f"Não achei a versão {recomp.REGION_NAMES[want]} ({want}) importada nesse recomp. "
+                                           "Importe o disco dessa versão no recomp e tente de novo.")
+                    root = hit["game_root"]
                 find_game(root)
                 self.meta["recomp_root"] = os.path.abspath(root)
             self.meta["use_recomp"] = bool(use)
@@ -1936,7 +1940,17 @@ class Project:
                     if t["fst"]:
                         r["fst"] = self._update_fst(t)
                     if t["recomp"]:
-                        r["states"] = recomp.count_states(os.path.dirname(os.path.dirname(t["root"])))
+                        data_dir = os.path.dirname(os.path.dirname(t["root"]))
+                        r["states"] = recomp.count_states(data_dir)
+                        if self.eu:
+                            # o jogo europeu mostra o idioma do console: o recomp tem de estar no
+                            # idioma onde a traducao foi gravada
+                            lang = recomp.GC_LANG.get(self.settings.get("eu_slot") or "en", 0)
+                            if self.settings.get("recomp_lang", True):
+                                if recomp.set_gc_language(data_dir, lang):
+                                    r["lang"] = recomp.GC_LANG_NAMES[lang]
+                            elif recomp.gc_language(data_dir) != lang:
+                                r["lang_warn"] = recomp.GC_LANG_NAMES[lang]
                     _atomic_write(t["manifest"], json.dumps(st["m"]).encode("utf-8"))
                 except (recomp.FstError, OSError) as exc:
                     report["errors"].append({"file": t["root"], "error": str(exc)})

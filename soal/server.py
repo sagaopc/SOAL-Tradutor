@@ -25,7 +25,7 @@ from . import intro, iso, janela, mt, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.9.0"
+VERSION = "0.9.1"
 
 
 class App:
@@ -221,10 +221,12 @@ class App:
         out = {"version": VERSION, "job": dict(self.job), "recent": recent,
                "project": None, "recomp": found}
         if p is not None:
-            if found and found["supported"] and not p.meta.get("recomp_root") and not p.eu:
+            if found and not p.meta.get("recomp_root"):
                 # lembra onde o recomp esta'; gravar nele continua sendo escolha do usuario
-                p.meta["recomp_root"] = found["game_root"]
-                p.touch()
+                mine = recomp.find_region("GEAP8P" if p.eu else "GEAE8P", self.config.get("recomp_hint"))
+                if mine and os.path.normcase(mine["game_root"]) != os.path.normcase(os.path.abspath(p.meta.get("game_root") or "")):
+                    p.meta["recomp_root"] = mine["game_root"]
+                    p.touch()
             out["project"] = {
                 "dir": p.dir, "game_root": p.meta.get("game_root"), "game_field": p.meta.get("game_field"),
                 "has_font": bool(p.orig_font), "settings": p.settings,

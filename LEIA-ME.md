@@ -263,6 +263,8 @@ reúne as que têm texto em inglês:
 
 - **Tela-título e abertura**: o logotipo com New Game, Continue e PRESS START, o “Presented by
   SEGA” e o aviso de luzes piscando.
+- **Início do jogo**: o prólogo que aparece ao começar um jogo novo (“The age of exploration has
+  dawned upon the world of Arcadia…”). Não é vídeo: é uma imagem.
 - **Fim de jogo**: GAME OVER.
 - **Batalha** e **Batalha de navios**: os comandos (Attack, Guard, Run, Item, Focus…), MISS, Hp, Mp e Lv.
 - **Menus e lojas**: os rótulos da loja e do status (Attack, Agility, Next, Gold, LEVEL UP,
@@ -291,7 +293,13 @@ A mesma imagem que aparece em vários arquivos é traduzida uma vez só: os nome
 em todos os arquivos do mapa-múndi, e todos recebem a sua versão.
 
 Na versão europeia, cada imagem tem uma cópia por idioma. Você edita a cópia em inglês, e ela é
-gravada no arquivo do idioma escolhido em **Ajustes** (o mesmo que recebe as falas).
+gravada no arquivo do idioma escolhido em **Ajustes** (o mesmo que recebe as falas). No prólogo, os
+quatro idiomas ficam no mesmo arquivo; a edição vai para a imagem do idioma escolhido.
+
+**Versão europeia: o jogo mostra o idioma do console.** Se a tradução foi gravada no lugar do
+espanhol, o console tem de estar em espanhol, senão o jogo mostra o inglês original (textos e
+imagens). No recomp, o programa ajusta o idioma sozinho ao gravar. No Dolphin, escolha o idioma em
+Configurações → GameCube → Idioma do sistema.
 
 ## Introdução
 
@@ -314,7 +322,7 @@ nome traduzido vale para todas as falas daquele personagem.
 - Na versão americana, os textos de itens e menus precisam caber no espaço do `main.dol`.
 - O recomp não foi testado com o `main.dol` traduzido.
 - Versões americana (GEAE8P) e europeia (GEAP8P). A japonesa não é aceita.
-- O recomp (port nativo) só roda a versão americana.
+- No recomp (port nativo), a tradução vai para o jogo importado da mesma versão do projeto (GEAE8P ou GEAP8P).
 
 ## Versão europeia
 

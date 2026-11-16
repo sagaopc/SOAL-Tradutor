@@ -25,6 +25,10 @@ GROUPS = [
         ("title/ts900026.mld", "Presented by SEGA", {0: "Presented by SEGA · Created by Overworks"}),
         ("title/warning.mld", "Aviso de luzes piscando", {0: "Flashing lights and similar effects are used in this game…"}),
     ]),
+    ("Início do jogo", [
+        ("field/a299a00.mld", "Prólogo (a história)", {0: "The age of exploration has dawned upon the world of Arcadia… "
+                                                        "there will be Air Pirates…"}),
+    ]),
     ("Fim de jogo", [
         ("field/a090a.mld", "GAME OVER", {1: "GAME OVER"}),
     ]),
@@ -64,8 +68,10 @@ SAME = ["field/sekai%03d.mld" % n for n in range(201, 217)]
 _EU_LETTERS = {"en": "", "fr": "f", "de": "g", "es": "s"}
 _EU_NUMBERED = {"field/a090a.mld": {"en": "field/a090a0.mld", "fr": "field/a090a1.mld",
                                     "es": "field/a090a2.mld", "de": "field/a090a3.mld"}}
-# na versao europeia estes arquivos tem outro conteudo
-_EU_OTHER = {"title/ts900000.mld": "Tela de abertura (aviso)", "title/warning.mld": "Tela de abertura"}
+# na versao europeia o logotipo tem outros rotulos (mostra todas as imagens do arquivo)
+_EU_OTHER = {"title/ts900000.mld": "Logotipo da tela-título", "title/warning.mld": "Aviso de luzes piscando"}
+# na versao europeia, arquivos com os quatro idiomas em imagens separadas do mesmo arquivo
+_EU_TEXVAR = {"field/a299a00.mld": {"en": 0, "fr": 1, "es": 2, "de": 3}}
 _EU_E = {"field/shop_hrse.mll": "field/shop_hrs", "field/save_hrs.mll": "field/save_hrs"}
 
 
@@ -100,7 +106,8 @@ def catalog(eu: bool, exists) -> List[dict]:
                 continue
             if eu and rel in _EU_OTHER:
                 name, text = _EU_OTHER[rel], {}
-            g.append({"id": src, "label": name, "text": {str(k): v for k, v in text.items()} or None, "var": var})
+            g.append({"id": src, "label": name, "text": {str(k): v for k, v in text.items()} or None, "var": var,
+                      "texvar": _EU_TEXVAR.get(rel) if eu else None})
         if g:
             out.append({"label": label, "items": g})
     return out
@@ -114,13 +121,16 @@ def tex_key(tf: "textura.TexFile", n: int) -> str:
     return h.hexdigest()[:20]
 
 
-def apply(orig: bytes, src: Optional[bytes], edits: Dict[str, "object"], errors: List[str]) -> Optional[bytes]:
+def apply(orig: bytes, src: Optional[bytes], edits: Dict[str, "object"], errors: List[str],
+          nmap: Optional[Dict[int, int]] = None) -> Optional[bytes]:
     """Aplica as imagens editadas (chave -> imagem do Pillow) ao arquivo `orig`.
     `src` e' o arquivo de onde vieram as chaves (o ingles, na versao europeia); None = o
-    proprio orig. Devolve o arquivo novo, ou None se nada mudou."""
+    proprio orig. `nmap` leva a imagem n do ingles para outra imagem do mesmo arquivo (os
+    idiomas do prologo europeu). Devolve o arquivo novo, ou None se nada mudou."""
     tf = textura.TexFile(orig)
     before = bytes(tf.data)
-    ref = tf if src is None else textura.TexFile(src)
+    ref = textura.TexFile(src if src is not None else orig)
+    nmap = nmap or {}
     changed = False
     for t in ref.tex:
         if not t.ok:
@@ -128,10 +138,11 @@ def apply(orig: bytes, src: Optional[bytes], edits: Dict[str, "object"], errors:
         img = edits.get(tex_key(ref, t.n))
         if img is None:
             continue
-        if t.n >= len(tf.tex) or (tf.tex[t.n].w, tf.tex[t.n].h) != (t.w, t.h) or not tf.tex[t.n].ok:
+        d = nmap.get(t.n, t.n)
+        if d >= len(tf.tex) or (tf.tex[d].w, tf.tex[d].h) != (t.w, t.h) or not tf.tex[d].ok:
             errors.append(f"imagem {t.n}: o arquivo deste idioma é diferente do inglês")
             continue
-        tf.set_image(t.n, img)
+        tf.set_image(d, img)
         changed = True
     if not changed or bytes(tf.data) == before:
         return None

@@ -104,8 +104,8 @@ Relatos são bem-vindos em [Issues](../../issues).
 As mudanças de cada versão estão nas notas de cada [release](../../releases).
 
 Limites: na versão americana, os textos de itens e menus precisam caber no espaço do `main.dol`;
-nomes de inimigos não aparecem como texto no jogo; versões americana (GEAE8P) e europeia (GEAP8P);
-o recomp só roda a americana.
+nomes de inimigos não aparecem como texto no jogo; versões americana (GEAE8P) e europeia (GEAP8P),
+no Dolphin e no recomp.
 
 ## Créditos
 

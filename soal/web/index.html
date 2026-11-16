@@ -331,7 +331,7 @@ table.grid input{width:100%}
     <div class="field"><label for="stAuto">Falas repetidas</label><label><input type="checkbox" id="stAuto"> Preencher sozinho as falas idênticas ainda não traduzidas</label></div>
     <div class="field hidden" id="euSlotRow"><label for="stSlot">Idioma que recebe a tradução</label>
       <select id="stSlot"><option value="en">Inglês</option><option value="es">Espanhol</option><option value="fr">Francês</option><option value="de">Alemão</option></select>
-      <small>Versão europeia: você traduz a partir do inglês, e a tradução é gravada no lugar do idioma escolhido. No jogo, escolha esse idioma no menu. Os outros idiomas ficam como estão; falas ainda não traduzidas aparecem no idioma original desse lugar.</small></div>
+      <small>Versão europeia: você traduz a partir do inglês, e a tradução é gravada no lugar do idioma escolhido. O jogo mostra o idioma do console: no recomp, o programa ajusta isso sozinho ao gravar; no Dolphin, escolha esse idioma em Configurações → GameCube → Idioma do sistema. Os outros idiomas ficam como estão; falas ainda não traduzidas aparecem no idioma original desse lugar.</small></div>
     <div class="field"><label for="stIntro">Fonte da introdução</label>
       <select id="stIntro"><option value="uncial">Uncial (parecida com a da versão americana)</option><option value="gotica">Gótica (parecida com a da versão europeia)</option></select>
       <small>As 11 páginas do começo do jogo (“In a world shrouded in mystery…”) são imagens. A tradução é desenhada com esta fonte no lugar do texto original.</small></div>
@@ -1503,7 +1503,7 @@ $("#btnBuild").onclick = async () => {
   const p = el("p"); p.append("Os arquivos traduzidos vão substituir os destas pastas:"); body.append(p);
   const main = el("p"); main.append(el("span", "secname", S.project.game_root), el("span", "note", S.project.is_recomp ? "  (jogo importado no recomp)" : "  (pasta extraída)")); body.append(main);
   let chk = null;
-  if (!S.project.is_recomp && S.project.region !== "eu") {
+  if (!S.project.is_recomp) {
     const box = el("p");
     if (S.project.recomp_root) {
       const lab = el("label"); chk = el("input"); chk.type = "checkbox"; chk.checked = S.project.use_recomp;
@@ -1549,6 +1549,8 @@ function showReport(r, err) {
       if (t.kept) ul.append(el("li", "", t.kept + " arquivos desta pasta eram diferentes do original; uma cópia deles foi guardada no projeto, em copias_do_destino."));
       if (t.font) ul.append(el("li", "", "Fonte: " + t.font + "."));
       if (t.fst) ul.append(el("li", "", "Recomp: " + t.fst + "." + (t.states ? " Os " + t.states + " save states existentes ficam guardados, mas só os feitos com esta gravação aparecem no jogo." : "")));
+      if (t.lang) ul.append(el("li", "", "O idioma do console no recomp foi mudado para " + t.lang + ", o idioma onde a tradução foi gravada. A versão europeia mostra os textos e as imagens no idioma do console."));
+      if (t.lang_warn) ul.append(el("li", "err", "O recomp não está com o console em " + t.lang_warn + ": a tradução não vai aparecer."));
       body.append(ul);
     }
     const ul = el("ul", "report");
@@ -1561,7 +1563,7 @@ function showReport(r, err) {
     if (longD.length) ul.append(el("li", "", longD.length + " falas passam do tamanho da caixa. Use o filtro “Com aviso” em cada arquivo. Exemplos: " + longD.slice(0, 5).map(lname).join(", ") + "."));
     if (longS.length) ul.append(el("li", "err", longS.length + " textos de itens e menus não couberam no espaço do jogo e ficaram em inglês. Use o filtro “Com aviso” nessas listas. Exemplos: " + longS.slice(0, 5).map(x => lname(x) + " (" + x.issue + ")").join(", ") + "."));
     for (const e of r.errors) ul.append(el("li", "err", e.file + ": " + e.error));
-    body.append(ul, el("p", "note", r.targets.some(t => t.recomp) ? "Abra o recomp e inicie o jogo para conferir. Se o launcher pedir o disco de novo (numa atualização, por exemplo), ele reextrai tudo: é só gravar a tradução outra vez." : "Agora abra o jogo pela pasta extraída no Dolphin para conferir."));
+    body.append(ul, el("p", "note", r.targets.some(t => t.recomp) ? "Abra o recomp e inicie o jogo para conferir. Se o launcher pedir o disco de novo (numa atualização, por exemplo), ele reextrai tudo: é só gravar a tradução outra vez." : "Agora abra o jogo pela pasta extraída no Dolphin para conferir." + (S.project.region === "eu" ? " No Dolphin, o idioma do GameCube tem de ser o idioma onde a tradução foi gravada (Configurações → GameCube)." : "")));
   }
   if (!err && S.project.can_iso) { const bIso = el("button", "", "Gerar ISO…"); bIso.onclick = () => { $("#dlgBuild").close(); openIso(false); }; foot.append(bIso); }
   const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);

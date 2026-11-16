@@ -29,6 +29,10 @@ from typing import Dict, List, Optional, Tuple
 
 DATA_NAME = "Skies of Arcadia Legends"
 SUPPORTED_ID = "GEAE8P"
+SUPPORTED_IDS = ("GEAE8P", "GEAP8P")
+# idioma do console (GameCube) no Dolphin.ini do port: o jogo europeu mostra o idioma do console
+GC_LANG = {"en": 0, "de": 1, "fr": 2, "es": 3}
+GC_LANG_NAMES = {0: "inglês", 1: "alemão", 2: "francês", 3: "espanhol", 4: "italiano", 5: "holandês"}
 REGION_NAMES = {"GEAE8P": "americana", "GEAP8P": "europeia", "GEAJ8P": "japonesa"}
 BLOCK = 0x8000      # o port alinha cada arquivo do disco em blocos de 32 KB
 
@@ -84,7 +88,8 @@ def _game_in(data_dir: str) -> Optional[str]:
             cands.append(os.path.join(data_dir, "games", os.path.basename(line.rstrip("\\/"))))
     except OSError:
         pass
-    cands.append(os.path.join(data_dir, "games", SUPPORTED_ID))
+    for gid in SUPPORTED_IDS:
+        cands.append(os.path.join(data_dir, "games", gid))
     for c in cands:
         if os.path.isdir(os.path.join(c, "files", "field")):
             return os.path.abspath(c)
@@ -118,11 +123,81 @@ def find_install(hint: Optional[str] = None) -> Optional[dict]:
     return None
 
 
+def find_region(gid: str, hint: Optional[str] = None) -> Optional[dict]:
+    """O jogo de um disco (GEAE8P ou GEAP8P) importado no port, mesmo que nao seja o padrao."""
+    first = find_install(hint)
+    if first and first.get("id") == gid:
+        return first
+    if first:
+        g = os.path.join(first["data_dir"], "games", gid)
+        if os.path.isdir(os.path.join(g, "files", "field")) and game_id(g) == gid:
+            return _describe(os.path.abspath(g))
+    return None
+
+
+def _ini_path(data_dir: str) -> str:
+    return os.path.join(data_dir, "Config", "Dolphin.ini")
+
+
+def gc_language(data_dir: str) -> int:
+    """Idioma do console configurado no port (0 = ingles, o padrao)."""
+    try:
+        with open(_ini_path(data_dir), encoding="utf-8", errors="replace") as fh:
+            sec = ""
+            for line in fh:
+                t = line.strip()
+                if t.startswith("[") and t.endswith("]"):
+                    sec = t[1:-1].strip().lower()
+                elif sec == "core" and "=" in t and t.split("=", 1)[0].strip().lower() == "selectedlanguage":
+                    return int(t.split("=", 1)[1].strip() or 0)
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
+def set_gc_language(data_dir: str, value: int) -> bool:
+    """Grava [Core] SelectedLanguage no Dolphin.ini do port. Devolve True se mudou."""
+    if gc_language(data_dir) == value:
+        return False
+    path = _ini_path(data_dir)
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        lines = []
+    out, sec, done, core_at = [], "", False, None
+    for line in lines:
+        t = line.strip()
+        if t.startswith("[") and t.endswith("]"):
+            if sec == "core" and not done:
+                out.append("SelectedLanguage = %d" % value)
+                done = True
+            sec = t[1:-1].strip().lower()
+            if sec == "core":
+                core_at = len(out)
+        elif sec == "core" and "=" in t and t.split("=", 1)[0].strip().lower() == "selectedlanguage":
+            out.append("SelectedLanguage = %d" % value)
+            done = True
+            continue
+        out.append(line)
+    if not done:
+        if sec == "core":
+            out.append("SelectedLanguage = %d" % value)
+        elif core_at is None:
+            out += ["[Core]", "SelectedLanguage = %d" % value]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write("\n".join(out) + "\n")
+    os.replace(tmp, path)
+    return True
+
+
 def _describe(game_root: str) -> dict:
     gid = game_id(game_root)
     data_dir = os.path.dirname(os.path.dirname(game_root))
     return {"game_root": game_root, "data_dir": data_dir, "id": gid,
-            "supported": gid == SUPPORTED_ID, "region": REGION_NAMES.get(gid or "", "desconhecida"),
+            "supported": gid in SUPPORTED_IDS, "region": REGION_NAMES.get(gid or "", "desconhecida"),
             "states": count_states(data_dir)}
 
 
