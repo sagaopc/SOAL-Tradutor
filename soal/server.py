@@ -25,7 +25,7 @@ from . import intro, iso, janela, mt, patch, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.10.1"
+VERSION = "0.10.2"
 
 
 class App:
@@ -486,7 +486,7 @@ def make_handler(app: App):
                 if u.path == "/api/img/catalog":
                     return self._json(app.need().img_catalog())
                 if u.path == "/api/img/file":
-                    return self._json(app.need().img_file(q.get("id", [""])[0]))
+                    return self._json(app.need().img_file(q.get("id", [""])[0], q.get("ref", [""])[0] or None))
                 if u.path == "/api/img/search":
                     return self._json({"results": app.need().img_search(q.get("q", [""])[0])})
                 if u.path == "/api/img/png":

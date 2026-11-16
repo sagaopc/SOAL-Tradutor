@@ -398,22 +398,88 @@ class Project:
     def img_catalog(self) -> dict:
         if not textura.have_pillow():
             raise ProjectError("Falta o Pillow para mostrar as imagens (o .exe já vem com ele).")
-        groups = imagens.catalog(self.eu, self._img_exists)
+        slot = self.settings.get("eu_slot") or "en"
+        moved = self._img_migrate()
+        groups = imagens.catalog(self.eu, self._img_exists, slot)
         extra = [r for r in self.meta.get("img_extra", []) if self._img_exists(r)]
         if extra:
             groups.append({"label": "Outros arquivos", "items": [{"id": r, "label": r.rsplit("/", 1)[-1], "text": None,
-                                                                  "var": {}} for r in extra]})
+                                                                  "var": {}, "ref": None, "only": None, "texmap": None}
+                                                                 for r in extra]})
         ed = self.meta.get("imagens") or {}
         for g in groups:
             for it in g["items"]:
                 it["edited"] = sum(1 for v in ed.values() if (v.get("de") or [None])[0] == it["id"])
-                it["dst"] = it["var"].get(self.settings.get("eu_slot") or "en", it["id"]) if it["var"] else it["id"]
-        return {"groups": groups, "eu": self.eu, "slot": self.settings.get("eu_slot") or "en",
-                "edited": len(ed)}
+                it["dst"] = it["id"]
+        return {"groups": groups, "eu": self.eu, "slot": slot, "edited": len(ed), "moved": moved}
 
-    def img_file(self, rel: str) -> dict:
+    def _img_migrate(self) -> int:
+        """Versao europeia com outro idioma que nao o ingles: as imagens sao editadas na copia
+        desse idioma (a disposicao das palavras muda de um idioma para outro). O que foi editado
+        antes na copia em ingles e' copiado, uma vez, para a imagem correspondente do idioma,
+        para nao se perder. As edicoes em ingles ficam guardadas (valem se o idioma voltar a
+        ser o ingles)."""
+        slot = self.settings.get("eu_slot") or "en"
+        ed = self.meta.get("imagens") or {}
+        if not self.eu or slot == "en" or not ed:
+            return 0
+        done = self.meta.setdefault("img_migrated", {})
+        n = 0
+        for g in imagens.catalog(True, self._img_exists, "en"):
+            for it in g["items"]:
+                en_rel = it["id"]
+                if it["var"] and it["var"].get(slot) and self._img_exists(it["var"][slot]):
+                    dst = it["var"][slot]
+                    ten, tdst = self._img_tex(en_rel), self._img_tex(dst)
+                    pairs = imagens._counterparts(ten, tdst)
+                elif imagens._EU_TEXVAR.get(en_rel):
+                    tv = imagens._EU_TEXVAR[en_rel]
+                    dst, ten = en_rel, self._img_tex(en_rel)
+                    pairs = {tv["en"]: tv.get(slot, tv["en"])}
+                else:
+                    continue
+                for t in ten.tex:
+                    if not t.ok:
+                        continue
+                    key = imagens.tex_key(ten, t.n)
+                    m = ed.get(key)
+                    if not m or (m.get("de") or [None])[0] != en_rel:
+                        continue
+                    try:
+                        with open(os.path.join(self.img_dir, key + ".png"), "rb") as fh:
+                            png = fh.read()
+                    except OSError:
+                        continue
+                    sig = hashlib.sha1(png).hexdigest()[:16]
+                    if done.get(key + ":" + slot) == sig:
+                        continue                     # esta edicao ja' foi copiada
+                    done[key + ":" + slot] = sig
+                    d = pairs.get(t.n)
+                    if d is None or (d == t.n and dst == en_rel):
+                        continue
+                    if imagens.tex_key(self._img_tex(dst), d) in ed:
+                        continue                     # ja' editada na copia do idioma
+                    try:
+                        self.img_save(dst, d, png)
+                        n += 1
+                    except ProjectError:
+                        pass
+        if n or done:
+            self.touch()
+            self.save()
+        return n
+
+    def img_file(self, rel: str, ref: Optional[str] = None) -> dict:
         rel = _img_check(rel)
         tf = self._img_tex(rel)
+        back: Dict[int, int] = {}
+        if ref:
+            try:
+                for a_, b_ in imagens._counterparts(self._img_tex(_img_check(ref)), tf).items():
+                    if b_ is not None:
+                        back[b_] = a_
+            except ProjectError:
+                back = {}
         ed = self.meta.get("imagens") or {}
         out = []
         for t in tf.tex:
@@ -421,6 +487,8 @@ class Project:
             if t.ok:
                 x["key"] = imagens.tex_key(tf, t.n)
                 x["edited"] = x["key"] in ed
+                if t.n in back:
+                    x["en"] = back[t.n]
             out.append(x)
         return {"id": rel, "tex": out}
 
@@ -527,20 +595,21 @@ class Project:
                 if os.path.exists(f):
                     edits[key] = Image.open(f).convert("RGBA")
             slot = self.settings.get("eu_slot") or "en"
-            items = [(it["id"], it["var"], it.get("texvar")) for g in imagens.catalog(self.eu, self._img_exists)
-                     for it in g["items"]]
-            items += [(r, {}, None) for r in imagens.SAME if self._img_exists(r)]
-            items += [(r, {}, None) for r in self.meta.get("img_extra", []) if self._img_exists(r)]
-            for src, var, texvar in items:
-                nmap = {texvar["en"]: texvar[slot]} if texvar and slot in texvar else None
-                dst = var.get(slot, src) if var else src
+            self._img_migrate()
+            cat = [it for g in imagens.catalog(self.eu, self._img_exists, slot) for it in g["items"]]
+            only_of = {it["id"]: set(it["only"]) for it in cat if it.get("only")}
+            items = [it["id"] for it in cat]
+            items += [r for r in imagens.SAME if self._img_exists(r)]
+            items += [r for r in self.meta.get("img_extra", []) if self._img_exists(r)]
+            for dst in items:
+                src, nmap = dst, None
                 if dst in done:
                     continue
                 done.add(dst)
                 errs: List[str] = []
                 try:
                     new = imagens.apply(self._img_orig(dst), None if dst == src else self._img_orig(src), edits, errs, nmap,
-                                        "em " + LANG_NAMES.get(slot, slot) if dst != src else "")
+                                        "em " + LANG_NAMES.get(slot, slot) if dst != src else "", only_of.get(dst))
                 except (textura.TexError, ProjectError, ValueError) as exc:
                     report["errors"].append({"file": dst, "error": str(exc)})
                     continue

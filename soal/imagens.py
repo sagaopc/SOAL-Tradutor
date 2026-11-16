@@ -89,10 +89,13 @@ def eu_variants(rel: str, exists) -> Dict[str, str]:
     return out if all(exists(x) for x in out.values()) else {}
 
 
-def catalog(eu: bool, exists) -> List[dict]:
-    """Grupos com os arquivos que existem no jogo aberto. Cada item: id (arquivo de onde a
-    imagem e' lida, em ingles), rotulo, texturas com texto e, na versao europeia, os
-    arquivos de cada idioma."""
+def catalog(eu: bool, exists, slot: str = "en") -> List[dict]:
+    """Grupos com os arquivos que existem no jogo aberto. Cada item:
+    id    arquivo que e' editado e vai para o jogo (na versao europeia, o do idioma escolhido);
+    ref   o arquivo em ingles, so' para comparar (quando o idioma escolhido nao e' o ingles);
+    text  o que esta' escrito em cada imagem do arquivo em ingles (pelo numero da imagem);
+    only  as imagens a mostrar (no prologo europeu, so' a do idioma escolhido);
+    texmap  {imagem do idioma: imagem em ingles} no prologo europeu."""
     out = []
     for label, items in GROUPS:
         g = []
@@ -106,8 +109,16 @@ def catalog(eu: bool, exists) -> List[dict]:
                 continue
             if eu and rel in _EU_OTHER:
                 name, text = _EU_OTHER[rel], {}
-            g.append({"id": src, "label": name, "text": {str(k): v for k, v in text.items()} or None, "var": var,
-                      "texvar": _EU_TEXVAR.get(rel) if eu else None})
+            item = {"id": src, "label": name, "text": {str(k): v for k, v in text.items()} or None, "var": var,
+                    "ref": None, "only": None, "texmap": None}
+            if eu and slot != "en" and var and exists(var.get(slot, "")):
+                item["id"], item["ref"] = var[slot], var["en"]
+            tv = _EU_TEXVAR.get(rel) if eu else None
+            if tv:
+                d = tv.get(slot, tv["en"])
+                item["only"] = [d]
+                item["texmap"] = {str(d): tv["en"]}
+            g.append(item)
         if g:
             out.append({"label": label, "items": g})
     return out
@@ -148,7 +159,7 @@ def _counterparts(ref: "textura.TexFile", tf: "textura.TexFile") -> Dict[int, Op
 
 
 def apply(orig: bytes, src: Optional[bytes], edits: Dict[str, "object"], errors: List[str],
-          nmap: Optional[Dict[int, int]] = None, lang: str = "") -> Optional[bytes]:
+          nmap: Optional[Dict[int, int]] = None, lang: str = "", only=None) -> Optional[bytes]:
     """Aplica as imagens editadas (chave -> imagem do Pillow) ao arquivo `orig`.
     `src` e' o arquivo de onde vieram as chaves (o ingles, na versao europeia); None = o
     proprio orig. `nmap` leva a imagem n do ingles para outra imagem do mesmo arquivo (os
@@ -162,7 +173,7 @@ def apply(orig: bytes, src: Optional[bytes], edits: Dict[str, "object"], errors:
     # arquivo: no prologo europeu a imagem em ingles fica como esta')
     moved = {a_ for a_, b_ in (nmap or {}).items() if a_ != b_} if src is None else set()
     for n, key in own.items():
-        if n in moved:
+        if n in moved or (only is not None and n not in only):
             continue
         img = edits.get(key)
         if img is not None and img.size == (tf.tex[n].w, tf.tex[n].h):

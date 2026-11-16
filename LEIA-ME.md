@@ -312,11 +312,12 @@ em **Gravar no jogo**, junto com o resto, e **Restaurar originais** também as d
 A mesma imagem que aparece em vários arquivos é traduzida uma vez só: os nomes das regiões se repetem
 em todos os arquivos do mapa-múndi, e todos recebem a sua versão.
 
-Na versão europeia, cada imagem tem uma cópia por idioma. Você edita a cópia em inglês, e ela é
-gravada no arquivo do idioma escolhido em **Ajustes** (o mesmo que recebe as falas). No prólogo, os
-quatro idiomas ficam no mesmo arquivo; a edição vai para a imagem do idioma escolhido. Quando a
-imagem do idioma é diferente da inglesa (outro tamanho, como o “FALLO” do espanhol no lugar do
-“MISS”), use **Editar a versão em …** para traduzir direto a cópia desse idioma.
+Na versão europeia, cada imagem tem uma cópia por idioma, e a janela mostra a cópia do idioma
+escolhido em **Ajustes** (o mesmo que recebe as falas): é ela que vai para o jogo. Edite sempre
+essa cópia: nos menus, a disposição das palavras muda de um idioma para outro (“Foc/us” no inglês,
+“Enfo/que” no espanhol), e o jogo recorta cada palavra do lugar dela. O botão **Inglês** (segure)
+mostra a imagem inglesa para comparar, e a dica de cada imagem traz o texto em inglês. No prólogo,
+os quatro idiomas ficam no mesmo arquivo, e a janela mostra só a imagem do idioma escolhido.
 
 **Versão europeia: o jogo tem de estar no idioma que recebeu a tradução.** Se a tradução foi
 gravada no lugar do espanhol e o jogo está em inglês, aparece o inglês original (textos e imagens).

@@ -418,7 +418,7 @@ table.grid input{width:100%}
     </aside>
     <section class="imgmain" id="imgList">
       <div class="imgbar"><b id="imgFileLbl"></b><label><input type="checkbox" id="imgOnlyText" checked> Só as imagens com texto</label><button type="button" class="hidden" id="imgLangBtn"></button></div>
-      <p class="note" id="imgHelp">Escolha um grupo à esquerda. Clique numa imagem para editar: apague o texto em inglês e escreva o português aqui mesmo, ou baixe o PNG, edite no seu programa de imagens e envie de volta. O tamanho tem de ser o mesmo.</p>
+      <p class="note" id="imgHelp">Escolha um grupo à esquerda. Clique numa imagem para editar: apague o texto original e escreva o português aqui mesmo, ou baixe o PNG, edite no seu programa de imagens e envie de volta. O tamanho tem de ser o mesmo.</p>
       <div class="imggrid" id="imgGrid"></div>
     </section>
     <section class="imgmain hidden" id="imgEd">
@@ -431,6 +431,7 @@ table.grid input{width:100%}
         <button type="button" id="imgZoomOut" title="Diminuir">−</button><span id="imgZoom"></span><button type="button" id="imgZoomIn" title="Aumentar">+</button>
         <button type="button" id="imgUndo" title="Desfazer (Ctrl+Z)">Desfazer</button>
         <button type="button" id="imgCmp" title="Segure para ver o original">Original</button>
+        <button type="button" id="imgCmpEn" class="hidden" title="Segure para ver a imagem em inglês">Inglês</button>
       </div>
       <div class="edbody">
         <div class="edcanvas" id="imgCanvasBox"><canvas id="imgCanvas"></canvas></div>
@@ -1061,7 +1062,7 @@ $("#btnImg").onclick = async () => {
 $("#dlgImg").addEventListener("cancel", e => { if (IMG.dirty && !confirm("A imagem tem mudanças não salvas. Fechar mesmo assim?")) e.preventDefault(); });
 async function imgCatalog(keep) {
   IMG.cat = await api("/api/img/catalog");
-  $("#imgSlot").textContent = IMG.cat.eu ? "Versão europeia: as imagens em inglês são editadas e gravadas no arquivo em " + LANGS[IMG.cat.slot] + " (o idioma escolhido em Ajustes)." : "";
+  $("#imgSlot").textContent = !IMG.cat.eu ? "" : IMG.cat.slot === "en" ? "Versão europeia: as imagens em inglês, o idioma escolhido em Ajustes." : "Versão europeia: você edita as imagens em " + LANGS[IMG.cat.slot] + ", as que vão para o jogo (o idioma escolhido em Ajustes). O botão Inglês mostra a imagem inglesa para comparar." + (IMG.cat.moved ? " " + IMG.cat.moved + " edições feitas antes no inglês foram copiadas para o " + LANGS[IMG.cat.slot] + ": confira a disposição das palavras com o botão Original." : "");
   const box = $("#imgGroups"); box.textContent = "";
   for (const g of IMG.cat.groups) {
     box.append(el("h3", "", g.label));
@@ -1083,26 +1084,27 @@ async function imgOpenItem(it) {
   IMG.dirty = false; IMG.item = it; imgMarkSide();
   $("#imgEd").classList.add("hidden"); $("#imgList").classList.remove("hidden");
   $("#imgFileLbl").textContent = it.label + " — " + it.id;
-  const lb = $("#imgLangBtn"), slotName = LANGS[IMG.cat.slot] || IMG.cat.slot;
-  lb.classList.add("hidden");
-  if (it.base) { lb.textContent = "Ver a versão em inglês"; lb.onclick = () => imgOpenItem(it.base); lb.classList.remove("hidden"); }
-  else if (IMG.cat.eu && it.dst && it.dst !== it.id) {
-    lb.textContent = "Editar a versão em " + slotName; lb.title = "Abre " + it.dst + ", o arquivo que vai para o jogo. Use quando a imagem do " + slotName + " for diferente da inglesa (outro tamanho ou outra ordem).";
-    lb.onclick = () => imgOpenItem({ id:it.dst, label:it.label + " (" + slotName + ")", text:null, var:{}, dst:it.dst, base:it });
-    lb.classList.remove("hidden");
-  }
-  $("#imgOnlyText").parentElement.classList.toggle("hidden", !it.text);
+  $("#imgLangBtn").classList.add("hidden");
+  $("#imgOnlyText").parentElement.classList.toggle("hidden", !it.text || !!it.only);
   $("#imgGrid").textContent = "Carregando…";
-  try { IMG.file = await api("/api/img/file?id=" + encodeURIComponent(it.id)); } catch (e) { $("#imgGrid").textContent = e.message; return; }
+  try { IMG.file = await api("/api/img/file?id=" + encodeURIComponent(it.id) + (it.ref ? "&ref=" + encodeURIComponent(it.ref) : "")); } catch (e) { $("#imgGrid").textContent = e.message; return; }
   imgRenderGrid();
 }
 $("#imgOnlyText").onchange = imgRenderGrid;
+// numero da imagem inglesa que corresponde a esta (para a dica e para comparar)
+function imgEnIndex(it, t) {
+  if (it.texmap) return it.texmap[String(t.n)] ?? null;
+  if (it.ref) return t.en ?? null;
+  return t.n;
+}
+function imgHint(it, t) { const n = imgEnIndex(it, t); return it.text && n != null ? it.text[String(n)] : null; }
 function imgRenderGrid() {
   const it = IMG.item, g = $("#imgGrid"); g.textContent = "";
-  const only = it.text && $("#imgOnlyText").checked;
+  const only = it.text && !it.only && $("#imgOnlyText").checked;
   for (const t of IMG.file.tex) {
     if (!t.ok) continue;
-    const hint = it.text && it.text[String(t.n)];
+    if (it.only && !it.only.includes(t.n)) continue;
+    const hint = imgHint(it, t);
     if (only && !hint && !t.edited) continue;
     if (!only && !hint && t.w < 16 && t.h < 16) continue;
     const c = el("button", "imgcard" + (t.edited ? " ed" : "")); c.type = "button";
@@ -1110,7 +1112,7 @@ function imgRenderGrid() {
     if (t.w <= 64 && t.h <= 64) { im.style.width = (t.w * 2) + "px"; }
     box.append(im); c.append(box);
     c.append(el("small", "", "#" + t.n + " · " + t.w + "×" + t.h + " · " + t.fmt));
-    if (hint) c.append(el("small", "", hint));
+    if (hint) c.append(el("small", "", (it.ref || it.texmap && IMG.cat.slot !== "en" ? "Em inglês: " : "") + hint));
     if (t.edited) c.append(el("span", "tag", "traduzida"));
     c.onclick = () => imgEdit(t);
     g.append(c);
@@ -1141,13 +1143,22 @@ async function imgEdit(t) {
   IMG.tex = t; IMG.undo = []; IMG.txt = null; IMG.sel = null; IMG.dirty = false;
   $("#imgList").classList.add("hidden"); $("#imgEd").classList.remove("hidden");
   $("#imgEdLbl").textContent = IMG.item.label + " · #" + t.n + " · " + t.w + "×" + t.h;
-  const hint = IMG.item.text && IMG.item.text[String(t.n)];
-  $("#imgEdHint").textContent = hint ? "No original: " + hint : "";
+  const hint = imgHint(IMG.item, t);
+  $("#imgEdHint").textContent = hint ? (IMG.item.ref || IMG.item.texmap && IMG.cat.slot !== "en" ? "No inglês: " : "No original: ") + hint : "";
   $("#imgMsg").textContent = "";
   const [orig, cur] = await Promise.all([imgLoadImage(imgUrl(IMG.item.id, t.n, "orig")), imgLoadImage(imgUrl(IMG.item.id, t.n, "edit"))]);
   IMG.orig = document.createElement("canvas"); IMG.orig.width = t.w; IMG.orig.height = t.h; IMG.orig.getContext("2d").drawImage(orig, 0, 0);
   IMG.work = document.createElement("canvas"); IMG.work.width = t.w; IMG.work.height = t.h;
   IMG.work.getContext("2d", { willReadFrequently:true }).drawImage(cur, 0, 0);
+  // a imagem inglesa correspondente, para comparar (versao europeia em outro idioma)
+  IMG.en = null; $("#imgCmpEn").classList.add("hidden");
+  const enN = imgEnIndex(IMG.item, t), enId = IMG.item.ref || (IMG.item.texmap ? IMG.item.id : null);
+  if (enId && enN != null && IMG.cat.slot !== "en") {
+    try {
+      const ei = await imgLoadImage(imgUrl(enId, enN, "orig"));
+      if (ei.width === t.w && ei.height === t.h) { IMG.en = document.createElement("canvas"); IMG.en.width = t.w; IMG.en.height = t.h; IMG.en.getContext("2d").drawImage(ei, 0, 0); $("#imgCmpEn").classList.remove("hidden"); }
+    } catch (e) { /* sem imagem inglesa para comparar */ }
+  }
   IMG.zoom = Math.max(1, Math.min(8, Math.floor(Math.min(900 / t.w, 620 / t.h))));
   imgShowGame(t.edited);
   imgDraw();
@@ -1164,8 +1175,9 @@ for (const r of document.querySelectorAll("input[name=imgTool]")) r.onchange = (
 };
 $("#imgZoomIn").onclick = () => { IMG.zoom = Math.min(16, IMG.zoom + 1); imgDraw(); };
 $("#imgZoomOut").onclick = () => { IMG.zoom = Math.max(1, IMG.zoom - 1); imgDraw(); };
-$("#imgCmp").onpointerdown = () => { IMG.cmp = true; imgDraw(); };
-for (const ev of ["pointerup", "pointerleave"]) $("#imgCmp").addEventListener(ev, () => { if (IMG.cmp) { IMG.cmp = false; imgDraw(); } });
+$("#imgCmp").onpointerdown = () => { IMG.cmp = "orig"; imgDraw(); };
+$("#imgCmpEn").onpointerdown = () => { IMG.cmp = "en"; imgDraw(); };
+for (const b of ["#imgCmp", "#imgCmpEn"]) for (const ev of ["pointerup", "pointerleave"]) $(b).addEventListener(ev, () => { if (IMG.cmp) { IMG.cmp = false; imgDraw(); } });
 function imgPush() { const c = IMG.work.getContext("2d"); IMG.undo.push(c.getImageData(0, 0, IMG.work.width, IMG.work.height)); if (IMG.undo.length > 40) IMG.undo.shift(); IMG.dirty = true; }
 $("#imgUndo").onclick = () => { const d = IMG.undo.pop(); if (d) { IMG.work.getContext("2d").putImageData(d, 0, 0); IMG.dirty = true; imgDraw(); } };
 
@@ -1200,7 +1212,7 @@ function imgDraw() {
   const cv = $("#imgCanvas"), z = IMG.zoom, w = IMG.work.width, h = IMG.work.height;
   cv.width = w * z; cv.height = h * z; $("#imgZoom").textContent = z + "×";
   const g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
-  g.drawImage(IMG.cmp ? IMG.orig : IMG.work, 0, 0, w * z, h * z);
+  g.drawImage(IMG.cmp === "en" && IMG.en ? IMG.en : IMG.cmp ? IMG.orig : IMG.work, 0, 0, w * z, h * z);
   if (IMG.cmp) return;
   const L = imgTool() === "text" ? imgTextLayer() : null;
   if (L) {
