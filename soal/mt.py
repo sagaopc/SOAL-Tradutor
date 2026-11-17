@@ -315,6 +315,7 @@ class Translator:
             out = "\n".join(res)
         # o portugues nao usa ¡ nem ¿ (vem de traducoes feitas do espanhol)
         out = out.replace("¡", "").replace("¿", "")
+        out = re.sub(r"…{2,}", "…", out)
         return restore(out, codes).strip()
 
     # -- DeepL ---------------------------------------------------------------

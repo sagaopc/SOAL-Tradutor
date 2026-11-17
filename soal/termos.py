@@ -50,7 +50,10 @@ def strip_spanish(t: str) -> Tuple[str, int]:
     if n:
         for c in SPANISH_PUNCT:
             t = t.replace(c, "")
-    return t, n
+    # reticencias dobradas (“……”, seis pontos) viram uma so' (“…”)
+    t, k = re.subn(r"…{2,}", "…", t)
+    t, k2 = re.subn(r"\.{4,}", "...", t)
+    return t, n + k + k2
 
 
 def _feminine(v: str) -> Optional[str]:
@@ -121,6 +124,8 @@ class Checker:
         out = [f"Termo padronizado: “{m['en']}” é “{m['pt']}”" for m in self.missing(body, t)]
         if any(c in (t or "") for c in SPANISH_PUNCT):
             out.append("Tire o ¡ e o ¿ (pontuação do espanhol)")
+        if re.search(r"…{2,}|\.{4,}", t or ""):
+            out.append("Reticências com seis pontos: use três")
         return out
 
     def fix(self, body: str, t: str) -> Tuple[str, int]:
