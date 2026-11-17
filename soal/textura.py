@@ -89,6 +89,27 @@ class Tex:
                 (self.fmt in (8, 9) and self.pal_fmt in (0, 2))}
 
 
+def dolphin_name(data, t: "Tex") -> str:
+    """Nome que o Dolphin (e o recomp) da' a esta textura nos pacotes de texturas HD:
+    tex1_{largura}x{altura}[_m]_{hash}[_{hash da paleta}]_{formato}. Uma imagem com esse nome
+    na pasta Load/Textures/GEA substitui a do jogo, em qualquer resolucao."""
+    from .xxh64 import xxh64
+    tw, th, bpp = TILE[t.fmt]
+    ew = (t.w + tw - 1) // tw * tw
+    eh = (t.h + th - 1) // th * th
+    tex = bytes(data[t.data_off:t.data_off + ew * eh * bpp // 8])
+    name = f"tex1_{t.w}x{t.h}{'_m' if t.mips else ''}_{xxh64(tex):016x}"
+    if t.fmt in (8, 9) and t.pal_len:
+        pal = bytes(data[t.off + 16:t.off + 16 + t.pal_len])
+        if t.fmt == 8:
+            lo = min(min(b >> 4, b & 15) for b in tex) if tex else 0
+            hi = max(max(b >> 4, b & 15) for b in tex) if tex else 0
+        else:
+            lo, hi = (min(tex), max(tex)) if tex else (0, 0)
+        name += f"_{xxh64(pal[2 * lo:2 * (hi + 1)]):016x}"
+    return f"{name}_{t.fmt}"
+
+
 class TexFile:
     def __init__(self, raw: bytes):
         self.compressed = aklz.is_compressed(raw)
@@ -111,6 +132,15 @@ class TexFile:
                 i += 8 + min(size, len(d) - i - 8)
             else:
                 i += 4
+
+    def dolphin_name(self, n: int) -> str:
+        return dolphin_name(self.data, self.tex[n])
+
+    def by_offset(self, off: int) -> Optional[int]:
+        for t in self.tex:
+            if t.off == off:
+                return t.n
+        return None
 
     def image(self, n: int):
         t = self.tex[n]

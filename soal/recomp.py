@@ -135,13 +135,13 @@ def find_region(gid: str, hint: Optional[str] = None) -> Optional[dict]:
     return None
 
 
-def _ini_path(data_dir: str) -> str:
-    return os.path.join(data_dir, "Config", "Dolphin.ini")
+def _ini_path(data_dir: str, name: str = "Dolphin.ini") -> str:
+    return os.path.join(data_dir, "Config", name)
 
 
-def _ini_get(data_dir: str, section: str, key: str) -> Optional[str]:
+def _ini_get(data_dir: str, section: str, key: str, name: str = "Dolphin.ini") -> Optional[str]:
     try:
-        with open(_ini_path(data_dir), encoding="utf-8", errors="replace") as fh:
+        with open(_ini_path(data_dir, name), encoding="utf-8", errors="replace") as fh:
             sec = ""
             for line in fh:
                 t = line.strip()
@@ -154,13 +154,13 @@ def _ini_get(data_dir: str, section: str, key: str) -> Optional[str]:
     return None
 
 
-def _ini_set(data_dir: str, values: Dict[Tuple[str, str], str]) -> bool:
+def _ini_set(data_dir: str, values: Dict[Tuple[str, str], str], name: str = "Dolphin.ini") -> bool:
     """Grava chaves no Dolphin.ini do port, mantendo o resto do arquivo (e as quebras de linha).
     Chave que ja' existe e' trocada no lugar; a que falta entra no fim da sua secao (ou numa
     secao nova, no fim do arquivo). Devolve True se mudou alguma coisa."""
-    if all(_ini_get(data_dir, s_, k) == v for (s_, k), v in values.items()):
+    if all(_ini_get(data_dir, s_, k, name) == v for (s_, k), v in values.items()):
         return False
-    path = _ini_path(data_dir)
+    path = _ini_path(data_dir, name)
     nl = "\r\n" if sys.platform.startswith("win") else "\n"
     try:
         with open(path, "rb") as fh:
@@ -216,6 +216,25 @@ def gc_language(data_dir: str) -> int:
 
 def language_ok(data_dir: str, value: int) -> bool:
     return gc_language(data_dir) == value
+
+
+def hires_textures(data_dir: str) -> bool:
+    """Texturas HD ligadas no port (GFX.ini [Settings] HiresTextures)."""
+    v = (_ini_get(data_dir, "Settings", "HiresTextures", "GFX.ini") or "").lower()
+    return v in ("true", "1")
+
+
+def set_hires_textures(data_dir: str, on: bool) -> bool:
+    return _ini_set(data_dir, {("Settings", "HiresTextures"): "True" if on else "False"}, "GFX.ini")
+
+
+def dumped_textures(data_dir: str) -> List[str]:
+    """Nomes das texturas que o port despejou (GFX.ini DumpTextures = True), em Dump/Textures."""
+    root = os.path.join(data_dir, "Dump", "Textures")
+    out = []
+    for dp, dn, fn in os.walk(root):
+        out += [f.rsplit(".", 1)[0] for f in fn if f.lower().startswith("tex1_")]
+    return out
 
 
 def set_gc_language(data_dir: str, value: int) -> bool:

@@ -21,11 +21,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import intro, iso, janela, mt, patch, recomp, text
+from . import exportar, intro, iso, janela, mt, patch, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.10.4"
+VERSION = "0.11.0"
 
 
 class App:
@@ -145,6 +145,81 @@ class App:
     def iso_default(self, p: pj.Project) -> str:
         root = os.path.abspath(p.meta.get("game_root") or "").rstrip("\\/")
         return os.path.join(os.path.dirname(root), os.path.basename(root) + " (PT-BR).iso")
+
+    # ------------------------------------------------------------- remaster
+    def remaster_info(self) -> dict:
+        """Onde ler o jogo (o jogo aberto e o do recomp, ja' com a traducao gravada) e onde
+        gravar a extracao."""
+        p = self.need()
+        srcs = []
+        for t in p.targets():
+            files = os.path.dirname(t["field"])
+            srcs.append({"root": t["root"], "files": files, "recomp": t["recomp"],
+                         "label": ("Jogo do recomp" if t["recomp"] else "Jogo do projeto") + " — " + t["root"]})
+        rc = p.meta.get("recomp_root")
+        data_dir = os.path.dirname(os.path.dirname(rc)) if rc and recomp.is_recomp_game(rc) else ""
+        if not data_dir:
+            for t in p.targets():
+                if t["recomp"]:
+                    data_dir = os.path.dirname(os.path.dirname(t["root"]))
+        out = self.config.get("remaster_out") or os.path.join(os.path.dirname(os.path.abspath(p.dir).rstrip("\\/")),
+                                                               "SOAL remaster")
+        folders = []
+        if srcs:
+            fdir = srcs[-1]["files"]
+            for k, label in exportar.FOLDERS.items():
+                d = os.path.join(fdir, k) if k else fdir
+                if os.path.isdir(d):
+                    folders.append({"id": k, "label": label})
+        dumped = recomp.dumped_textures(data_dir) if data_dir else []
+        return {"sources": srcs, "out": out, "folders": folders, "recomp": data_dir,
+                "hires": recomp.hires_textures(data_dir) if data_dir else False,
+                "installed": os.path.isdir(os.path.join(data_dir, "Load", "Textures", "GEA", "SOAL Tradutor")) if data_dir else False,
+                "dumped": len(dumped)}
+
+    def remaster_extract(self, files: str, out: str, what: list, folders: list):
+        if not files or not os.path.isdir(files):
+            raise pj.ProjectError("Não achei a pasta do jogo.")
+        if not out:
+            raise pj.ProjectError("Escolha a pasta onde gravar.")
+        out = os.path.abspath(out)
+        if os.path.normcase(out).startswith(os.path.normcase(os.path.abspath(files)).rstrip("\\/") + os.sep):
+            raise pj.ProjectError("Grave a extração fora da pasta do jogo.")
+        what = [w for w in what if w in ("texturas", "modelos", "cenarios")] or ["texturas"]
+        self.config["remaster_out"] = out
+        self._save_config()
+
+        def prog(k, n, rel):
+            self._progress(f"Extraindo {rel}" if rel else "Terminando", k, n)
+        self.start_job("remaster", lambda: exportar.extract(
+            files, out, what, folders if folders else None, f"SOAL Tradutor {VERSION}", prog, lambda: self.cancel))
+
+    def remaster_install(self, src: str):
+        info = self.remaster_info()
+        if not info["recomp"]:
+            raise pj.ProjectError("Marque o recomp em Gravar no jogo primeiro (o programa precisa saber a pasta dele).")
+        if not src or not os.path.isdir(src):
+            raise pj.ProjectError("Escolha a pasta com as texturas melhoradas (a pasta texturas da extração, por exemplo).")
+
+        def fn():
+            self._progress("Copiando as texturas", 0, 0)
+            r = exportar.install_textures(src, info["recomp"])
+            if not r["copiadas"]:
+                raise pj.ProjectError("Não achei texturas tex1_….png nem .dds nessa pasta.")
+            return r
+        self.start_job("remaster", fn)
+
+    def remaster_check(self, out: str) -> dict:
+        """Confere os nomes da extracao com as texturas que o recomp despejou jogando
+        (GFX.ini DumpTextures = True)."""
+        info = self.remaster_info()
+        dumped = set(recomp.dumped_textures(info["recomp"])) if info["recomp"] else set()
+        mine = set()
+        for dp, dn, fn in os.walk(os.path.join(out, "texturas")):
+            mine.update(f.rsplit(".", 1)[0] for f in fn if f.lower().startswith("tex1_"))
+        both = dumped & mine
+        return {"dumped": len(dumped), "extracted": len(mine), "match": len(both),
+                "only_dump": sorted(dumped - mine)[:30]}
 
     # ----------------------------------------------------------------- patch
     def patch_default(self, p: pj.Project) -> str:
@@ -663,6 +738,22 @@ def make_handler(app: App):
                         root = found["game_root"]
                     app.need().set_recomp(root or None, bool(data.get("use")))
                     return self._json({"ok": True})
+                if u.path == "/api/remaster/info":
+                    return self._json(app.remaster_info())
+                if u.path == "/api/remaster/extract":
+                    app.remaster_extract(data.get("files") or "", (data.get("out") or "").strip().strip('"'),
+                                         list(data.get("what") or []), list(data.get("folders") or []))
+                    return self._json({"ok": True})
+                if u.path == "/api/remaster/install":
+                    app.remaster_install((data.get("src") or "").strip().strip('"'))
+                    return self._json({"ok": True})
+                if u.path == "/api/remaster/check":
+                    return self._json(app.remaster_check((data.get("out") or "").strip().strip('"')))
+                if u.path == "/api/remaster/open":
+                    d = (data.get("dir") or "").strip()
+                    if d and os.path.isdir(d) and sys.platform.startswith("win"):
+                        os.startfile(d)  # noqa: abre a pasta no Explorer
+                    return self._json({"ok": bool(d and os.path.isdir(d))})
                 if u.path == "/api/patch/create":
                     app.patch_create(data.get("path") or "")
                     return self._json({"ok": True})

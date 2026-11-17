@@ -16,26 +16,28 @@ def is_compressed(data: bytes) -> bool:
 
 
 def decompress(data: bytes) -> bytes:
+    """A janela de 4 KB e' a propria saida (a escrita na janela comeca em 0xFEE e a janela
+    comeca zerada): uma copia da posicao `off` da janela le `d` bytes atras na saida."""
     if not is_compressed(data):
         return bytes(data)
     size = int.from_bytes(data[12:16], "big")
     out = bytearray()
-    window = bytearray(_N)
-    r = _N - _F
     pos = 16
     end = len(data)
+    start = _N - _F
     while len(out) < size and pos < end:
         flags = data[pos]
         pos += 1
+        if flags == 0xFF and pos + 8 <= end:        # 8 bytes literais
+            out += data[pos:pos + 8]
+            pos += 8
+            continue
         for _ in range(8):
             if len(out) >= size or pos >= end:
                 break
             if flags & 1:
-                c = data[pos]
+                out.append(data[pos])
                 pos += 1
-                out.append(c)
-                window[r] = c
-                r = (r + 1) & (_N - 1)
             else:
                 if pos + 1 >= end:
                     pos = end
@@ -44,14 +46,21 @@ def decompress(data: bytes) -> bytes:
                 pos += 2
                 offset = b1 | ((b2 & 0xF0) << 4)
                 length = (b2 & 0x0F) + _THRESHOLD + 1
-                for k in range(length):
-                    c = window[(offset + k) & (_N - 1)]
-                    out.append(c)
-                    window[r] = c
-                    r = (r + 1) & (_N - 1)
-                    if len(out) >= size:
-                        break
+                o = len(out)
+                dist = ((start + o) - offset) & (_N - 1) or _N
+                src = o - dist
+                if src >= 0 and dist >= length:
+                    out += out[src:src + length]
+                elif src >= 0:                           # copia que se sobrepoe: repete o padrao
+                    pat = out[src:o]
+                    out += (pat * (length // dist + 1))[:length]
+                else:                                    # antes do comeco: janela zerada
+                    for k in range(length):
+                        i = src + k
+                        out.append(out[i] if i >= 0 else 0)
             flags >>= 1
+    if len(out) > size:
+        del out[size:]
     if len(out) != size:
         raise ValueError(f"AKLZ: esperado {size} bytes, obtido {len(out)}")
     return bytes(out)

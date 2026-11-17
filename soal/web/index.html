@@ -77,7 +77,10 @@ input[type=text],input[type=number],input[type=search],select{border:1px solid v
 h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
 
 /* barra superior */
-header.bar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--paper);border-bottom:1px solid var(--line);flex:none}
+header.bar{display:flex;align-items:center;flex-wrap:wrap;gap:14px;row-gap:8px;padding:10px 16px;background:var(--paper);border-bottom:1px solid var(--line);flex:none}
+header.bar button{white-space:nowrap}
+@media (max-width:1560px){header.bar{gap:8px}.meter .track{display:none}header.bar button{padding-left:10px;padding-right:10px}}
+@media (max-width:1300px){.brand small{display:none}#search{min-width:110px}}
 .brand{font-size:17px;font-weight:700;white-space:nowrap}
 .brand small{font-weight:400;color:var(--muted);margin-left:6px;font-size:12px}
 #search{flex:1;max-width:460px;min-width:140px}
@@ -218,6 +221,7 @@ table.grid input{width:100%}
   <button id="btnNames">Nomes</button>
   <button id="btnTerms" title="Expressões que devem ter sempre a mesma tradução">Termos</button>
   <button id="btnImg" title="Logotipo, GAME OVER, comandos de batalha, lojas, mapa-múndi">Imagens</button>
+  <button id="btnRemaster" title="Extrair texturas e modelos 3D (personagens, objetos, cenários) para um remaster">Remaster</button>
   <button id="btnSheet">Planilha</button>
   <button id="btnSettings">Ajustes</button>
   <button class="primary" id="btnBuild">Gravar no jogo</button>
@@ -397,6 +401,36 @@ table.grid input{width:100%}
   </div>
   <div class="df"><button data-close>Fechar</button></div></dialog>
 
+<dialog id="dlgRemaster" class="wide"><div class="dh"><h2>Extrair para remaster</h2></div>
+  <div class="db">
+    <p>Tira do jogo as texturas e os modelos 3D para você melhorar fora do programa:</p>
+    <ul class="report">
+      <li><b>Texturas</b>: cada uma com o nome que o recomp procura nos pacotes de texturas HD. Melhore a imagem em qualquer resolução, mantenha o nome e instale (aqui embaixo). O jogo passa a usar a nova, sem regravar nada.</li>
+      <li><b>Modelos 3D</b>: personagens, inimigos, objetos e construções, um arquivo .glb por modelo, com esqueleto, pesos e texturas. Abre direto no Blender (Arquivo › Importar › glTF 2.0).</li>
+      <li><b>Cenários</b>: cada lugar inteiro (cidades, interiores, cenários de batalha) com os objetos na posição do jogo.</li>
+    </ul>
+    <div class="field"><label for="rmSrc">Ler do jogo</label><select id="rmSrc"></select></div>
+    <div class="field"><label for="rmOut">Gravar em</label><input type="text" id="rmOut" spellcheck="false"></div>
+    <p><button type="button" id="btnRmOutPick">Escolher pasta…</button></p>
+    <p><b>O que extrair</b><br>
+      <label><input type="checkbox" class="rmWhat" value="texturas" checked> Texturas</label>
+      <label><input type="checkbox" class="rmWhat" value="modelos" checked> Modelos 3D</label>
+      <label><input type="checkbox" class="rmWhat" value="cenarios" checked> Cenários completos</label></p>
+    <p><b>De que partes do jogo</b><br><span id="rmFolders"></span></p>
+    <p class="note">O jogo inteiro leva de 15 a 30 minutos e ocupa alguns GB. A tradução que já está gravada no jogo vai junto (as imagens traduzidas saem traduzidas).</p>
+    <p><button type="button" class="primary" id="btnRmGo">Extrair</button> <button type="button" id="btnRmOpen" class="hidden">Abrir a pasta</button></p>
+    <div id="rmResult"></div>
+    <hr>
+    <h3>Instalar texturas melhoradas no recomp</h3>
+    <p class="note">Copia as imagens <span class="kbd">tex1_….png</span> (ou .dds) da pasta escolhida para <span class="kbd">Load/Textures/GEA/SOAL Tradutor</span> do recomp e liga as texturas HD. Pode instalar só as que você mudou. Os pacotes que você já importou pelo recomp continuam lá.</p>
+    <div class="field"><label for="rmInst">Pasta com as texturas</label><input type="text" id="rmInst" spellcheck="false"></div>
+    <p><button type="button" id="btnRmInstPick">Escolher pasta…</button> <button type="button" class="primary" id="btnRmInstall">Instalar no recomp</button></p>
+    <p class="note" id="rmRecomp"></p>
+    <p id="rmCheckRow" class="hidden"><button type="button" id="btnRmCheck">Conferir com as texturas despejadas pelo recomp</button></p>
+    <p class="err" id="rmMsg"></p>
+  </div>
+  <div class="df"><button data-close>Fechar</button></div></dialog>
+
 <dialog id="dlgIso"><div class="dh"><h2>Gerar ISO</h2></div>
   <div class="db">
     <p>Monta uma imagem de disco de GameCube (<code>.iso</code>) com os arquivos da pasta do jogo, para guardar, jogar no Dolphin ou usar num console. As posições dos arquivos que mudaram de tamanho com a tradução são ajustadas sozinhas. A pasta do jogo não é alterada.</p>
@@ -536,7 +570,7 @@ async function waitJob(onTick) {
     $("#busyLabel").textContent = j.label || "Trabalhando";
     $("#busyBar").style.width = (j.total ? Math.round(100 * j.cur / j.total) : 5) + "%";
     $("#busyNote").textContent = j.total ? (j.cur + " de " + j.total) : "";
-    $("#busyCancel").classList.toggle("hidden", j.kind !== "mt" && j.kind !== "iso");
+    $("#busyCancel").classList.toggle("hidden", j.kind !== "mt" && j.kind !== "iso" && j.kind !== "remaster");
     if (onTick) onTick(j);
     if (!j.running) break;
     await sleep(250);
@@ -1714,6 +1748,77 @@ $("#btnPatchApply").onclick = async () => {
     const c = el("button", "primary", "Fechar"); c.onclick = () => $("#dlgBuild").close(); foot.append(c);
     $("#dlgBuild").showModal();
   } catch (e) { $("#busy").classList.add("hidden"); setSaved("Não aplicou o patch: " + e.message, true); }
+};
+
+/* ----------------------------------------------------------------- remaster */
+async function openRemaster() {
+  $("#rmMsg").textContent = "";
+  let r;
+  try { r = await api("/api/remaster/info", {}); } catch (e) { setSaved(e.message, true); return; }
+  const sel = $("#rmSrc"); sel.textContent = "";
+  for (const x of r.sources) { const o = el("option", "", x.label); o.value = x.files; sel.append(o); }
+  if (r.sources.length) sel.value = r.sources[r.sources.length - 1].files;
+  if (!$("#rmOut").value) $("#rmOut").value = r.out;
+  const f = $("#rmFolders"); f.textContent = "";
+  for (const x of r.folders) {
+    const lb = el("label", ""), cb = el("input", "rmFolder"); cb.type = "checkbox"; cb.value = x.id; cb.checked = true;
+    lb.append(cb, " " + x.label + " "); f.append(lb);
+  }
+  if (!$("#rmInst").value) $("#rmInst").value = $("#rmOut").value.replace(/[\\/]+$/, "") + "\\texturas";
+  rmRecompNote(r);
+  $("#dlgRemaster").showModal();
+}
+function rmRecompNote(r) {
+  $("#rmRecomp").textContent = r.recomp
+    ? "Recomp: " + r.recomp + ". Texturas HD " + (r.hires ? "ligadas" : "desligadas") + (r.installed ? "; já há texturas instaladas pelo SOAL Tradutor." : ".")
+    : "Para instalar, marque o recomp em Gravar no jogo (o programa precisa saber a pasta dele). Também dá para importar pelo próprio recomp: Configurações › Gráficos › Texture pack › Import a folder….";
+  $("#btnRmInstall").disabled = !r.recomp;
+  $("#rmCheckRow").classList.toggle("hidden", !r.dumped);
+}
+$("#btnRemaster").onclick = () => openRemaster();
+$("#btnRmOutPick").onclick = async () => { try { const r = await api("/api/pick", { title:"Pasta onde gravar a extração" }); if (r.path) { $("#rmOut").value = r.path; $("#rmInst").value = r.path.replace(/[\\/]+$/, "") + "\\texturas"; } } catch (e) {} };
+$("#btnRmInstPick").onclick = async () => { try { const r = await api("/api/pick", { title:"Pasta com as texturas melhoradas" }); if (r.path) $("#rmInst").value = r.path; } catch (e) {} };
+$("#btnRmGo").onclick = async () => {
+  $("#rmMsg").textContent = ""; $("#rmResult").textContent = "";
+  const what = [...document.querySelectorAll(".rmWhat")].filter(x => x.checked).map(x => x.value);
+  const folders = [...document.querySelectorAll(".rmFolder")].filter(x => x.checked).map(x => x.value);
+  if (!what.length) { $("#rmMsg").textContent = "Marque o que extrair."; return; }
+  if (!folders.length) { $("#rmMsg").textContent = "Marque ao menos uma parte do jogo."; return; }
+  try { await api("/api/remaster/extract", { files:$("#rmSrc").value, out:$("#rmOut").value, what, folders }); }
+  catch (e) { $("#rmMsg").textContent = e.message; return; }
+  $("#dlgRemaster").close();
+  $("#busyCancel").disabled = false; $("#busyCancel").textContent = "Parar";
+  try {
+    const r = await waitJob();
+    const ul = el("ul", "report");
+    if (r.cancelado) ul.append(el("li", "err", "Parado no meio: o que já tinha sido extraído ficou na pasta."));
+    ul.append(el("li", "", pl(r.arquivos, "arquivo do jogo lido", "arquivos do jogo lidos") + "."));
+    if (what.includes("texturas")) ul.append(el("li", "", pl(r.texturas, "textura", "texturas") + " (as repetidas em vários arquivos saem uma vez só: " + r.texturas_repetidas + ")."));
+    if (what.includes("modelos")) ul.append(el("li", "", pl(r.modelos, "modelo 3D", "modelos 3D") + ", " + r.triangulos.toLocaleString("pt-BR") + " triângulos ao todo."));
+    if (what.includes("cenarios")) ul.append(el("li", "", pl(r.cenarios, "cenário completo", "cenários completos") + "."));
+    for (const e of r.erros.slice(0, 20)) ul.append(el("li", "err", e));
+    if (r.erros.length > 20) ul.append(el("li", "err", "… e mais " + (r.erros.length - 20) + "."));
+    $("#rmResult").append(el("p", "ok", "Pronto: " + r.pasta), ul, el("p", "note", "Leia o LEIA-ME.txt da pasta. O indice_texturas.csv diz de que arquivo vem cada textura e quais modelos a usam."));
+    $("#btnRmOpen").classList.remove("hidden"); $("#btnRmOpen").dataset.dir = r.pasta;
+  } catch (e) { $("#busy").classList.add("hidden"); $("#rmMsg").textContent = "Não terminou: " + e.message; }
+  $("#dlgRemaster").showModal();
+};
+$("#btnRmOpen").onclick = () => api("/api/remaster/open", { dir:$("#btnRmOpen").dataset.dir }).catch(() => {});
+$("#btnRmInstall").onclick = async () => {
+  $("#rmMsg").textContent = "";
+  try { await api("/api/remaster/install", { src:$("#rmInst").value }); } catch (e) { $("#rmMsg").textContent = e.message; return; }
+  try {
+    const r = await waitJob();
+    $("#rmMsg").append(el("span", "ok", pl(r.copiadas, "textura instalada", "texturas instaladas") + " em " + r.pasta + ". As texturas HD estão ligadas: abra o jogo pelo recomp."));
+    rmRecompNote(await api("/api/remaster/info", {}));
+  } catch (e) { $("#busy").classList.add("hidden"); $("#rmMsg").textContent = e.message; }
+};
+$("#btnRmCheck").onclick = async () => {
+  $("#rmMsg").textContent = "";
+  try {
+    const r = await api("/api/remaster/check", { out:$("#rmOut").value });
+    $("#rmMsg").append(el("span", r.match ? "ok" : "err", "O recomp despejou " + pl(r.dumped, "textura", "texturas") + "; " + pl(r.match, "tem", "têm") + " o mesmo nome de uma textura extraída (" + r.extracted + " extraídas)."));
+  } catch (e) { $("#rmMsg").textContent = e.message; }
 };
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 10000);

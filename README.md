@@ -67,6 +67,10 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
 - **Imagens com texto**: logotipo, GAME OVER, comandos de batalha, lojas e mapa-múndi. Editor
   embutido (apagar área, escrever texto com fonte, contorno e sombra) ou PNG editado em outro
   programa, com prévia de como fica no jogo.
+- **Remaster**: extrai as texturas com os nomes dos pacotes de texturas HD do recomp e do Dolphin
+  (melhore em qualquer resolução e instale pelo programa) e os modelos 3D em glTF (`.glb`, abre no
+  Blender): personagens e inimigos com esqueleto e pesos, objetos, construções e cada cenário
+  inteiro com os objetos no lugar.
 - **Termos padronizados**: “Blue Rogues” é sempre “Piratas Azuis”. O programa aponta as falas fora
   do padrão, troca as variações conhecidas de uma vez (também no feminino), tira o ¡ e o ¿ do
   espanhol e passa os termos à tradução automática.

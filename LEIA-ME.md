@@ -330,6 +330,42 @@ No recomp, o idioma é a opção da aba **Language** das configurações dele (`
 **Trocar a pasta do recomp** na janela **Gravar no jogo**. No Dolphin, escolha o idioma em
 Configurações → GameCube → Idioma do sistema.
 
+## Remaster: texturas e modelos 3D
+
+O botão **Remaster** tira do jogo as texturas e os modelos 3D para você melhorar fora do programa.
+Ele lê o jogo do jogo aberto ou do recomp, com a tradução que já está gravada, e grava numa pasta à
+sua escolha:
+
+- **`texturas/GEA/…`**: cada textura com o nome que o recomp (e o Dolphin) procura nos pacotes de
+  texturas HD, como `tex1_128x128_m_57ca8a0b140a3cf1_14.png`. Melhore a imagem em qualquer
+  resolução (2×, 4×, redesenhada), **mantenha o nome** e a proporção, e instale. O jogo passa a
+  usar a nova, sem regravar nada. A mesma textura usada em vários arquivos sai uma vez só: melhorando
+  ela, muda em todos os lugares (a roupa do Vyse nas batalhas e nas cenas, por exemplo).
+- **`modelos/…`**: cada modelo em glTF 2.0 (`.glb`): personagens, inimigos, objetos e construções,
+  com esqueleto (ossos e pesos), materiais e texturas embutidas. No Blender: Arquivo › Importar ›
+  glTF 2.0. O nome de cada imagem nos materiais é o nome da textura na pasta `texturas`.
+- **`cenarios/…`**: cada lugar inteiro (cidades, interiores, masmorras, cenários de batalha), com
+  os objetos e os moradores na posição do jogo.
+- **`indice_texturas.csv`**: de que arquivo vem cada textura e quais modelos a usam.
+
+Ficam de fora a malha de colisão do chão e as caixas invisíveis que o jogo usa como gatilho
+(escadas, portas, scripts). As peças com reflexo (que o jogo calcula pela câmera) recebem
+coordenadas aproximadas para aparecerem no Blender.
+
+**Instalar texturas melhoradas no recomp**: na mesma janela, escolha a pasta com as texturas (pode
+ser só as que você mudou) e clique **Instalar no recomp**. Elas vão para
+`Load/Textures/GEA/SOAL Tradutor` e as texturas HD são ligadas (`GFX.ini`, `HiresTextures`). Os
+pacotes que você já importou pelo recomp continuam. Também dá para importar pelo próprio recomp:
+Configurações › Gráficos › Texture pack › Import a folder….
+
+**Conferir os nomes**: com `DumpTextures = True` no `GFX.ini` do recomp, ele grava em
+`Dump/Textures` as texturas que aparecem enquanto você joga. O botão **Conferir com as texturas
+despejadas pelo recomp** diz quantas delas têm o mesmo nome de uma textura extraída.
+
+O jogo inteiro leva de 15 a 30 minutos e ocupa alguns GB; dá para extrair só uma parte (personagens,
+cenários, efeitos…). Algumas imagens de menu que o jogo copia da tela mudam de nome a cada vez e
+não podem ser trocadas por pacote.
+
 ## Introdução
 
 A **Introdução** (“In a world shrouded in mystery…”) são 11 páginas que o jogo mostra como imagens.
@@ -352,6 +388,9 @@ nome traduzido vale para todas as falas daquele personagem.
 - O recomp não foi testado com o `main.dol` traduzido.
 - Versões americana (GEAE8P) e europeia (GEAP8P). A japonesa não é aceita.
 - No recomp (port nativo), a tradução vai para o jogo importado da mesma versão do projeto (GEAE8P ou GEAP8P).
+- Remaster: os modelos são extraídos, mas ainda não voltam para o jogo. Texturas melhoradas entram
+  pelo pacote de texturas HD; modelos com mais polígonos precisam de um importador (próximo passo).
+  As animações (NMDM) ainda não são extraídas.
 
 ## Versão europeia
 
