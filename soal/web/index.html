@@ -661,6 +661,7 @@ function termIssues(t, e) {
   if (!t || !e) return [];
   const out = [];
   for (const k of termList()) if (k.en.some(r => r.test(e.body)) && !k.pt.some(r => r.test(t))) out.push("Termo padronizado: “" + k.x.en + "” é “" + k.x.pt + "”.");
+  if (/[¡¿]/.test(t)) out.push("Tire o ¡ e o ¿: o português não usa (o botão Padronizar, em Termos, tira de todas as falas).");
   return out;
 }
 function issuesOf(t, e) {
@@ -1355,10 +1356,11 @@ async function termCheck(apply) {
     const body = el("tbody");
     for (const t of r.terms) { if (!t.total) continue; const tr = el("tr"); for (const v of [t.en + " → " + t.pt, t.total, t.ok, t.fix, t.miss]) tr.append(el("td", "", String(v))); body.append(tr); }
     tb.append(body); box.append(tb);
+    if (r.punct) box.append(el("p", "", r.punct + " falas " + (r.applied ? "tiveram" : "têm") + " o ¡ ou o ¿ do espanhol" + (r.applied ? " tirados." : "; o Padronizar tira.")));
     if (r.applied) box.append(el("p", "", r.fixes + " falas foram padronizadas."));
     else if (r.fixes) {
       const b = el("button", "primary", "Padronizar: trocar em " + r.fixes + " falas"); b.type = "button"; b.onclick = () => termCheck(true);
-      const p = el("p"); p.append(b, " ", el("span", "note", "Troca as traduções listadas em “Traduções a trocar” pelo termo escolhido. O estado das falas não muda.")); box.append(p);
+      const p = el("p"); p.append(b, " ", el("span", "note", "Troca as traduções listadas em “Traduções a trocar” pelo termo escolhido (também no feminino) e tira o ¡ e o ¿. O estado das falas não muda.")); box.append(p);
       const ul = el("ul"); for (const f of r.fix_list.slice(0, 40)) ul.append(el("li", "", f.before.replace(/\n/g, " ") + "  →  " + f.after.replace(/\n/g, " "))); box.append(ul);
     }
     if (r.missing) {

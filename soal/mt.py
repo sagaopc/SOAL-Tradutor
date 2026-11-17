@@ -218,7 +218,8 @@ def style_for(src: str = "en") -> str:
     name = SOURCE_LANGS[src][2]
     return (STYLE.replace("do inglês para o", f"do {name} para o")
             + f"\n9. O texto de origem está em {name} (versão europeia do jogo). Use o gênero e a "
-              "concordância que o original deixa claros.")
+              "concordância que o original deixa claros. Não use os sinais ¡ e ¿ nem palavras em "
+              f"{name}: escreva tudo em português do Brasil.")
 
 
 STYLE = (
@@ -293,11 +294,11 @@ class Translator:
         """text vem com as quebras de linha do jogo como '\\n'. Devolve no mesmo formato."""
         if not text.strip():
             return ""
-        src, codes = protect(text)
+        prot, codes = protect(text)
         if menu:
-            lines = src.split("\n")
+            lines = prot.split("\n")
         else:
-            lines = [" ".join(l.strip() for l in src.split("\n"))]
+            lines = [" ".join(l.strip() for l in prot.split("\n"))]
         self._note = note
         self._src = src if src in SOURCE_LANGS else "en"
         self._gloss = gloss_text
@@ -312,6 +313,8 @@ class Translator:
         else:
             res = fn(lines, who, prev)
             out = "\n".join(res)
+        # o portugues nao usa ¡ nem ¿ (vem de traducoes feitas do espanhol)
+        out = out.replace("¡", "").replace("¿", "")
         return restore(out, codes).strip()
 
     # -- DeepL ---------------------------------------------------------------

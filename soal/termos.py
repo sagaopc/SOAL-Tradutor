@@ -41,6 +41,48 @@ def clean(terms) -> List[dict]:
     return out[:500]
 
 
+SPANISH_PUNCT = "¡¿"
+
+
+def strip_spanish(t: str) -> Tuple[str, int]:
+    """Tira a exclamacao e a interrogacao invertidas (¡ ¿), que o portugues nao usa."""
+    n = sum(t.count(c) for c in SPANISH_PUNCT)
+    if n:
+        for c in SPANISH_PUNCT:
+            t = t.replace(c, "")
+    return t, n
+
+
+def _feminine(v: str) -> Optional[str]:
+    """'Ladino Azul' -> 'Ladina Azul'; 'Bandidos Azuis' -> 'Bandidas Azuis'."""
+    w = v.split(" ", 1)
+    m = re.match(r"^(.*[^aeiou])o(s?)$", w[0], re.I)
+    if not m:
+        return None
+    a = "A" if w[0][len(m.group(1))].isupper() else "a"
+    return m.group(1) + a + m.group(2) + (" " + w[1] if len(w) > 1 else "")
+
+
+def merge_defaults(terms: List[dict]) -> List[dict]:
+    """Acrescenta aos termos do projeto as variantes novas da lista padrao (mesmo termo em
+    ingles), sem tirar nada do que o usuario escolheu."""
+    try:
+        base = {_fold(t["en"]): t for t in defaults()}
+    except (OSError, ValueError, KeyError):
+        return terms
+    out = []
+    for t in terms or []:
+        d = base.get(_fold(str(t.get("en", ""))))
+        if d and isinstance(t, dict):
+            have = variants(t.get("trocar", ""))
+            seen = {_fold(x) for x in have} | {_fold(x) for x in forms(t.get("pt", ""))}
+            add = [v for v in variants(d["trocar"]) if _fold(v) not in seen]
+            if add:
+                t = dict(t, trocar=", ".join(have + add))
+        out.append(t)
+    return out
+
+
 def _fold(s: str) -> str:
     return unicodedata.normalize("NFC", s).casefold()
 
@@ -56,10 +98,13 @@ class Checker:
         for t in clean(terms):
             en = forms(t["en"])
             pt = forms(t["pt"])
+            var = variants(t["trocar"])
+            # a forma feminina das variantes tambem e' trocada (Ladina Azul, Bandidas Azuis)
+            var += [f for f in (_feminine(v) for v in var) if f and _fold(f) not in {_fold(x) for x in var}]
             # o original pode trazer a forma mais longa primeiro ("Blue Rogues" antes de "Blue Rogue")
             self.terms.append({"t": t, "en": [_rx(x) for x in sorted(en, key=len, reverse=True)],
                                "pt": [_rx(x) for x in sorted(pt, key=len, reverse=True)],
-                               "ptf": pt, "var": [(v, _rx(v)) for v in sorted(variants(t["trocar"]), key=len, reverse=True)
+                               "ptf": pt, "var": [(v, _rx(v)) for v in sorted(var, key=len, reverse=True)
                                                  if _fold(v) not in {_fold(x) for x in pt}]})
 
     def missing(self, body: str, t: str) -> List[dict]:
@@ -73,7 +118,10 @@ class Checker:
         return out
 
     def issues(self, body: str, t: str) -> List[str]:
-        return [f"Termo padronizado: “{m['en']}” é “{m['pt']}”" for m in self.missing(body, t)]
+        out = [f"Termo padronizado: “{m['en']}” é “{m['pt']}”" for m in self.missing(body, t)]
+        if any(c in (t or "") for c in SPANISH_PUNCT):
+            out.append("Tire o ¡ e o ¿ (pontuação do espanhol)")
+        return out
 
     def fix(self, body: str, t: str) -> Tuple[str, int]:
         """Troca, na traducao, as variantes pelo termo escolhido (so' quando o original tem
@@ -92,6 +140,11 @@ class Checker:
                     s = std
                     if m.group(0)[:1].isupper() and s[:1].islower():
                         s = s[:1].upper() + s[1:]
+                    # mantem as quebras de linha que estavam entre as palavras
+                    seps = re.findall(r"\s+", m.group(0))
+                    words = s.split()
+                    if seps and len(seps) == len(words) - 1:
+                        s = words[0] + "".join(a + b for a, b in zip(seps, words[1:]))
                     return s
                 t, k = rv.subn(rep, t)
                 n += k

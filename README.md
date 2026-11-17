@@ -68,7 +68,8 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
   embutido (apagar área, escrever texto com fonte, contorno e sombra) ou PNG editado em outro
   programa, com prévia de como fica no jogo.
 - **Termos padronizados**: “Blue Rogues” é sempre “Piratas Azuis”. O programa aponta as falas fora
-  do padrão, troca as variações conhecidas de uma vez e passa os termos à tradução automática.
+  do padrão, troca as variações conhecidas de uma vez (também no feminino), tira o ¡ e o ¿ do
+  espanhol e passa os termos à tradução automática.
 - Tradução automática dos **nomes de quem fala** que faltam (cargos como “Valuan Soldier” são
   traduzidos; nomes próprios ficam iguais).
 - Letras acentuadas desenhadas na fonte do jogo, que na versão americana não tem acentos. Na

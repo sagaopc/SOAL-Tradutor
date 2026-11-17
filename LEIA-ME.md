@@ -250,8 +250,12 @@ mudar, apagar ou acrescentar os seus.
   Azuis…), separadas por vírgula.
 - **Conferir as traduções** mostra, para cada termo, quantas falas estão no padrão, quantas usam uma
   das traduções a trocar e quantas usam outra coisa. **Padronizar** troca as conhecidas pelo termo
-  escolhido, respeitando singular, plural e letra maiúscula, sem mudar o estado das falas. As demais
-  aparecem numa lista; clique para abrir e corrigir à mão.
+  escolhido, respeitando singular, plural, letra maiúscula e quebra de linha, sem mudar o estado das
+  falas. A forma feminina das traduções a trocar também é trocada (Ladina Azul, Bandidas Azuis). As
+  demais aparecem numa lista; clique para abrir e corrigir à mão.
+- **Padronizar** também tira de todas as falas o **¡** e o **¿** do espanhol, que aparecem quando a
+  tradução automática parte do texto espanhol. A tradução automática já não os coloca, e uma fala
+  que ainda os tenha ganha um aviso.
 - Uma fala cujo original tem o termo e cuja tradução não segue o padrão ganha um **aviso** (filtro
   **Com aviso**).
 - A tradução automática recebe os termos e usa as formas escolhidas.

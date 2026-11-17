@@ -711,6 +711,8 @@ class Project:
         st.update(self.meta.get("settings") or {})
         if "termos" not in st:
             st["termos"] = termos.defaults()
+        else:
+            st["termos"] = termos.merge_defaults(st["termos"])
         self.meta["settings"] = st
         self.meta.setdefault("names", {})
         self.meta.setdefault("tr", {})
@@ -1432,38 +1434,41 @@ class Project:
         stats = {t["t"]["en"]: {"en": t["t"]["en"], "pt": t["t"]["pt"], "total": 0, "ok": 0, "fix": 0, "miss": 0}
                  for t in ck.terms}
         fixes, missing = [], []
+        punct = 0
         for f in self.files:
             tr = self.tr.get(f["name"], {})
             for e in f["entries"]:
                 cur = (tr.get(e["k"]) or {}).get("t", "")
                 if not cur:
                     continue
+                new, p = termos.strip_spanish(cur)
+                punct += bool(p)
                 hits = [x for x in ck.terms if any(r.search(e["body"]) for r in x["en"])]
-                if not hits:
-                    continue
-                new, n = ck.fix(e["body"], cur)
-                before = ck.missing(e["body"], cur)
-                left = ck.missing(e["body"], new)
-                for x in hits:
-                    st = stats[x["t"]["en"]]
-                    st["total"] += 1
-                    if x["t"] in left:
-                        st["miss"] += 1
-                    elif x["t"] in before:
-                        st["fix"] += 1
-                    else:
-                        st["ok"] += 1
-                if n:
+                n = 0
+                if hits:
+                    new, n = ck.fix(e["body"], new)
+                    before = ck.missing(e["body"], cur)
+                    left = ck.missing(e["body"], new)
+                    for x in hits:
+                        st = stats[x["t"]["en"]]
+                        st["total"] += 1
+                        if x["t"] in left:
+                            st["miss"] += 1
+                        elif x["t"] in before:
+                            st["fix"] += 1
+                        else:
+                            st["ok"] += 1
+                    for m in left:
+                        missing.append({"file": f["name"], "k": e["k"], "term": m["en"], "pt": m["pt"],
+                                        "body": e["body"], "t": new if apply else cur})
+                if new != cur:
                     fixes.append({"file": f["name"], "k": e["k"], "before": cur, "after": new})
                     if apply:
                         self.tr[f["name"]][e["k"]]["t"] = new
-                for m in left:
-                    missing.append({"file": f["name"], "k": e["k"], "term": m["en"], "pt": m["pt"],
-                                    "body": e["body"], "t": new if apply else cur})
         if apply and fixes:
             self.touch()
             self.save()
-        return {"terms": list(stats.values()), "fixes": len(fixes), "fix_list": fixes[:300],
+        return {"terms": list(stats.values()), "fixes": len(fixes), "fix_list": fixes[:300], "punct": punct,
                 "missing": len(missing), "missing_list": missing[:500], "applied": bool(apply)}
 
     def mt_source(self) -> str:
