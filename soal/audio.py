@@ -206,6 +206,19 @@ class DspStream:
         return bytes(head) + body
 
 
+class Encoded:
+    """Um som ja' codificado em DSP ADPCM (para usar em varios bancos sem codificar de novo)."""
+    __slots__ = ("body", "coefs", "ps", "n", "rate")
+
+    @classmethod
+    def of(cls, pcm, rate: int) -> "Encoded":
+        e = cls()
+        e.coefs = compute_coefs(pcm)
+        e.body, e.ps = encode(pcm, e.coefs)
+        e.n, e.rate = len(pcm), rate
+        return e
+
+
 # ---------------------------------------------------------------- bancos MusyX
 class Sample:
     __slots__ = ("id", "index", "off", "rate", "pitch", "nsamples", "fmt", "loop_start", "loop_len",
@@ -271,8 +284,9 @@ class Bank:
         return decode(self.data_of(s), s.nsamples, s.coefs, s.hist1, s.hist2)
 
     def rebuild(self, new: dict) -> Tuple[bytes, bytes]:
-        """new: indice da amostra -> (pcm, taxa). Monta o .samp de novo (amostras alinhadas a
-        32 bytes) e atualiza a tabela. Amostras trocadas perdem o loop."""
+        """new: indice da amostra -> (pcm, taxa) ou Encoded (ja' codificada). Monta o .samp de
+        novo (amostras alinhadas a 32 bytes) e atualiza a tabela. Amostras trocadas perdem o
+        loop."""
         info = bytearray(self.info)
         out = bytearray()
         order = sorted(self.samples, key=lambda s: s.off)
@@ -281,10 +295,11 @@ class Bank:
             if s.off in placed and s.index not in new:
                 continue
             if s.index in new:
-                pcm, rate = new[s.index]
-                coefs = compute_coefs(pcm)
-                body, ps = encode(pcm, coefs)
-                meta = (len(pcm), rate, coefs, ps)
+                e = new[s.index]
+                if not isinstance(e, Encoded):
+                    e = Encoded.of(*e)
+                body = e.body
+                meta = (e.n, e.rate, e.coefs, e.ps)
             else:
                 body = self.samp[s.off:s.off + bytes_for(s.nsamples)]
                 meta = None

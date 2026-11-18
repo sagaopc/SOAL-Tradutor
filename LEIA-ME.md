@@ -211,28 +211,36 @@ ficou em inglês ou espanhol, tradução ao pé da letra. Gosto pessoal não con
 Botão **Dublagem** no topo.
 
 1. **Extrair os sons**: cada voz e cada som do jogo vira um WAV (PCM 16 bits, com a taxa do
-   jogo), numa pasta à sua escolha. Saem sempre os sons originais, mesmo os já dublados.
-   - `vozes/golpes`: falas dos golpes especiais (os arquivos numerados, `141`, `150`…), estéreo;
-   - `vozes/eventos`: falas das cenas (`ko0000`…), estéreo;
-   - `vozes/batalha`: falas curtas de batalha (bancos `stv`), um WAV por fala;
-   - `eventos`: sons de cada cena (bancos `e6…`), vozes curtas e efeitos misturados;
-   - `batalha`, `campo`, `musica`, `outros`.
+   jogo), organizado por personagem:
+   - `Personagens/<nome>/golpes`: falas dos golpes especiais (Vyse, Aika, Fina, Drachma,
+     Enrique e Gilder), estéreo;
+   - `Personagens/<nome>/batalha`: falas de batalha (ataque, dano, vitória…);
+   - `Personagens/Outras vozes de batalha`: falas de batalha de chefes e convidados;
+   - `Tripulacao/crNNN`: sons de cada tripulante, com `aparencia.png` mostrando quem é;
+     `Tripulacao/comum`: sons das batalhas de navio;
+   - `Cenas/<cena>`: sons de cada cena (vozes curtas e efeitos misturados); `Cenas/efeitos`:
+     efeitos longos das cenas;
+   - `Batalha`, `Campo`, `Musica`, `Outros`.
 
-   Nos bancos (pastas com vários WAV), o nome é `<ordem>_<id>.wav`; o id liga o WAV ao som do
-   jogo. O `indice_audio.csv` diz de que arquivo do jogo vem cada WAV, a taxa e a duração.
-2. **Gravar as falas**: grave por cima do WAV (ou numa cópia da pasta, com o mesmo nome e na
-   mesma pasta). Qualquer taxa, mono ou estéreo; o programa converte para a taxa do jogo. Tente
-   manter a duração parecida com a original.
+   Cada som sai uma vez só. O jogo repete muitos sons em vários arquivos (as falas de batalha
+   da Aika estão em 72 bancos de som, um para cada formação do grupo); dublando o WAV, o
+   programa troca em todos. O `indice_audio.csv` diz de que arquivos do jogo vem cada WAV.
+2. **Gravar as falas**: grave por cima do WAV ou em outra pasta. Qualquer taxa, mono ou
+   estéreo. **Vale o nome do arquivo, não a pasta**: dá para mover e reorganizar à vontade, e
+   pôr texto depois do nome (`0e5f - Aika grito.wav`). Tente manter a duração parecida.
 3. **Importar**: o programa pega só os WAV que mudaram e guarda no projeto (pasta `dublagem`).
-   A janela lista os sons dublados, toca o original e o dublado e avisa quando a fala nova é bem
-   mais longa.
-4. **Gravar no jogo** codifica os sons dublados (DSP ADPCM, o formato do GameCube) e grava junto
-   com a tradução, também no recomp (com a tabela de arquivos atualizada) e na ISO. Os originais
-   ficam guardados em `originais/extras`; **Restaurar os originais** devolve os sons originais.
-   O patch de tradução leva a dublagem junto.
+   A janela lista os sons dublados com o personagem ou a cena, toca o original e o dublado e
+   avisa quando a fala nova é bem mais longa.
+4. **Gravar no jogo** devolve cada som aos arquivos originais do jogo de onde saiu, codificado
+   em DSP ADPCM (o formato do GameCube), junto com a tradução, também no recomp (com a tabela
+   de arquivos atualizada) e na ISO. Os originais ficam guardados em `originais/extras`;
+   **Restaurar os originais** devolve os sons originais. O patch de tradução leva a dublagem.
 
-Nos bancos, o som trocado ocupa o lugar do original e os outros sons do banco não mudam. Falas
-muito mais longas deixam o banco maior; o programa avisa quando o banco cresce mais de 25%,
+Como os personagens foram identificados: as falas dos golpes têm o número do personagem no nome
+(1 = Vyse … 6 = Gilder); as falas de batalha formam grupos fixos nos 72 bancos (Vyse, Aika e
+Fina em todos; Drachma, Enrique e Gilder se revezando), conferidos pelo tom e pelo timbre da voz
+comparados com as falas dos golpes de cada um. Nos bancos, o som trocado ocupa o lugar do
+original e os outros sons não mudam; o programa avisa quando um banco cresce mais de 25%,
 porque o console guarda os bancos numa memória de som limitada.
 
 ## Acentos
@@ -444,9 +452,9 @@ nome traduzido vale para todas as falas daquele personagem.
 - Remaster: os modelos são extraídos, mas ainda não voltam para o jogo. Texturas melhoradas entram
   pelo pacote de texturas HD; modelos com mais polígonos precisam de um importador (próximo passo).
   As animações (NMDM) ainda não são extraídas.
-- Dublagem: os grupos de sons (vozes, eventos, batalha…) foram separados pelo nome dos arquivos.
-  Dentro dos bancos de eventos e de batalha, vozes e efeitos vêm misturados. Fala dublada que
-  ficar muito mais longa que a original pode ser cortada pela cena.
+- Dublagem: as vozes curtas das cenas e as da tripulação não estão separadas por personagem
+  (vêm por cena e por tripulante, misturadas com efeitos). Fala dublada muito mais longa que a
+  original pode ser cortada pela cena.
 
 ## Versão europeia
 

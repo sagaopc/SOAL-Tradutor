@@ -25,7 +25,7 @@ from . import dublagem, exportar, intro, iso, janela, mt, patch, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.13.0"
+VERSION = "0.14.0"
 
 
 class App:
@@ -224,21 +224,20 @@ class App:
     # ----------------------------------------------------------------- dublagem
     def dub_info(self) -> dict:
         p = self.need()
-        files = p._img_files_dir()
-        sdir = dublagem.sound_dir(files)
         groups = {}
-        if sdir:
-            inv = dublagem.Inventory(sdir)
-            for b in inv.streams:
-                g = dublagem.classify(b, "stream")[0]
+        sdir = ""
+        try:
+            inv = p._snd_inventory()
+            sdir = inv.dir
+            for k in inv.keys():
+                g = dublagem.group_of(inv.place(k))
                 groups[g] = groups.get(g, 0) + 1
-            for b in inv.banks:
-                g = dublagem.classify(b, "bank")[0]
-                groups[g] = groups.get(g, 0) + 1
+        except pj.ProjectError:
+            pass
         out = self.config.get("dub_out") or os.path.join(os.path.dirname(os.path.abspath(p.dir).rstrip("\\/")),
                                                          "SOAL sons")
         lst = p.dub_list()
-        return {"sound": sdir or "", "out": out, "src": p.meta.get("dub_src") or out,
+        return {"sound": sdir, "out": out, "src": p.meta.get("dub_src") or out,
                 "groups": [{"id": k, "label": v, "files": groups.get(k, 0)} for k, v in dublagem.GROUPS.items()],
                 "items": lst["items"], "dir": lst["dir"]}
 
@@ -250,15 +249,19 @@ class App:
         out = os.path.abspath(out)
         if os.path.normcase(out).startswith(os.path.normcase(os.path.abspath(files)).rstrip("\\/") + os.sep):
             raise pj.ProjectError("Grave os sons fora da pasta do jogo.")
-        groups = [g for g in groups if g in dublagem.GROUPS] or ["vozes"]
+        groups = [g for g in groups if g in dublagem.GROUPS] or ["personagens"]
         self.config["dub_out"] = out
         self._save_config()
         inv = p._snd_inventory()
 
         def prog(k, n, name):
             self._progress(f"Extraindo {name}" if name else "Terminando", k, n)
-        self.start_job("audio", lambda: dublagem.extract(files, out, groups, lambda f: p._snd_read(inv, f),
-                                                         prog, lambda: self.cancel))
+
+        def run():
+            self._progress("Lendo as tabelas de sons", 0, 0)
+            _ = inv.ids
+            return dublagem.extract(inv, out, groups, prog, lambda: self.cancel, portraits=p.crew_portrait)
+        self.start_job("audio", run)
 
     def dub_import(self, src: str):
         p = self.need()

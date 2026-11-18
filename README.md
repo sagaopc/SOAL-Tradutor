@@ -67,8 +67,9 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
 - **Imagens com texto**: logotipo, GAME OVER, comandos de batalha, lojas e mapa-múndi. Editor
   embutido (apagar área, escrever texto com fonte, contorno e sombra) ou PNG editado em outro
   programa, com prévia de como fica no jogo.
-- **Dublagem**: extrai as vozes e os sons do jogo em WAV e grava de volta os WAV dublados (o
-  programa converte para o formato do GameCube), no jogo, no recomp, na ISO e no patch.
+- **Dublagem**: extrai as vozes e os sons do jogo em WAV, organizados por personagem (Vyse, Aika,
+  Fina, Drachma, Enrique, Gilder, tripulação, cenas), e grava de volta os WAV dublados nos arquivos
+  originais (o programa converte para o formato do GameCube), no jogo, no recomp, na ISO e no patch.
 - **Revisão com IA**: Claude, Gemini ou um modelo no seu PC confere sentido, português, gênero e
   termos, fala por fala; cada sugestão aparece com o motivo para você aceitar ou recusar.
 - **Remaster**: extrai as texturas com os nomes dos pacotes de texturas HD do recomp e do Dolphin

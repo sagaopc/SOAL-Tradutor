@@ -135,7 +135,8 @@ section.work{overflow:auto;min-height:0;background:var(--sky)}
 ul.dublist{list-style:none;padding:0;margin:6px 0;max-height:34vh;overflow:auto;border:1px solid var(--line);border-radius:8px}
 ul.dublist li{display:flex;gap:8px;align-items:center;padding:5px 10px;border-bottom:1px solid var(--line);font-size:13px}
 ul.dublist li:last-child{border-bottom:0}
-ul.dublist .k{font-family:var(--mono, monospace);min-width:110px}
+ul.dublist .k{font-family:var(--mono, monospace);min-width:64px}
+ul.dublist .w{min-width:220px;font-size:12px}
 ul.dublist .d{color:var(--muted);flex:1}
 ul.dublist .d.long{color:var(--alert)}
 ul.dublist button{padding:2px 8px;font-size:12px}
@@ -447,20 +448,21 @@ table.grid input{width:100%}
 <dialog id="dlgDub" class="wide"><div class="dh"><h2>Dublagem</h2></div>
   <div class="db">
     <h3>1. Extrair os sons</h3>
-    <p>Cada voz e cada som do jogo vira um arquivo WAV, com o mesmo nome e a mesma taxa do jogo. As falas dos golpes especiais e das cenas saem inteiras; as falas curtas de batalha e os sons das cenas saem um por arquivo, numa pasta para cada grupo.</p>
+    <p>Cada voz e cada som do jogo vira um arquivo WAV, organizado por personagem: <span class="kbd">Personagens/Vyse/golpes</span>, <span class="kbd">Personagens/Aika/batalha</span>… A tripulação sai com uma pasta por tripulante (com a imagem de quem é), e as cenas, uma pasta por cena.</p>
+    <p class="note">Cada som sai uma vez só, mesmo que o jogo o use em vários arquivos (as falas de batalha da Aika estão em 72): dublando o WAV, o programa troca em todos. Na volta, vale o nome do arquivo, não a pasta, então dá para reorganizar como quiser.</p>
     <div class="field"><label for="dubOut">Gravar em</label><input type="text" id="dubOut" spellcheck="false"></div>
     <p><button type="button" id="btnDubOutPick">Escolher pasta…</button></p>
     <p><b>O que extrair</b><br><span id="dubGroups"></span></p>
-    <p class="note">Sempre saem os sons originais, mesmo os que você já dublou. Só as vozes levam menos de um minuto; tudo, alguns minutos e cerca de 800 MB.</p>
+    <p class="note">Sempre saem os sons originais, mesmo os que você já dublou. Personagens e tripulação levam menos de um minuto; tudo, alguns minutos e cerca de 500 MB.</p>
     <p><button type="button" class="primary" id="btnDubGo">Extrair</button> <button type="button" id="btnDubOpen" class="hidden">Abrir a pasta</button></p>
     <div id="dubResult"></div>
     <hr>
     <h3>2. Gravar as falas</h3>
-    <p class="note">Grave a fala nova por cima do WAV (ou numa cópia da pasta, com o mesmo nome e na mesma pasta), em qualquer programa de áudio: WAV PCM, qualquer taxa, mono ou estéreo. Tente manter a duração parecida com a original. O LEIA-ME.txt da pasta explica as pastas.</p>
+    <p class="note">Grave a fala nova por cima do WAV (ou em outra pasta, com o mesmo nome), em qualquer programa de áudio: WAV PCM, qualquer taxa, mono ou estéreo. Pode mover e renomear as pastas; mantenha o nome do arquivo (pode pôr texto depois dele: <span class="kbd">0e5f - grito.wav</span>). Tente manter a duração parecida com a original.</p>
     <h3>3. Importar a dublagem</h3>
     <div class="field"><label for="dubSrc">Pasta com os WAV</label><input type="text" id="dubSrc" spellcheck="false"></div>
     <p><button type="button" id="btnDubSrcPick">Escolher pasta…</button> <button type="button" class="primary" id="btnDubImport">Importar</button></p>
-    <p class="note">Os WAV que continuam iguais aos originais são pulados. Os dublados ficam guardados no projeto (pasta <span class="kbd">dublagem</span>) e vão para o jogo em <b>Gravar no jogo</b>, junto com a tradução, também no recomp. <b>Restaurar os originais</b> devolve os sons originais.</p>
+    <p class="note">Os WAV que continuam iguais aos originais são pulados. Os dublados ficam guardados no projeto (pasta <span class="kbd">dublagem</span>) e vão para o jogo em <b>Gravar no jogo</b>: cada um volta para os arquivos originais do jogo de onde saiu, junto com a tradução, também no recomp. <b>Restaurar os originais</b> devolve os sons originais.</p>
     <div id="dubImpResult"></div>
     <h3 id="dubListTitle">Sons dublados no projeto</h3>
     <ul class="dublist" id="dubList"></ul>
@@ -1988,7 +1990,8 @@ function dubRenderList() {
     const b1 = el("button", "quiet", "▶ original"), b2 = el("button", "quiet", "▶ dublado"), b3 = el("button", "quiet", "Tirar");
     b1.onclick = () => dubPlay(it.key, "orig"); b2.onclick = () => dubPlay(it.key, "dub");
     b3.onclick = async () => { try { await api("/api/dub/remove", { key:it.key }); await dubRefresh(); } catch (e) { $("#dubMsg").textContent = e.message; } };
-    li.append(el("span", "k", it.key), d, b1, b2, b3); ul.append(li);
+    const w = el("span", "w", it.onde || "?"); if (it.bancos > 1) w.title = "Usado em " + it.bancos + " arquivos do jogo; a dublagem vai para todos";
+    li.append(el("span", "k", it.name), w, d, b1, b2, b3); ul.append(li);
   }
 }
 async function dubRefresh() { DUB = await api("/api/dub/info", {}); dubRenderList(); }
@@ -2000,7 +2003,7 @@ async function openDub() {
   const g = $("#dubGroups");
   if (!g.childNodes.length) for (const x of DUB.groups) {
     if (!x.files) continue;
-    const lb = el("label", ""), cb = el("input", "dubGroup"); cb.type = "checkbox"; cb.value = x.id; cb.checked = x.id === "vozes" || x.id === "eventos";
+    const lb = el("label", ""), cb = el("input", "dubGroup"); cb.type = "checkbox"; cb.value = x.id; cb.checked = x.id === "personagens" || x.id === "tripulacao";
     lb.append(cb, " " + x.label + " "); g.append(lb, el("br"));
   }
   if (!DUB.sound) $("#dubMsg").textContent = "Não achei a pasta sound do jogo aberto.";
@@ -2021,7 +2024,7 @@ $("#btnDubGo").onclick = async () => {
     const r = await waitJob();
     const ul = el("ul", "report"), min = Math.round(r.segundos / 60);
     if (r.cancelado) ul.append(el("li", "err", "Parado no meio: o que já tinha sido extraído ficou na pasta."));
-    ul.append(el("li", "", pl(r.falas, "som extraído", "sons extraídos") + " de " + pl(r.arquivos, "arquivo do jogo", "arquivos do jogo") + " (" + (min ? "cerca de " + pl(min, "minuto", "minutos") : r.segundos + " segundos") + " de áudio)."));
+    ul.append(el("li", "", pl(r.falas, "som extraído", "sons extraídos") + " (" + (min ? "cerca de " + pl(min, "minuto", "minutos") : r.segundos + " segundos") + " de áudio)" + (r.repetidos ? "; " + r.repetidos.toLocaleString("pt-BR") + " cópias repetidas nos arquivos do jogo ficaram de fora" : "") + "."));
     for (const e of r.erros.slice(0, 15)) ul.append(el("li", "err", e));
     $("#dubResult").append(el("p", "ok", "Pronto: " + r.pasta), ul);
     $("#btnDubOpen").classList.remove("hidden"); $("#btnDubOpen").dataset.dir = r.pasta;
@@ -2041,7 +2044,8 @@ $("#btnDubImport").onclick = async () => {
     ul.append(el("li", r.importadas.length ? "ok" : "", r.importadas.length ? pl(r.importadas.length, "som dublado importado", "sons dublados importados") + ". Use Gravar no jogo para levar ao jogo." : "Nenhum som novo para importar."));
     if (r.iguais) ul.append(el("li", "", pl(r.iguais, "WAV igual ao original foi pulado", "WAV iguais aos originais foram pulados") + "."));
     if (r.ja) ul.append(el("li", "", pl(r.ja, "já estava importado", "já estavam importados") + "."));
-    for (const x of r.longas.slice(0, 10)) ul.append(el("li", "err", x.key + ": " + x.secs + " s, a original tem " + x.orig + " s. Fala bem mais longa pode ser cortada pela cena."));
+    for (const x of r.longas.slice(0, 10)) ul.append(el("li", "err", x.rel + ": " + x.secs + " s, a original tem " + x.orig + " s. Fala bem mais longa pode ser cortada pela cena."));
+    for (const x of (r.repetidas || []).slice(0, 5)) ul.append(el("li", "err", "Dois WAV diferentes para o mesmo som: " + x + ". Ficou o último."));
     if (r.desconhecidos.length) ul.append(el("li", "err", pl(r.desconhecidos.length, "WAV não reconhecido", "WAV não reconhecidos") + " (nome ou pasta diferente do extraído): " + r.desconhecidos.slice(0, 5).join(", ") + (r.desconhecidos.length > 5 ? "…" : "")));
     for (const e of r.erros.slice(0, 10)) ul.append(el("li", "err", e));
     $("#dubImpResult").append(ul);
