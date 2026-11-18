@@ -212,9 +212,10 @@ Botão **Dublagem** no topo.
 
 1. **Extrair os sons**: cada voz e cada som do jogo vira um WAV (PCM 16 bits, com a taxa do
    jogo), organizado por personagem:
-   - `Personagens/<nome>/golpes`: falas dos golpes especiais (Vyse, Aika, Fina, Drachma,
+   - `Personagens/<nome>/vitoria`: falas de vitória com a fanfarra (Vyse, Aika, Fina, Drachma,
      Enrique e Gilder), estéreo;
-   - `Personagens/<nome>/batalha`: falas de batalha (ataque, dano, vitória…);
+   - `Personagens/<nome>/batalha`: falas de batalha (gritos de ataque e de dano e nomes dos
+     golpes especiais, misturados);
    - `Personagens/Outras vozes de batalha`: falas de batalha de chefes e convidados;
    - `Tripulacao/crNNN`: sons de cada tripulante, com `aparencia.png` mostrando quem é;
      `Tripulacao/comum`: sons das batalhas de navio;
@@ -236,10 +237,10 @@ Botão **Dublagem** no topo.
    de arquivos atualizada) e na ISO. Os originais ficam guardados em `originais/extras`;
    **Restaurar os originais** devolve os sons originais. O patch de tradução leva a dublagem.
 
-Como os personagens foram identificados: as falas dos golpes têm o número do personagem no nome
+Como os personagens foram identificados: as falas de vitória têm o número do personagem no nome
 (1 = Vyse … 6 = Gilder); as falas de batalha formam grupos fixos nos 72 bancos (Vyse, Aika e
 Fina em todos; Drachma, Enrique e Gilder se revezando), conferidos pelo tom e pelo timbre da voz
-comparados com as falas dos golpes de cada um. Nos bancos, o som trocado ocupa o lugar do
+comparados com as falas de vitória de cada um. Nos bancos, o som trocado ocupa o lugar do
 original e os outros sons não mudam; o programa avisa quando um banco cresce mais de 25%,
 porque o console guarda os bancos numa memória de som limitada.
 

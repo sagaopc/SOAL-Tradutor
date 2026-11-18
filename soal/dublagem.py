@@ -23,7 +23,7 @@ from . import audio
 
 # o que extrair (primeira pasta da organizacao)
 GROUPS = {
-    "personagens": "Falas dos personagens (golpes especiais e batalha)",
+    "personagens": "Falas dos personagens (vitória e batalha)",
     "tripulacao": "Tripulação (sons de cada tripulante e das batalhas de navio)",
     "cenas": "Sons das cenas (vozes curtas e efeitos)",
     "batalha": "Outros sons de batalha",
@@ -34,10 +34,10 @@ GROUPS = {
 FOLDER_GROUP = {"Personagens": "personagens", "Tripulacao": "tripulacao", "Cenas": "cenas",
                 "Batalha": "batalha", "Campo": "campo", "Musica": "musica", "Outros": "outros"}
 
-# Personagens: a fala dos golpes especiais e' o fluxo <n>xx (n = 1..6) e as falas de batalha
+# Personagens: as falas de vitoria (com a fanfarra) sao o fluxo <n>xx (n = 1..6) e as de batalha
 # sao amostras dos bancos stv. Os grupos de ids foram achados pela distribuicao nos 72 bancos
 # stv (Vyse, Aika e Fina estao em todos; Drachma, Enrique e Gilder se revezam no 4o lugar) e
-# conferidos pela voz (tom e timbre comparados com as falas dos golpes de cada um).
+# conferidos pela voz (tom e timbre comparados com as falas de vitoria de cada um).
 CHARS = ["Vyse", "Aika", "Fina", "Drachma", "Enrique", "Gilder"]
 BATTLE_IDS = {
     "Vyse": range(0xEB1, 0xEBD),
@@ -132,7 +132,7 @@ class Inventory:
             b = key
             ch = stream_char(b)
             if ch:
-                return f"Personagens/{ch}/golpes/{b}.wav"
+                return f"Personagens/{ch}/vitoria/{b}.wav"
             if b.startswith("ko"):
                 return f"Cenas/efeitos/{b}.wav"
             top = {"b": "Batalha", "f": "Campo", "m": "Musica"}.get(b[:1], "Outros")
@@ -354,8 +354,9 @@ README = """SONS DE SKIES OF ARCADIA LEGENDS, extraídos pelo SOAL Tradutor
 
 Cada som do jogo virou um arquivo WAV (PCM 16 bits), com a mesma taxa do jogo.
 
-Personagens/<nome>/golpes     falas dos golpes especiais (estéreo)
-Personagens/<nome>/batalha    falas de batalha (ataque, dano, vitória...)
+Personagens/<nome>/vitoria    falas de vitória, com a fanfarra (estéreo)
+Personagens/<nome>/batalha    falas de batalha: gritos de ataque e de dano e nomes dos golpes
+                              especiais, misturados
 Personagens/Outras vozes de batalha   falas de batalha de chefes e convidados
 Tripulacao/crNNN              sons de cada tripulante (aparencia.png mostra quem é)
 Tripulacao/comum              sons das batalhas de navio (comandos, canhões...)
