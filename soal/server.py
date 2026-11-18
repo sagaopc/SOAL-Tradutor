@@ -21,11 +21,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import exportar, intro, iso, janela, mt, patch, recomp, text
+from . import dublagem, exportar, intro, iso, janela, mt, patch, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.12.0"
+VERSION = "0.13.0"
 
 
 class App:
@@ -220,6 +220,51 @@ class App:
         both = dumped & mine
         return {"dumped": len(dumped), "extracted": len(mine), "match": len(both),
                 "only_dump": sorted(dumped - mine)[:30]}
+
+    # ----------------------------------------------------------------- dublagem
+    def dub_info(self) -> dict:
+        p = self.need()
+        files = p._img_files_dir()
+        sdir = dublagem.sound_dir(files)
+        groups = {}
+        if sdir:
+            inv = dublagem.Inventory(sdir)
+            for b in inv.streams:
+                g = dublagem.classify(b, "stream")[0]
+                groups[g] = groups.get(g, 0) + 1
+            for b in inv.banks:
+                g = dublagem.classify(b, "bank")[0]
+                groups[g] = groups.get(g, 0) + 1
+        out = self.config.get("dub_out") or os.path.join(os.path.dirname(os.path.abspath(p.dir).rstrip("\\/")),
+                                                         "SOAL sons")
+        lst = p.dub_list()
+        return {"sound": sdir or "", "out": out, "src": p.meta.get("dub_src") or out,
+                "groups": [{"id": k, "label": v, "files": groups.get(k, 0)} for k, v in dublagem.GROUPS.items()],
+                "items": lst["items"], "dir": lst["dir"]}
+
+    def dub_extract(self, out: str, groups: list):
+        p = self.need()
+        files = p._img_files_dir()
+        if not out:
+            raise pj.ProjectError("Escolha a pasta onde gravar os sons.")
+        out = os.path.abspath(out)
+        if os.path.normcase(out).startswith(os.path.normcase(os.path.abspath(files)).rstrip("\\/") + os.sep):
+            raise pj.ProjectError("Grave os sons fora da pasta do jogo.")
+        groups = [g for g in groups if g in dublagem.GROUPS] or ["vozes"]
+        self.config["dub_out"] = out
+        self._save_config()
+        inv = p._snd_inventory()
+
+        def prog(k, n, name):
+            self._progress(f"Extraindo {name}" if name else "Terminando", k, n)
+        self.start_job("audio", lambda: dublagem.extract(files, out, groups, lambda f: p._snd_read(inv, f),
+                                                         prog, lambda: self.cancel))
+
+    def dub_import(self, src: str):
+        p = self.need()
+        if not src or not os.path.isdir(src):
+            raise pj.ProjectError("Escolha a pasta com os WAV dublados.")
+        self.start_job("audio", lambda: p.dub_import(src, self._progress, lambda: self.cancel))
 
     # ----------------------------------------------------------------- patch
     def patch_default(self, p: pj.Project) -> str:
@@ -570,6 +615,9 @@ def make_handler(app: App):
                     return self._json(mt.public_config(app.mt_cfg()))
                 if u.path == "/api/glyphs":
                     return self._json(app.glyphs())
+                if u.path == "/api/dub/wav":
+                    data = app.need().dub_wav(q.get("key", [""])[0], q.get("v", ["orig"])[0])
+                    return self._send(200, data, "audio/wav")
                 if u.path == "/api/font":
                     from . import intro as _intro
                     f = _intro.FONTS.get(q.get("n", [""])[0])
@@ -795,6 +843,16 @@ def make_handler(app: App):
                     if d and os.path.isdir(d) and sys.platform.startswith("win"):
                         os.startfile(d)  # noqa: abre a pasta no Explorer
                     return self._json({"ok": bool(d and os.path.isdir(d))})
+                if u.path == "/api/dub/info":
+                    return self._json(app.dub_info())
+                if u.path == "/api/dub/extract":
+                    app.dub_extract((data.get("out") or "").strip().strip('"'), list(data.get("groups") or []))
+                    return self._json({"ok": True})
+                if u.path == "/api/dub/import":
+                    app.dub_import((data.get("src") or "").strip().strip('"'))
+                    return self._json({"ok": True})
+                if u.path == "/api/dub/remove":
+                    return self._json(app.need().dub_remove(data.get("key") if not data.get("all") else None))
                 if u.path == "/api/patch/create":
                     app.patch_create(data.get("path") or "")
                     return self._json({"ok": True})

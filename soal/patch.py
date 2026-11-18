@@ -19,6 +19,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import time
 import zipfile
 from typing import Dict, List, Optional
@@ -80,10 +81,11 @@ def create(p, path: str, version: str) -> dict:
             if os.path.exists(os.path.join(p.img_dir, key + ".png")):
                 imgs[key] = {"de": m.get("de"), "w": m.get("w"), "h": m.get("h")}
         extra = list(p.meta.get("img_extra") or [])
+        dubs = p.dub_keys()
     info = {"formato": FORMAT, "programa": "SOAL Tradutor", "versao": version,
             "criado": time.strftime("%Y-%m-%d %H:%M"), "regiao": p.meta.get("region", "us"),
             "jogo": p.meta.get("game_id", ""), "falas": n_tr, "imagens": len(imgs), "nomes": len(names),
-            "ajustes": settings, "nomes_falantes": names, "outros_arquivos_de_imagem": extra}
+            "sons": len(dubs), "ajustes": settings, "nomes_falantes": names, "outros_arquivos_de_imagem": extra}
     os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
     tmp = path + ".tmp"
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
@@ -92,8 +94,10 @@ def create(p, path: str, version: str) -> dict:
         z.writestr("imagens.json", json.dumps(imgs, ensure_ascii=False, indent=1))
         for key in imgs:
             z.write(os.path.join(p.img_dir, key + ".png"), "imagens/%s.png" % key)
+        for key, wav in dubs.items():
+            z.write(wav, "dublagem/%s.wav" % key)
     os.replace(tmp, path)
-    return {"path": os.path.abspath(path), "falas": n_tr, "imagens": len(imgs), "nomes": len(names),
+    return {"path": os.path.abspath(path), "falas": n_tr, "imagens": len(imgs), "nomes": len(names), "sons": len(dubs),
             "bytes": os.path.getsize(path)}
 
 
@@ -114,9 +118,14 @@ def read(path: str) -> dict:
                     png[key] = z.read("imagens/%s.png" % key)
                 except KeyError:
                     pass
+            wavs = {}
+            for n in z.namelist():
+                m = re.match(r"^dublagem/([a-z0-9_]+(?:/[0-9a-f]{4})?)\.wav$", n)
+                if m:
+                    wavs[m.group(1)] = z.read(n)
     except (zipfile.BadZipFile, KeyError, ValueError) as exc:
         raise PatchError("Esse arquivo não é um patch do SOAL Tradutor: %s" % exc)
-    return {"info": info, "tr": tr, "imgs": imgs, "png": png}
+    return {"info": info, "tr": tr, "imgs": imgs, "png": png, "wavs": wavs}
 
 
 def apply(q, data: dict) -> dict:
@@ -195,4 +204,11 @@ def apply(q, data: dict) -> dict:
                 rep["imagens"] += 1 if r.get("edited") else 0
             except Exception as exc:
                 rep["erros_imagens"].append(f"{de[0]} #{de[1]}: {exc}")
+    # dublagem (som que nao existir neste jogo aparece como erro em Gravar no jogo)
+    for key, wav in (data.get("wavs") or {}).items():
+        dst = q._dub_path(key)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        with open(dst, "wb") as fh:
+            fh.write(wav)
+        rep["sons"] = rep.get("sons", 0) + 1
     return rep

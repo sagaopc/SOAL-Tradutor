@@ -206,6 +206,35 @@ ficou em inglês ou espanhol, tradução ao pé da letra. Gosto pessoal não con
   com a DeepL e revisar com o Gemini, por exemplo. O programa guarda a chave de cada serviço.
   DeepL, Google Cloud Translation e LibreTranslate só traduzem.
 
+## Dublagem: extrair e trocar as vozes
+
+Botão **Dublagem** no topo.
+
+1. **Extrair os sons**: cada voz e cada som do jogo vira um WAV (PCM 16 bits, com a taxa do
+   jogo), numa pasta à sua escolha. Saem sempre os sons originais, mesmo os já dublados.
+   - `vozes/golpes`: falas dos golpes especiais (os arquivos numerados, `141`, `150`…), estéreo;
+   - `vozes/eventos`: falas das cenas (`ko0000`…), estéreo;
+   - `vozes/batalha`: falas curtas de batalha (bancos `stv`), um WAV por fala;
+   - `eventos`: sons de cada cena (bancos `e6…`), vozes curtas e efeitos misturados;
+   - `batalha`, `campo`, `musica`, `outros`.
+
+   Nos bancos (pastas com vários WAV), o nome é `<ordem>_<id>.wav`; o id liga o WAV ao som do
+   jogo. O `indice_audio.csv` diz de que arquivo do jogo vem cada WAV, a taxa e a duração.
+2. **Gravar as falas**: grave por cima do WAV (ou numa cópia da pasta, com o mesmo nome e na
+   mesma pasta). Qualquer taxa, mono ou estéreo; o programa converte para a taxa do jogo. Tente
+   manter a duração parecida com a original.
+3. **Importar**: o programa pega só os WAV que mudaram e guarda no projeto (pasta `dublagem`).
+   A janela lista os sons dublados, toca o original e o dublado e avisa quando a fala nova é bem
+   mais longa.
+4. **Gravar no jogo** codifica os sons dublados (DSP ADPCM, o formato do GameCube) e grava junto
+   com a tradução, também no recomp (com a tabela de arquivos atualizada) e na ISO. Os originais
+   ficam guardados em `originais/extras`; **Restaurar os originais** devolve os sons originais.
+   O patch de tradução leva a dublagem junto.
+
+Nos bancos, o som trocado ocupa o lugar do original e os outros sons do banco não mudam. Falas
+muito mais longas deixam o banco maior; o programa avisa quando o banco cresce mais de 25%,
+porque o console guarda os bancos numa memória de som limitada.
+
 ## Acentos
 
 A fonte da versão americana só tem ASCII. O programa desenha as letras acentuadas por cima de
@@ -415,6 +444,9 @@ nome traduzido vale para todas as falas daquele personagem.
 - Remaster: os modelos são extraídos, mas ainda não voltam para o jogo. Texturas melhoradas entram
   pelo pacote de texturas HD; modelos com mais polígonos precisam de um importador (próximo passo).
   As animações (NMDM) ainda não são extraídas.
+- Dublagem: os grupos de sons (vozes, eventos, batalha…) foram separados pelo nome dos arquivos.
+  Dentro dos bancos de eventos e de batalha, vozes e efeitos vêm misturados. Fala dublada que
+  ficar muito mais longa que a original pode ser cortada pela cena.
 
 ## Versão europeia
 

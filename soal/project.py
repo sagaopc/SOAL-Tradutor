@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import aklz
 from . import font as fontmod
-from . import imagens, intro, mt, recomp, revisao, sct, sistema, sugestao, termos, text, textura
+from . import audio, dublagem, imagens, intro, mt, recomp, revisao, sct, sistema, sugestao, termos, text, textura
 
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
@@ -154,6 +154,8 @@ def find_game(root: str) -> Tuple[str, Optional[str]]:
 
 
 IMG_PREFIX = "img__"
+SND_PREFIX = "snd__"          # originais dos sons dublados, em originais/extras
+AUDIO_VERSION = "1"           # muda quando a codificacao muda (refaz o cache)
 LANG_NAMES = {"en": "inglês", "es": "espanhol", "fr": "francês", "de": "alemão"}
 
 
@@ -171,6 +173,14 @@ def _img_name(rel: str) -> str:
 
 def _img_rel(name: str) -> str:
     return name[len(IMG_PREFIX):].replace("__", "/")
+
+
+def _snd_name(rel: str) -> str:
+    return SND_PREFIX + rel.replace("/", "__")
+
+
+def _snd_rel(name: str) -> str:
+    return name[len(SND_PREFIX):].replace("__", "/")
 
 
 def _atomic_write(path: str, data: bytes):
@@ -315,6 +325,8 @@ class Project:
             for f in sorted(os.listdir(self.orig_extra)):
                 if f.startswith(IMG_PREFIX):
                     out.append((f, "files/" + _img_rel(f)))
+                elif f.startswith(SND_PREFIX):
+                    out.append((f, "files/" + _snd_rel(f)))
         return out
 
     def _extra_path(self, root: str, rel: str) -> str:
@@ -623,6 +635,323 @@ class Project:
             for f in sorted(os.listdir(self.orig_extra)):
                 if f.startswith(IMG_PREFIX) and _img_rel(f) not in done:
                     out.append((f, "files/" + _img_rel(f), None))
+        return out
+
+    # ------------------------------------------------------------ dublagem (sons)
+    @property
+    def dub_dir(self) -> str:
+        return os.path.join(self.dir, "dublagem")
+
+    def _snd_inventory(self) -> "dublagem.Inventory":
+        sdir = dublagem.sound_dir(self._img_files_dir())
+        if not sdir:
+            raise ProjectError("Não achei a pasta sound do jogo.")
+        return dublagem.Inventory(sdir)
+
+    def _snd_read(self, inv: "dublagem.Inventory", fname: str) -> bytes:
+        """Arquivo de som ORIGINAL (a copia guardada, se o som ja' foi dublado)."""
+        rel = os.path.basename(inv.dir) + "/" + fname
+        kept = os.path.join(self.orig_extra, _snd_name(rel))
+        with open(kept if os.path.exists(kept) else os.path.join(inv.dir, fname), "rb") as fh:
+            return fh.read()
+
+    def _snd_keep(self, inv: "dublagem.Inventory", fname: str):
+        """Guarda o original de um arquivo de som (uma vez so')."""
+        rel = os.path.basename(inv.dir) + "/" + fname
+        dst = os.path.join(self.orig_extra, _snd_name(rel))
+        if not os.path.exists(dst):
+            os.makedirs(self.orig_extra, exist_ok=True)
+            shutil.copy2(os.path.join(inv.dir, fname), dst)
+        return rel
+
+    def dub_keys(self) -> Dict[str, str]:
+        """chave do som -> WAV dublado guardado no projeto."""
+        out: Dict[str, str] = {}
+        d = self.dub_dir
+        if not os.path.isdir(d):
+            return out
+        for n in sorted(os.listdir(d)):
+            full = os.path.join(d, n)
+            if n.startswith("."):
+                continue
+            if os.path.isdir(full):
+                for f in sorted(os.listdir(full)):
+                    m = re.match(r"^([0-9a-f]{4})\.wav$", f, re.I)
+                    if m:
+                        out[n.lower() + "/" + m.group(1).lower()] = os.path.join(full, f)
+            elif n.lower().endswith(".wav"):
+                out[n[:-4].lower()] = full
+        return out
+
+    def _dub_path(self, key: str) -> str:
+        return os.path.join(self.dub_dir, *(key + ".wav").split("/"))
+
+    @staticmethod
+    def _dub_secs(path: str) -> float:
+        import wave
+        try:
+            with wave.open(path, "rb") as w:
+                return w.getnframes() / float(w.getframerate() or 1)
+        except (wave.Error, OSError, EOFError):
+            return 0.0
+
+    def _dub_orig_info(self, inv, key: str, banks: dict) -> Tuple[int, float, int]:
+        """(taxa, segundos, canais) do som original."""
+        if "/" in key:
+            b, sid = key.split("/")
+            bank = banks.get(b)
+            if bank is None:
+                fi, fs = inv.banks[b]
+                bank = banks[b] = audio.Bank(self._snd_read(inv, fi), self._snd_read(inv, fs))
+            for s in bank.samples:
+                if s.id == int(sid, 16):
+                    return s.rate, s.nsamples / s.rate, 1
+            raise ProjectError(f"o som {key} não existe nesse banco")
+        chans = inv.streams[key]
+        h = audio.DspStream(self._snd_read(inv, sorted(chans.values())[0]))
+        return h.rate, h.nsamples / h.rate, len(chans)
+
+    def dub_list(self) -> dict:
+        try:
+            inv = self._snd_inventory()
+        except ProjectError:
+            inv = None
+        banks: dict = {}
+        out = []
+        for key, path in self.dub_keys().items():
+            row = {"key": key, "secs": round(self._dub_secs(path), 2), "orig": None, "grupo": ""}
+            if inv is not None:
+                try:
+                    _, secs, _ = self._dub_orig_info(inv, key, banks)
+                    row["orig"] = round(secs, 2)
+                    row["grupo"] = dublagem.GROUPS[dublagem.classify(key.split("/")[0], "bank" if "/" in key else "stream")[0]]
+                except (ProjectError, KeyError, ValueError, OSError):
+                    row["orig"] = None
+            out.append(row)
+        return {"items": out, "dir": self.dub_dir}
+
+    def dub_import(self, src: str, progress=None, cancel=lambda: False) -> dict:
+        """Traz para o projeto os WAV dublados da pasta src (a da extracao ou uma copia dela).
+        WAV iguais aos originais sao pulados."""
+        src = os.path.abspath(src)
+        if os.path.normcase(src).startswith(os.path.normcase(os.path.abspath(self.dub_dir))):
+            raise ProjectError("Escolha a pasta onde estão os WAV dublados, não a pasta dublagem do projeto.")
+        inv = self._snd_inventory()
+        wavs = dublagem.find_wavs(src)
+        if not wavs:
+            raise ProjectError("Não achei arquivos .wav nessa pasta.")
+        index = dublagem.read_index(src)
+        rep = {"importadas": [], "iguais": 0, "ja": 0, "desconhecidos": [], "erros": [], "longas": [],
+               "cancelado": False}
+        banks: dict = {}
+        for i, rel in enumerate(wavs):
+            if cancel():
+                rep["cancelado"] = True
+                break
+            if progress:
+                progress(f"Conferindo {rel}", i, len(wavs))
+            key = dublagem.key_for(inv, rel)
+            full = os.path.join(src, *rel.split("/"))
+            if key is None:
+                rep["desconhecidos"].append(rel)
+                continue
+            try:
+                row = index.get(rel)
+                digest = dublagem._sha1(full)
+                if row and row[7] == digest:
+                    rep["iguais"] += 1
+                    continue
+                rate, chans = audio.read_wav(full)
+                n = max((len(c) for c in chans), default=0)
+                if not n:
+                    raise ValueError("WAV vazio")
+                orate, osecs, och = self._dub_orig_info(inv, key, banks)
+                if not row and rate == orate:
+                    # sem indice: compara com o som original decodificado
+                    if "/" in key:
+                        b, sid = key.split("/")
+                        s = next(x for x in banks[b].samples if x.id == int(sid, 16))
+                        same = len(chans) == 1 and banks[b].pcm(s) == chans[0]
+                    else:
+                        _, oc = dublagem.stream_channels(inv, key, lambda f: self._snd_read(inv, f))
+                        same = len(oc) == len(chans) and all(a == b for a, b in zip(oc, chans))
+                    if same:
+                        rep["iguais"] += 1
+                        continue
+                dst = self._dub_path(key)
+                if os.path.exists(dst) and dublagem._sha1(dst) == digest:
+                    rep["ja"] += 1
+                    continue
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(full, dst)
+                secs = n / rate
+                rep["importadas"].append({"key": key, "rel": rel, "secs": round(secs, 2), "orig": round(osecs, 2)})
+                if secs > osecs * 1.5 + 0.3:
+                    rep["longas"].append({"key": key, "rel": rel, "secs": round(secs, 2), "orig": round(osecs, 2)})
+            except (ValueError, ProjectError, OSError, KeyError, StopIteration) as exc:
+                rep["erros"].append(f"{rel}: {exc}")
+        self.meta["dub_src"] = src
+        self.touch()
+        self.save()
+        return rep
+
+    def dub_remove(self, key: Optional[str]) -> dict:
+        keys = self.dub_keys()
+        gone = 0
+        for k, path in keys.items():
+            if key is None or k == key:
+                os.remove(path)
+                gone += 1
+                d = os.path.dirname(path)
+                if d != self.dub_dir and not os.listdir(d):
+                    os.rmdir(d)
+        return {"removed": gone}
+
+    def dub_wav(self, key: str, which: str) -> bytes:
+        """WAV para ouvir na janela: o original (decodificado do jogo) ou o dublado."""
+        if which == "dub":
+            path = self.dub_keys().get(key)
+            if not path:
+                raise ProjectError("som não dublado")
+            with open(path, "rb") as fh:
+                return fh.read()
+        inv = self._snd_inventory()
+        buf = io.BytesIO()
+        if "/" in key:
+            b, sid = key.split("/")
+            if b not in inv.banks:
+                raise ProjectError("som desconhecido")
+            fi, fs = inv.banks[b]
+            bank = audio.Bank(self._snd_read(inv, fi), self._snd_read(inv, fs))
+            s = next((x for x in bank.samples if x.id == int(sid, 16)), None)
+            if s is None:
+                raise ProjectError("som desconhecido")
+            audio.write_wav(buf, s.rate, [bank.pcm(s)])
+        else:
+            if key not in inv.streams:
+                raise ProjectError("som desconhecido")
+            rate, chans = dublagem.stream_channels(inv, key, lambda f: self._snd_read(inv, f))
+            audio.write_wav(buf, rate, chans)
+        return buf.getvalue()
+
+    def _snd_outputs(self, report: dict) -> List[Tuple[str, str, Optional[bytes]]]:
+        """Arquivos de som com a dublagem (codificados uma vez e guardados em dublagem/.gerado)."""
+        keys = self.dub_keys()
+        out: List[Tuple[str, str, Optional[bytes]]] = []
+        done = set()
+        if keys:
+            try:
+                inv = self._snd_inventory()
+            except ProjectError as exc:
+                report["errors"].append({"file": "dublagem", "error": str(exc)})
+                inv = None
+            if inv is not None:
+                cdir = os.path.join(self.dub_dir, ".gerado")
+                cidx_path = os.path.join(cdir, "chaves.json")
+                try:
+                    with open(cidx_path, encoding="utf-8") as fh:
+                        cidx = json.load(fh)
+                except (OSError, ValueError):
+                    cidx = {}
+                streams: Dict[str, str] = {}
+                banks: Dict[str, Dict[int, str]] = {}
+                for k, path in keys.items():
+                    if "/" in k:
+                        b, sid = k.split("/")
+                        banks.setdefault(b, {})[int(sid, 16)] = path
+                    else:
+                        streams[k] = path
+
+                def cached(names: List[str], ck: str) -> Optional[List[bytes]]:
+                    if all(cidx.get(n) == ck and os.path.exists(os.path.join(cdir, n)) for n in names):
+                        res = []
+                        for n in names:
+                            with open(os.path.join(cdir, n), "rb") as fh:
+                                res.append(fh.read())
+                        return res
+                    return None
+
+                def store(names: List[str], datas: List[bytes], ck: str):
+                    os.makedirs(cdir, exist_ok=True)
+                    for n, d in zip(names, datas):
+                        _atomic_write(os.path.join(cdir, n), d)
+                        cidx[n] = ck
+
+                n_ok = 0
+                for base, path in sorted(streams.items()):
+                    chans = inv.streams.get(base)
+                    if not chans:
+                        report["errors"].append({"file": base + ".wav", "error": "som que não existe neste jogo"})
+                        continue
+                    names = [chans[c] for c in ("l", "r") if c in chans]
+                    ck = hashlib.sha1((AUDIO_VERSION + base + dublagem._sha1(path)).encode()).hexdigest()
+                    datas = cached(names, ck)
+                    if datas is None:
+                        try:
+                            rate, wch = audio.read_wav(path)
+                            datas = []
+                            for ci, n in enumerate(names):
+                                orig = audio.DspStream(self._snd_read(inv, n))
+                                if len(wch) == len(names):
+                                    pcm = wch[ci]
+                                else:
+                                    pcm = audio.mix_mono(wch) if len(names) == 1 else wch[0]
+                                pcm = audio.resample(pcm, rate, orig.rate)
+                                datas.append(audio.DspStream.build(pcm, orig.rate, orig.header))
+                        except (ValueError, OSError) as exc:
+                            report["errors"].append({"file": base + ".wav", "error": str(exc)})
+                            continue
+                        store(names, datas, ck)
+                    for n, d in zip(names, datas):
+                        rel = self._snd_keep(inv, n)
+                        out.append((_snd_name(rel), "files/" + rel, d))
+                        done.add(rel)
+                    n_ok += 1
+                for b, ids in sorted(banks.items()):
+                    if b not in inv.banks:
+                        report["errors"].append({"file": b, "error": "banco de sons que não existe neste jogo"})
+                        continue
+                    fi, fs = inv.banks[b]
+                    ck = hashlib.sha1((AUDIO_VERSION + b + "".join(f"{i:04x}{dublagem._sha1(p)}"
+                                                                   for i, p in sorted(ids.items()))).encode()).hexdigest()
+                    datas = cached([fi, fs], ck)
+                    if datas is None:
+                        try:
+                            bank = audio.Bank(self._snd_read(inv, fi), self._snd_read(inv, fs))
+                            new = {}
+                            for s in bank.samples:
+                                if s.id in ids and s.fmt == 0:
+                                    rate, wch = audio.read_wav(ids[s.id])
+                                    new[s.index] = (audio.resample(audio.mix_mono(wch), rate, s.rate), s.rate)
+                            missing = set(ids) - {s.id for s in bank.samples}
+                            for m in sorted(missing):
+                                report["errors"].append({"file": f"{b}/{m:04x}.wav", "error": "som que não existe nesse banco"})
+                            info, samp = bank.rebuild(new)
+                        except (ValueError, OSError) as exc:
+                            report["errors"].append({"file": b, "error": str(exc)})
+                            continue
+                        datas = [info, samp]
+                        store([fi, fs], datas, ck)
+                    grow = len(datas[1]) - len(self._snd_read(inv, fs))
+                    if grow > 0.25 * len(self._snd_read(inv, fs)) + 32768:
+                        report["errors"].append({"file": fs, "error": f"o banco de sons ficou {grow // 1024} KB maior; "
+                                                 "se o som falhar ou o jogo travar nessa parte, encurte as falas"})
+                    for n, d in zip([fi, fs], datas):
+                        rel = self._snd_keep(inv, n)
+                        out.append((_snd_name(rel), "files/" + rel, d))
+                        done.add(rel)
+                    n_ok += len(ids)
+                try:
+                    os.makedirs(cdir, exist_ok=True)
+                    _atomic_write(cidx_path, json.dumps(cidx).encode("utf-8"))
+                except OSError:
+                    pass
+                report["sons"] = n_ok
+        # sons que foram dublados antes e agora voltam ao original
+        if os.path.isdir(self.orig_extra):
+            for f in sorted(os.listdir(self.orig_extra)):
+                if f.startswith(SND_PREFIX) and _snd_rel(f) not in done:
+                    out.append((f, "files/" + _snd_rel(f), None))
         return out
 
     def _extra_orig(self, name: str) -> Optional[bytes]:
@@ -2346,6 +2675,7 @@ class Project:
                     report["intro"] = len(intro_tr)
             out.append((name, "files/field/" + name, new))
         out += self._img_outputs(report)
+        out += self._snd_outputs(report)
         return out
 
     def _build_extras(self, states: List[dict], report: dict, cm: Dict[str, int]):
