@@ -182,6 +182,30 @@ resposta (o modelo pode estar carregando) e pede ao modelo para não "pensar" an
 Se mesmo assim a tradução não vier, desligue o raciocínio (thinking) nas opções do modelo, deixe o
 **GPU Offload** no máximo e use um contexto pequeno (4096), para o modelo caber na placa de vídeo.
 
+## Revisão com IA
+
+Botão **Revisar com IA…** na lateral. Um serviço de IA lê as suas traduções em sequência (12 falas
+por pedido, com quem fala e o original) e aponta só problemas: sentido errado, erro de português,
+concordância de gênero, termo ou nome fora do padrão (glossário e janela **Nomes**), palavra que
+ficou em inglês ou espanhol, tradução ao pé da letra. Gosto pessoal não conta.
+
+- **Nada é trocado sozinho.** Cada sugestão aparece embaixo da fala, com o tipo, o motivo e o que
+  muda (riscado em vermelho, novo em verde): **Aceitar**, **Recusar** ou **Usar e editar**.
+- O filtro **Sugestões da IA** em cada arquivo mostra só as falas com sugestão, e o botão
+  **Aceitar as N sugestões da IA** aceita todas de uma vez. Na lista de arquivos, o contador "IA"
+  mostra onde há sugestões, e o filtro **Com sugestões da IA** separa esses arquivos.
+- Escolha o arquivo aberto ou um trecho de capítulos (ou o jogo inteiro). Dá para revisar só as
+  falas de tradução automática e as marcadas para revisar.
+- Falas que a IA já revisou e que você não mudou ficam de fora na próxima vez (a opção **Revisar de
+  novo** inclui essas). Pode parar no meio: começar de novo continua das que faltam. Editar a fala
+  descarta a sugestão antiga.
+- Falas iguais são revisadas uma vez só. Sugestões que estragam um código do jogo ou mudam o número
+  de linhas de um menu são descartadas; as quebras de linha são refeitas para caber na caixa.
+- Serve qualquer serviço de modelo de linguagem configurado em Ajustes (Claude, Gemini,
+  Ollama/LM Studio ou outro compatível com OpenAI), e pode ser outro que não o que traduz: traduzir
+  com a DeepL e revisar com o Gemini, por exemplo. O programa guarda a chave de cada serviço.
+  DeepL, Google Cloud Translation e LibreTranslate só traduzem.
+
 ## Acentos
 
 A fonte da versão americana só tem ASCII. O programa desenha as letras acentuadas por cima de

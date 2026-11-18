@@ -25,7 +25,7 @@ from . import exportar, intro, iso, janela, mt, patch, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.11.0"
+VERSION = "0.12.0"
 
 
 class App:
@@ -359,6 +359,25 @@ class App:
         tr = self.translator()
         self.start_job("mt", lambda: p.mt_story(tr, first, last, progress=self._progress,
                                                 cancelled=lambda: self.cancel))
+
+    def review_translator(self, provider: str) -> "mt.Translator":
+        cfg = self.mt_cfg()
+        choices = [c["id"] for c in mt.ai_choices(cfg)]
+        if not choices:
+            raise pj.ProjectError("Para revisar, configure em Ajustes um serviço de IA: Claude, Gemini (chave grátis) "
+                                  "ou Ollama/LM Studio/OpenAI. DeepL, Google e LibreTranslate só traduzem.")
+        if provider not in choices:
+            provider = cfg.get("provider") if cfg.get("provider") in choices else choices[0]
+        return mt.Translator(mt.config_for(cfg, provider))
+
+    def review_run(self, provider: str, files: list, again: bool, only: str):
+        p = self.need()
+        tr = self.review_translator(provider)
+        files = [f for f in files if f in p.by_name]
+        if not files:
+            raise pj.ProjectError("Nada para revisar.")
+        self.start_job("mt", lambda: p.ai_review(tr, files, again, only, progress=self._progress,
+                                                 cancelled=lambda: self.cancel))
 
     def need(self) -> pj.Project:
         if self.project is None:
@@ -712,6 +731,28 @@ def make_handler(app: App):
                 if u.path == "/api/suggest/apply":
                     p = app.need()
                     return self._json(p.apply_suggestions(data.get("file") or None))
+                if u.path == "/api/review/info":
+                    p = app.need()
+                    return self._json({"choices": mt.ai_choices(app.mt_cfg()),
+                                       "chapters": p.review_info(bool(data.get("again")), data.get("only") or "all"),
+                                       "pending": len(p.review_list())})
+                if u.path == "/api/review/run":
+                    p = app.need()
+                    if data.get("file"):
+                        files = [data["file"]]
+                    else:
+                        ch = p.story_groups()
+                        a, b = int(data.get("from", 0)), int(data.get("to", 0))
+                        files = [fn for i in range(max(0, a), min(len(ch) - 1, b) + 1) for fn in ch[i][1]]
+                    app.review_run(data.get("provider") or "", files, bool(data.get("again")),
+                                   data.get("only") or "all")
+                    return self._json({"ok": True})
+                if u.path == "/api/review/decide":
+                    return self._json(app.need().review_decide(data["file"], data["k"], bool(data.get("accept"))))
+                if u.path == "/api/review/accept_all":
+                    return self._json(app.need().review_accept_all(data["file"]))
+                if u.path == "/api/review/list":
+                    return self._json({"list": app.need().review_list()})
                 if u.path == "/api/mt/names":
                     app.mt_names()
                     return self._json({"ok": True})

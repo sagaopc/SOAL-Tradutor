@@ -125,6 +125,17 @@ section.work{overflow:auto;min-height:0;background:var(--sky)}
 .tag.warn{color:var(--alert);border-color:var(--alert)}
 .tag.rev{color:var(--brass);border-color:var(--brass)}
 .tag.mt{color:var(--sea);border-color:var(--sea)}
+.tag.ia{color:var(--brass);border-color:var(--brass);font-weight:600}
+.tag.iaok{color:var(--ok);border-color:var(--ok)}
+.iaBox{margin-top:6px;padding:8px 10px;border:1px dashed var(--brass);border-radius:8px;font-size:13px}
+.iaBox .why{color:var(--muted);font-size:12px;margin-bottom:4px}
+.iaBox .why b{color:var(--brass)}
+.sugt{white-space:pre-wrap;margin:2px 0 6px}
+.sugt del{color:var(--alert);margin-right:2px}.sugt ins{color:var(--ok);text-decoration:none;font-weight:600}
+.file .iac{font-size:11px;color:var(--brass);margin-left:4px}
+ul.ialist{list-style:none;padding:0;margin:8px 0;max-height:52vh;overflow:auto}
+ul.ialist li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+ul.ialist li a{cursor:pointer;font-weight:600}
 .tr textarea.mt{border-color:var(--sea);border-style:dashed}
 .mtbox{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:18px}
 .mtbox .field{margin:8px 0}
@@ -264,8 +275,10 @@ table.grid input{width:100%}
         <option value="todo">Com falas por traduzir</option>
         <option value="started">Já começados</option>
         <option value="done">Completos</option>
+        <option value="ia">Com sugestões da IA</option>
       </select>
       <button id="btnMtStory" type="button" class="quiet">Traduzir automático em ordem…</button>
+      <button id="btnReview" type="button" class="quiet" title="Um serviço de IA confere sentido, português, concordância e termos; você aceita ou recusa cada sugestão">Revisar com IA…</button>
     </div>
     <div id="fileList"></div>
   </aside>
@@ -381,6 +394,28 @@ table.grid input{width:100%}
     <p class="note">Pode parar quando quiser: o que já foi traduzido fica salvo, e começar de novo continua das que faltam. Se o serviço parar de responder, a tradução para sozinha e diz o motivo.</p>
   </div>
   <div class="df"><button data-close>Cancelar</button><button class="primary" id="btnStyGo">Começar</button></div></dialog>
+
+<dialog id="dlgReview" class="wide"><div class="dh"><h2>Revisar com IA</h2></div>
+  <div class="db">
+    <p>A IA lê as falas em sequência, compara o original com a sua tradução e aponta só problemas: sentido errado, erro de português, concordância de gênero, termo ou nome fora do padrão, palavra que ficou em inglês ou espanhol, tradução ao pé da letra. <b>Nada é trocado sozinho</b>: cada sugestão aparece na fala, com o motivo, para você aceitar ou recusar.</p>
+    <div class="field"><label for="rvSvc">Revisar com</label><select id="rvSvc"></select></div>
+    <p class="note" id="rvSvcNote"></p>
+    <p><label><input type="radio" name="rvScope" value="file" id="rvScopeFile"> Só o arquivo aberto (<span id="rvFileName"></span>)</label><br>
+       <label><input type="radio" name="rvScope" value="range" id="rvScopeRange" checked> Capítulos:</label></p>
+    <div class="field"><label for="rvFrom">Do capítulo</label><select id="rvFrom"></select></div>
+    <div class="field"><label for="rvTo">Até o capítulo</label><select id="rvTo"></select></div>
+    <p><button type="button" id="btnRvAll">O jogo inteiro</button></p>
+    <p><label><input type="checkbox" id="rvOnly"> Só as falas de tradução automática e as marcadas para revisar</label><br>
+       <label><input type="checkbox" id="rvAgain"> Revisar de novo as que a IA já revisou</label></p>
+    <p id="rvInfo"></p>
+    <p class="note">Falas iguais são revisadas uma vez só. Pode parar quando quiser: começar de novo continua das que faltam. Depois, use o filtro <b>Sugestões da IA</b> em cada arquivo, ou a lista abaixo.</p>
+    <p><button type="button" id="btnRvList">Ver as sugestões pendentes</button> <span class="note" id="rvPending"></span></p>
+  </div>
+  <div class="df"><button data-close>Fechar</button><button class="primary" id="btnRvGo">Revisar</button></div></dialog>
+
+<dialog id="dlgIaList" class="wide"><div class="dh"><h2 id="iaListTitle">Sugestões da IA</h2></div>
+  <div class="db"><div id="iaListBox"></div></div>
+  <div class="df"><button data-close>Fechar</button></div></dialog>
 
 <dialog id="dlgPatch" class="wide"><div class="dh"><h2>Patch de tradução</h2></div>
   <div class="db">
@@ -619,7 +654,7 @@ function renderFiles() {
   const box = $("#fileList"); box.textContent = "";
   const flt = $("#fileFilter").value, sum = S.project.summary;
   for (const [label, all] of fileGroups(sum)) {
-    const fs = all.filter(f => flt === "all" || (flt === "todo" && f.done < f.total) || (flt === "started" && f.done > 0 && f.done < f.total) || (flt === "done" && f.total > 0 && f.done >= f.total));
+    const fs = all.filter(f => flt === "all" || (flt === "todo" && f.done < f.total) || (flt === "started" && f.done > 0 && f.done < f.total) || (flt === "done" && f.total > 0 && f.done >= f.total) || (flt === "ia" && f.ia > 0));
     if (!fs.length) continue;
     const t = all.reduce((a, f) => a + f.total, 0), d = all.reduce((a, f) => a + f.done, 0);
     const h = el("div", "cat"); h.append(el("span", "", label), el("span", "", t ? Math.floor(100 * d / t) + "%" : ""));
@@ -628,7 +663,9 @@ function renderFiles() {
       const row = el("div", "file" + (f.name === S.file ? " on" : "") + (f.total && f.done >= f.total ? " full" : ""));
       row.dataset.name = f.name; row.tabIndex = 0;
       const pb = el("div", "pb"), bar = el("i"); bar.style.width = (f.total ? 100 * f.done / f.total : 0) + "%"; pb.append(bar);
-      row.append(el("span", "nm", fileLabel(f)), el("span", "ct", f.done + "/" + f.total), pb);
+      const nm = el("span", "nm", fileLabel(f));
+      if (f.ia) { const c = el("span", "iac", "IA " + f.ia); c.title = f.ia + " sugestões da IA para ver"; nm.append(c); }
+      row.append(nm, el("span", "ct", f.done + "/" + f.total), pb);
       row.onclick = () => openFile(f.name);
       row.onkeydown = e => { if (e.key === "Enter") openFile(f.name); };
       box.append(row);
@@ -814,6 +851,7 @@ function visibleEntries() {
     if (S.filter === "todo") return !e.t && !e.dbg && e.body.trim();
     if (S.filter === "rev") return e.st === "rev" || e.st === "mt" || e.auto;
     if (S.filter === "warn") return e.t && issuesOf(e.t, e).length;
+    if (S.filter === "ia") return !!e.ia;
     return true;
   });
 }
@@ -823,10 +861,13 @@ function renderWork(focusKey) {
   const cat = (S.project.summary.categories.find(c => c[0] === f.cat) || [0, ""])[1];
   head.append(el("h2", "", fileLabel(f)), el("span", "sub", cat + ", " + S.entries.length + " textos"));
   const seg = el("div", "seg");
-  for (const [k, lab] of [["all", "Todas"], ["todo", "Faltam"], ["rev", "Revisar"], ["warn", "Com aviso"]]) {
-    const b = el("button", S.filter === k ? "on" : "", lab); b.onclick = () => { S.filter = k; renderWork(); }; seg.append(b);
+  const nIa = S.entries.filter(e => e.ia).length;
+  if (S.filter === "ia" && !nIa) S.filter = "all";
+  for (const [k, lab] of [["all", "Todas"], ["todo", "Faltam"], ["rev", "Revisar"], ["warn", "Com aviso"]].concat(nIa ? [["ia", "Sugestões da IA (" + nIa + ")"]] : [])) {
+    const b = el("button", S.filter === k ? "on" : "", lab); b.onclick = () => { S.filter = k; renderWork(); }; if (k === "ia") b.id = "segIa"; seg.append(b);
   }
   head.append(seg);
+  if (nIa) { const bA = el("button", "", "Aceitar as " + nIa + " sugestões da IA"); bA.id = "btnIaAll"; bA.title = "Troca a tradução pela sugestão em todas as falas deste arquivo que têm sugestão"; bA.onclick = () => iaAcceptAll(nIa); head.append(bA); }
   const missing = S.entries.filter(e => !e.t && !e.dbg && e.body.trim()).length;
   const nSug = S.entries.filter(e => e.sug && !e.t).length;
   if (nSug) { const bS = el("button", "", "Usar as " + nSug + " sugestões de nomes"); bS.title = "Preenche os nomes ainda vazios com as sugestões do vocabulário do programa; ficam marcados para revisar"; bS.onclick = () => applySug(nSug); head.append(bS); }
@@ -879,7 +920,22 @@ function rowFor(e) {
   if (e.sug) { bSug = el("button", "sug"); bSug.title = "Sugestão do vocabulário do programa; clique para usar e depois ajuste se quiser"; bSug.append("Sugestão: ", el("b", "", e.sug.trim())); sp.append(bSug); bSug.onclick = () => { ta.value = e.sug; ta.dispatchEvent(new Event("input")); ta.focus(); }; }
   if (!e.dbg) sp.append(bMt);
   sp.append(bCopy, bRev); under.append(cols, sp); tr.append(ta, under);
+  const iaBox = el("div", "iaBox hidden"); tr.append(iaBox);
   row.append(meta, orig, tr);
+  const paintIa = () => {
+    iaBox.textContent = "";
+    const show = e.ia && ta.value === e.t;
+    iaBox.classList.toggle("hidden", !show);
+    if (!show) return;
+    const why = el("div", "why"); why.append(el("b", "", "IA" + (e.ia.tp ? " · " + e.ia.tp : "")), e.ia.m ? " — " + e.ia.m : "");
+    const st = el("div", "sugt"); st.append(...diffNodes(e.t, e.ia.s));
+    const bOk = el("button", "primary", "Aceitar"), bNo = el("button", "quiet", "Recusar"), bEd = el("button", "quiet", "Usar e editar");
+    bOk.onclick = () => iaDecide(e, row, true); bNo.onclick = () => iaDecide(e, row, false);
+    bEd.onclick = () => { ta.value = e.ia.s; ta.dispatchEvent(new Event("input")); ta.focus(); };
+    const bs = el("div", "sp"); bs.append(bOk, bNo, bEd);
+    iaBox.append(why, st, bs);
+  };
+  row._paintIa = paintIa;
   const paint = () => {
     tags.textContent = "";
     if (e.end === "c") tags.append(el("span", "tag", "continua"));
@@ -889,6 +945,9 @@ function rowFor(e) {
     if (e.auto) tags.append(el("span", "tag rev", "preenchida sozinha"));
     if (e.st === "rev") tags.append(el("span", "tag rev", "revisar"));
     if (e.st === "mt") tags.append(el("span", "tag mt", "tradução automática"));
+    if (e.ia && ta.value === e.t) tags.append(el("span", "tag ia", "sugestão da IA"));
+    else if (e.iaok && ta.value === e.t) tags.append(el("span", "tag iaok", "revisada pela IA"));
+    paintIa();
     ta.classList.toggle("auto", !!e.auto);
     if (bSug) bSug.classList.toggle("hidden", !!ta.value);
     ta.classList.toggle("mt", e.st === "mt");
@@ -1749,6 +1808,130 @@ $("#btnPatchApply").onclick = async () => {
     $("#dlgBuild").showModal();
   } catch (e) { $("#busy").classList.add("hidden"); setSaved("Não aplicou o patch: " + e.message, true); }
 };
+
+/* ----------------------------------------------------------------- revisao com IA */
+function diffNodes(a, b) {
+  // diferenca por palavra entre a traducao atual (a) e a sugestao (b)
+  const A = (a || "").split(/(\s+)/), B = (b || "").split(/(\s+)/), n = A.length, m = B.length;
+  if (n * m > 250000) return [document.createTextNode(b)];
+  const L = Array.from({ length:n + 1 }, () => new Int32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  const push = (tag, t) => { if (!t) return; const last = out[out.length - 1]; if (last && last.tag === tag) last.t += t; else out.push({ tag, t }); };
+  while (i < n && j < m) { if (A[i] === B[j]) { push("", A[i]); i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) { push("del", A[i]); i++; } else { push("ins", B[j]); j++; } }
+  while (i < n) push("del", A[i++]); while (j < m) push("ins", B[j++]);
+  return out.map(x => x.tag ? el(x.tag, "", x.t) : document.createTextNode(x.t));
+}
+async function iaDecide(e, row, accept) {
+  await flushAll();
+  try {
+    const r = await api("/api/review/decide", { file:S.file, k:e.k, accept });
+    for (const [f, k] of r.changed || []) {
+      if (f !== S.file) continue;
+      const o = S.byKey.get(k); if (!o) continue;
+      if (accept) { o.t = r.t; o.auto = false; }
+      o.ia = null; o.iaok = true;
+      const n = document.querySelector('.row[data-k="' + CSS.escape(k) + '"]');
+      if (n) { n.querySelector("textarea").value = o.t; n._paint(); }
+    }
+    for (const [f, k] of r.filled || []) if (f === S.file) { const o = S.byKey.get(k); if (o) { o.t = r.t; o.auto = true; const n = document.querySelector('.row[data-k="' + CSS.escape(k) + '"]'); if (n) { n.querySelector("textarea").value = o.t; n._paint(); } } }
+    const nIa = S.entries.filter(x => x.ia).length;
+    const f = S.project.summary.files.find(x => x.name === S.file); if (f) f.ia = nIa;
+    const sg = $("#segIa"), ba = $("#btnIaAll");
+    if (sg) sg.textContent = "Sugestões da IA (" + nIa + ")";
+    if (ba) { ba.textContent = "Aceitar as " + nIa + " sugestões da IA"; ba.onclick = () => iaAcceptAll(nIa); ba.classList.toggle("hidden", !nIa); }
+    renderFiles();
+    if (S.focus) showPreview(S.focus);
+    setSaved(accept ? "Sugestão aceita" : "Sugestão recusada");
+  } catch (err) { setSaved(err.message, true); }
+}
+async function iaAcceptAll(n) {
+  if (!confirm("Trocar a tradução pela sugestão da IA nas " + n + " falas deste arquivo?\n\nDica: o filtro “Sugestões da IA” mostra cada uma com o motivo, para aceitar ou recusar uma por uma.")) return;
+  await flushAll();
+  try { const r = await api("/api/review/accept_all", { file:S.file }); setSaved(r.accepted + " sugestões aceitas"); const f = S.file; S.file = null; await refreshState(); await openFile(f); }
+  catch (err) { setSaved(err.message, true); }
+}
+let RV = null;
+async function rvRefresh() {
+  const again = $("#rvAgain").checked, only = $("#rvOnly").checked ? "marked" : "all";
+  RV = await api("/api/review/info", { again, only });
+  const a = $("#rvFrom"), b = $("#rvTo"), keepA = a.value, keepB = b.value;
+  a.textContent = ""; b.textContent = "";
+  RV.chapters.forEach((c, i) => { const t = (i + 1) + ". " + c.title + " (" + c.lines + ")"; a.append(new Option(t, i)); b.append(new Option(t, i)); });
+  a.value = keepA || "0"; b.value = keepB || String(Math.max(0, RV.chapters.length - 1));
+  $("#rvPending").textContent = RV.pending ? RV.pending + " esperando você" : "nenhuma pendente";
+  rvPaint();
+}
+function rvPaint() {
+  const info = $("#rvInfo"), go = $("#btnRvGo"), fmt = n => n.toLocaleString("pt-BR");
+  const svc = $("#rvSvc").value;
+  let lines = 0, chars = 0;
+  if ($("#rvScopeFile").checked && S.file) {
+    for (const c of RV.chapters) if (c.files.includes(S.file)) { /* contagem exata vem do servidor ao rodar */ }
+    const es = S.entries.filter(e => e.t && !e.auto && !e.dbg && e.body.trim() && ($("#rvAgain").checked || (!e.ia && !e.iaok)) && (!$("#rvOnly").checked || e.st === "mt" || e.st === "rev"));
+    lines = es.length; chars = es.reduce((n, e) => n + e.body.length + e.t.length, 0);
+  } else {
+    const a = +$("#rvFrom").value, b = +$("#rvTo").value;
+    if (b < a) { info.textContent = "O capítulo final vem antes do inicial."; info.style.color = "var(--alert)"; go.disabled = true; return; }
+    for (let i = a; i <= b; i++) { lines += RV.chapters[i].lines; chars += RV.chapters[i].chars; }
+  }
+  let t = lines ? fmt(lines) + " falas para revisar, cerca de " + fmt(chars) + " caracteres (mais as instruções, a cada 12 falas)." : "Nada para revisar aqui (as falas já revisadas que não mudaram ficam de fora).";
+  if (lines && svc === "anthropic") t += " A API do Claude é paga por uso.";
+  if (lines && svc === "gemini" && lines > 3000) t += " A chave grátis do Gemini tem limite de pedidos por minuto e por dia: o jogo inteiro pode levar alguns dias; quando o limite chegar, a revisão para e continua depois.";
+  info.textContent = t; info.style.color = ""; go.disabled = !lines || !svc;
+}
+$("#btnReview").onclick = async () => {
+  await flushAll();
+  try { await rvRefresh(); } catch (e) { setSaved(e.message, true); return; }
+  const sel = $("#rvSvc"); sel.textContent = "";
+  for (const c of RV.choices) sel.append(new Option(c.name + (c.model ? " — " + c.model : ""), c.id));
+  const cur = RV.choices.find(c => c.current); if (cur) sel.value = cur.id;
+  $("#rvSvcNote").textContent = RV.choices.length ? "Os serviços de IA configurados em Ajustes. Pode ser diferente do que traduz (ex.: traduzir com a DeepL e revisar com o Claude ou o Gemini)." : "Nenhum serviço de IA configurado. Em Ajustes, escolha Claude, Gemini (chave grátis, sem cartão) ou Ollama/LM Studio, salve e volte aqui. DeepL, Google e LibreTranslate só traduzem.";
+  $("#rvSvcNote").style.color = RV.choices.length ? "" : "var(--alert)";
+  $("#rvScopeFile").disabled = !S.file || S.searchMode; $("#rvFileName").textContent = S.file ? fileLabel(curFile()) : "nenhum aberto";
+  if (S.file && !S.searchMode) $("#rvScopeFile").checked = true;
+  rvPaint(); $("#dlgReview").showModal();
+};
+for (const id of ["#rvFrom", "#rvTo", "#rvSvc", "#rvScopeFile", "#rvScopeRange"]) $(id).onchange = () => { if (id === "#rvFrom" || id === "#rvTo") $("#rvScopeRange").checked = true; rvPaint(); };
+$("#rvAgain").onchange = $("#rvOnly").onchange = () => rvRefresh().catch(e => setSaved(e.message, true));
+$("#btnRvAll").onclick = () => { $("#rvScopeRange").checked = true; $("#rvFrom").value = "0"; $("#rvTo").value = String(RV.chapters.length - 1); rvPaint(); };
+$("#btnRvGo").onclick = async () => {
+  const body = { provider:$("#rvSvc").value, again:$("#rvAgain").checked, only:$("#rvOnly").checked ? "marked" : "all" };
+  if ($("#rvScopeFile").checked) body.file = S.file; else { body.from = +$("#rvFrom").value; body.to = +$("#rvTo").value; }
+  $("#dlgReview").close();
+  try {
+    await api("/api/review/run", body);
+    $("#busyCancel").disabled = false; $("#busyCancel").textContent = "Parar";
+    const r = await waitJob();
+    await refreshState();
+    if (S.file && !S.searchMode) { const f = S.file; S.file = null; await openFile(f); }
+    let msg = r.reviewed + " falas revisadas, " + r.suggested + " com sugestão";
+    if (r.stopped) msg = "Parou: " + r.stopped + " — " + msg;
+    else if (r.cancelled) msg += " (parado)";
+    else if (r.error_count) msg += ", " + r.error_count + " pedidos com erro: " + r.errors[r.errors.length - 1];
+    setSaved(msg, !!(r.stopped || r.error_count));
+    showIaList(r.list, msg + ".");
+  } catch (err) { $("#busy").classList.add("hidden"); setSaved(err.message, true); }
+};
+$("#btnRvList").onclick = async () => { try { const r = await api("/api/review/list", {}); $("#dlgReview").close(); showIaList(r.list, r.list.length ? "" : "Nenhuma sugestão esperando você."); } catch (e) { setSaved(e.message, true); } };
+function showIaList(list, head) {
+  const box = $("#iaListBox"); box.textContent = "";
+  if (head) box.append(el("p", "", head));
+  if (list && list.length) {
+    box.append(el("p", "note", "Clique numa fala para abrir no lugar dela e aceitar ou recusar. " + (list.length >= 400 ? "Mostrando as primeiras 400; o filtro “Com sugestões da IA” da lista de arquivos mostra o resto." : "")));
+    const ul = el("ul", "ialist");
+    for (const m of list) {
+      const li = el("li"), fi = S.project.summary.files.find(y => y.name === m.file);
+      const a = el("a", "", (fi ? fileLabel(fi) : m.file)); a.onclick = async () => { $("#dlgIaList").close(); S.filter = "ia"; await openFile(m.file, m.k); };
+      const st = el("div", "sugt"); st.append(...diffNodes(m.t.replace(/\n/g, " "), m.s.replace(/\n/g, " ")));
+      const og = el("div", "note", "Original: " + m.body.replace(/\\[a-z][0-9]*|\n/gi, " ").replace(/\s+/g, " ").trim().slice(0, 160));
+      li.append(a, " ", el("span", "tag ia", m.tp || "IA"), m.m ? el("div", "", m.m) : "", og, st);
+      ul.append(li);
+    }
+    box.append(ul);
+  }
+  $("#dlgIaList").showModal();
+}
 
 /* ----------------------------------------------------------------- remaster */
 async function openRemaster() {

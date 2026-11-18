@@ -67,6 +67,8 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
 - **Imagens com texto**: logotipo, GAME OVER, comandos de batalha, lojas e mapa-múndi. Editor
   embutido (apagar área, escrever texto com fonte, contorno e sombra) ou PNG editado em outro
   programa, com prévia de como fica no jogo.
+- **Revisão com IA**: Claude, Gemini ou um modelo no seu PC confere sentido, português, gênero e
+  termos, fala por fala; cada sugestão aparece com o motivo para você aceitar ou recusar.
 - **Remaster**: extrai as texturas com os nomes dos pacotes de texturas HD do recomp e do Dolphin
   (melhore em qualquer resolução e instale pelo programa) e os modelos 3D em glTF (`.glb`, abre no
   Blender): personagens e inimigos com esqueleto e pesos, objetos, construções e cada cenário

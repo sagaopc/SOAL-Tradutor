@@ -38,6 +38,7 @@ PROVIDERS = {
     "anthropic": "Claude (API da Anthropic)",
     "gemini": "Google Gemini (chave grátis, sem cartão)",
 }
+AI_PROVIDERS = ("anthropic", "gemini", "openai")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 GEMINI_MODEL = "gemini-flash-latest"
 
@@ -318,6 +319,20 @@ class Translator:
         out = re.sub(r"…{2,}", "…", out)
         return restore(out, codes).strip()
 
+    def is_ai(self) -> bool:
+        return self.provider in AI_PROVIDERS
+
+    def chat(self, system: str, user: str, max_tokens: int = 4096, temperature: float = 0.2) -> str:
+        """Pergunta livre a um servico de IA (usado pela revisao)."""
+        if self.provider == "anthropic":
+            return self._anthropic_chat(system, user, max_tokens, temperature)
+        if self.provider == "gemini":
+            return self._gemini_call(lambda: self._openai_chat(system, user, max_tokens, temperature))
+        if self.provider == "openai":
+            return self._openai_chat(system, user, max_tokens, temperature)
+        raise MTError(f"{PROVIDERS.get(self.provider, self.provider)} só traduz; a revisão precisa de um serviço "
+                      "de IA (Claude, Gemini ou Ollama/LM Studio/OpenAI).")
+
     # -- DeepL ---------------------------------------------------------------
     def _deepl(self, lines: List[str], who, prev) -> List[str]:
         key = (self.cfg.get("key") or "").strip()
@@ -375,17 +390,25 @@ class Translator:
     # -- compativel com OpenAI (Ollama, LM Studio, OpenAI...) -----------------
     def _gemini(self, text: str, who, prev, menu, extra) -> str:
         """Gemini pelo endereco compativel com OpenAI do Google."""
+        return self._gemini_call(lambda: self._openai(text, who, prev, menu, extra))
+
+    def _gemini_call(self, fn):
         if not (self.cfg.get("key") or "").strip():
             raise MTError("Informe a chave do Gemini em Ajustes (crie em aistudio.google.com).")
         saved = dict(self.cfg)
         self.cfg["url"] = GEMINI_URL
         self.cfg["model"] = (saved.get("model") or "").strip() or GEMINI_MODEL
         try:
-            return self._openai(text, who, prev, menu, extra)
+            return fn()
         finally:
             self.cfg = saved
 
     def _openai(self, text: str, who, prev, menu, extra) -> str:
+        return self._openai_chat(style_for(getattr(self, "_src", "en")),
+                                 build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None),
+                                              getattr(self, "_gloss", None)), 2048, 0.3)
+
+    def _openai_chat(self, system: str, user: str, max_tokens: int, temperature: float) -> str:
         base = (self.cfg.get("url") or "").strip().rstrip("/") or "http://localhost:11434/v1"
         model = (self.cfg.get("model") or "").strip()
         if not model:
@@ -394,10 +417,9 @@ class Translator:
         if (self.cfg.get("key") or "").strip():
             headers["Authorization"] = "Bearer " + self.cfg["key"].strip()
         local = _is_local(base)
-        payload = {"model": model, "temperature": 0.3, "max_tokens": 2048,
-                   "messages": [{"role": "system", "content": style_for(getattr(self, "_src", "en"))},
-                                {"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None),
-                                                                        getattr(self, "_gloss", None))}]}
+        payload = {"model": model, "temperature": temperature, "max_tokens": max_tokens,
+                   "messages": [{"role": "system", "content": system},
+                                {"role": "user", "content": user}]}
         if local:
             # Em pedacos: enquanto o modelo gera, a conexao nao fica parada esperando.
             payload["stream"] = True
@@ -423,7 +445,7 @@ class Translator:
             out = _clean_llm(st["content"])
             if not out:
                 if st["reasoning_chars"]:
-                    raise MTError("o modelo gastou a resposta inteira \"pensando\" e não traduziu. Desligue o "
+                    raise MTError("o modelo gastou a resposta inteira \"pensando\" e não respondeu. Desligue o "
                                   "raciocínio (thinking) do modelo no LM Studio/Ollama ou use outro modelo.")
                 raise MTError("o servidor respondeu vazio. Confira o nome do modelo em Ajustes.")
             return out
@@ -433,7 +455,7 @@ class Translator:
             raise MTError("resposta inesperada do servidor: " + json.dumps(r)[:200])
         out = _clean_llm(msg.get("content") or "")
         if not out and (msg.get("reasoning_content") or msg.get("reasoning")):
-            raise MTError("o modelo gastou a resposta inteira \"pensando\" e não traduziu. Desligue o "
+            raise MTError("o modelo gastou a resposta inteira \"pensando\" e não respondeu. Desligue o "
                           "raciocínio (thinking) do modelo ou use outro modelo.")
         if not out:
             raise MTError("o servidor respondeu vazio. Confira o nome do modelo em Ajustes.")
@@ -441,14 +463,18 @@ class Translator:
 
     # -- Claude ---------------------------------------------------------------
     def _anthropic(self, text: str, who, prev, menu, extra) -> str:
+        return self._anthropic_chat(style_for(getattr(self, "_src", "en")),
+                                    build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None),
+                                                 getattr(self, "_gloss", None)), 1024, None)
+
+    def _anthropic_chat(self, system: str, user: str, max_tokens: int, temperature) -> str:
         key = (self.cfg.get("key") or "").strip()
         if not key:
             raise MTError("Informe a chave da API da Anthropic em Ajustes.")
         base = (self.cfg.get("url") or "").strip().rstrip("/") or "https://api.anthropic.com"
         model = (self.cfg.get("model") or "").strip() or "claude-sonnet-5-5"
-        payload = {"model": model, "max_tokens": 1024, "system": style_for(getattr(self, "_src", "en")),
-                   "messages": [{"role": "user", "content": build_prompt(text, who, prev, menu, extra, getattr(self, "_note", None),
-                                                                        getattr(self, "_gloss", None))}]}
+        payload = {"model": model, "max_tokens": max_tokens, "system": system,
+                   "messages": [{"role": "user", "content": user}]}
         r = _post(base + "/v1/messages", payload,
                   {"x-api-key": key, "anthropic-version": "2023-06-01"}, self.timeout)
         try:
@@ -472,6 +498,31 @@ def effective_config(cfg: dict) -> dict:
         if f not in used:
             c.pop(f, None)
     return c
+
+
+def config_for(cfg: dict, provider: str) -> dict:
+    """Configuracao de outro servico guardado em Ajustes (para revisar com um servico diferente
+    do que traduz)."""
+    cfg = cfg or {}
+    if not provider or provider == cfg.get("provider"):
+        return effective_config(cfg)
+    saved = ((cfg.get("salvos") or {}).get(provider) or {})
+    c = {"provider": provider, "timeout": cfg.get("timeout") or DEFAULTS["timeout"]}
+    c.update({k: saved.get(k) or "" for k in ("key", "url", "model")})
+    return effective_config(c)
+
+
+def ai_choices(cfg: dict) -> List[dict]:
+    """Servicos de IA configurados (com chave ou modelo) que podem revisar."""
+    cfg = cfg or {}
+    out = []
+    for prov in AI_PROVIDERS:
+        c = config_for(cfg, prov)
+        ok = bool(c.get("key")) if prov in ("anthropic", "gemini") else bool(c.get("model"))
+        if ok:
+            out.append({"id": prov, "name": PROVIDERS[prov], "model": c.get("model") or "",
+                        "current": prov == cfg.get("provider")})
+    return out
 
 
 def _hint(k: str) -> str:

@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from . import aklz
 from . import font as fontmod
-from . import imagens, intro, mt, recomp, sct, sistema, sugestao, termos, text, textura
+from . import imagens, intro, mt, recomp, revisao, sct, sistema, sugestao, termos, text, textura
 
 PROJECT_FILE = "projeto.json"
 CACHE_FILE = "textos.json"
@@ -946,7 +946,7 @@ class Project:
             gt += t
             gd += d
             item = {"name": f["name"], "cat": f["cat"], "total": t, "done": d,
-                    "count": len(f["entries"]), "error": f.get("error")}
+                    "count": len(f["entries"]), "error": f.get("error"), "ia": self.ia_count(f["name"])}
             if f.get("virt"):
                 item["label"] = f.get("label")
                 item["virt"] = f["virt"]
@@ -968,6 +968,11 @@ class Project:
             row["t"] = t.get("t", "")
             row["st"] = t.get("st", "")
             row["auto"] = bool(t.get("auto"))
+            ia = self._ia_pending(t)
+            if ia:
+                row["ia"] = {"s": ia["s"], "tp": ia.get("tp", ""), "m": ia.get("m", "")}
+            elif (t.get("ia") or {}).get("b") == t.get("t") and t.get("t"):
+                row["iaok"] = True
             row["dup"] = len(self.same.get(self._skey(e), ())) if e["body"] else 0
             st_ = self.source_text(e)
             if st_:
@@ -1790,6 +1795,232 @@ class Project:
         if done_lines:
             res["per_line"] = round((clock() - t0) / done_lines, 1)
         return res
+
+    # ------------------------------------------------------------ revisao com IA
+    REVIEW_BATCH = 12            # falas por pedido
+
+    @staticmethod
+    def _ia_pending(t: dict) -> Optional[dict]:
+        """A sugestao da IA ainda valida (a traducao nao mudou depois da revisao)."""
+        ia = (t or {}).get("ia")
+        if ia and ia.get("s") and ia.get("b") == t.get("t"):
+            return ia
+        return None
+
+    def ia_count(self, fname: str) -> int:
+        return sum(1 for t in self.tr.get(fname, {}).values() if self._ia_pending(t))
+
+    def _review_todo(self, fname: str, again: bool = False, only: str = "all") -> List[dict]:
+        """Falas traduzidas para revisar. Ficam de fora as preenchidas sozinhas (copias de uma
+        fala igual, revisadas junto com ela) e, sem again, as ja' revisadas que nao mudaram."""
+        f = self.by_name[fname]
+        tr = self.tr.get(fname, {})
+        out = []
+        for e in f["entries"]:
+            if e.get("raw") or e.get("dbg") or not e["body"].strip():
+                continue
+            t = tr.get(e["k"]) or {}
+            if not t.get("t") or t.get("auto"):
+                continue
+            if only == "marked" and t.get("st") not in ("mt", "rev"):
+                continue
+            ia = t.get("ia")
+            if ia and ia.get("b") == t["t"] and not again:
+                continue
+            out.append(e)
+        return out
+
+    def review_info(self, again: bool = False, only: str = "all") -> List[dict]:
+        out = []
+        for title, files in self.story_groups():
+            lines = chars = 0
+            for fn in files:
+                for e in self._review_todo(fn, again, only):
+                    lines += 1
+                    chars += len(e["body"]) + len((self.translated(fn, e["k"]) or {}).get("t", ""))
+            out.append({"title": title, "files": files, "lines": lines, "chars": chars})
+        return out
+
+    def _review_item(self, n: int, fname: str, e: dict) -> "revisao.ReviewItem":
+        f = self.by_name[fname]
+        t = self.tr[fname][e["k"]]["t"]
+        menu = (not f.get("virt")) and text.is_menu(e["body"])
+        prot, codes = mt.protect(t)
+        body, _ = mt.protect(e["body"])
+        if not menu:
+            prot = " ".join(l.strip() for l in prot.split("\n") if l.strip()) if not f.get("virt") == "intro" else prot
+            body = " ".join(l.strip() for l in body.split("\n") if l.strip())
+        who = (e.get("head") if e.get("br") else None) or None
+        src = self.source_text(e)
+        return revisao.ReviewItem(id=n, fname=fname, key=e["k"], who=who, gender=mt.GENDER.get(who or ""),
+                                  body=body, src=" ".join(src.split()) if src else None, t=t, menu=menu,
+                                  note=self._mt_note(f, e) if f.get("virt") else None,
+                                  codes=codes, prot=prot)
+
+    def _ia_store(self, fname: str, key: str, base: str, sug: Optional[str], tipo: str = "", motivo: str = ""):
+        t = self.tr.get(fname, {}).get(key)
+        if not t or t.get("t") != base:
+            return
+        t["ia"] = {"b": base, "s": sug or "", "tp": tipo, "m": motivo}
+
+    def ai_review(self, tr: "mt.Translator", files: List[str], again: bool = False, only: str = "all",
+                  progress=None, cancelled=lambda: False, clock=None) -> dict:
+        """Revisa as traducoes de files com o servico de IA, em lotes de falas seguidas. As
+        sugestoes ficam guardadas na fala; nada e' trocado sem o usuario aceitar."""
+        import time
+        clock = clock or time.monotonic
+        if not tr.is_ai():
+            raise ProjectError(f"{mt.PROVIDERS.get(tr.provider, tr.provider)} só traduz. Para revisar, escolha um "
+                               "serviço de IA: Claude, Gemini ou Ollama/LM Studio/OpenAI (em Ajustes).")
+        gloss = self._mt_extra_glossary()
+        src = self.mt_source()
+        src_name = mt.SOURCE_LANGS[src][2] if src != "en" else ""
+        # falas iguais com a mesma traducao: revisa uma vez e guarda em todas
+        groups: Dict[tuple, List[Tuple[str, str]]] = {}
+        batches: List[List[Tuple[str, dict]]] = []
+        for fn in files:
+            if fn not in self.by_name:
+                continue
+            cur: List[Tuple[str, dict]] = []
+            for e in self._review_todo(fn, again, only):
+                t = self.tr[fn][e["k"]]["t"]
+                gk = (self._skey(e), t, e.get("head") if e.get("br") else "")
+                if gk in groups:
+                    groups[gk].append((fn, e["k"]))
+                    continue
+                groups[gk] = [(fn, e["k"])]
+                for of, ok in self.same.get(self._skey(e), ()):
+                    o = self.tr.get(of, {}).get(ok) or {}
+                    if (of, ok) != (fn, e["k"]) and o.get("auto") and o.get("t") == t:
+                        groups[gk].append((of, ok))
+                cur.append((fn, e))
+                if len(cur) >= self.REVIEW_BATCH:
+                    batches.append(cur)
+                    cur = []
+            if cur:
+                batches.append(cur)
+        total = sum(len(b) for b in batches)
+        res = {"reviewed": 0, "suggested": 0, "total": total, "errors": [], "error_count": 0,
+               "stopped": "", "cancelled": False, "list": []}
+        done = 0
+        t0 = clock()
+        in_a_row = no_answer = 0
+        for bi, batch in enumerate(batches):
+            if cancelled():
+                break
+            if progress:
+                fn0 = batch[0][0]
+                label = f"Revisando {fn0.replace('.sct', '')} · fala {done + 1} de {total}"
+                if done:
+                    left = (clock() - t0) / done * (total - done)
+                    if left >= 60:
+                        label += f" · faltam cerca de {_fmt_secs(left)}"
+                progress(label, done, total)
+            items = [self._review_item(i + 1, fn, e) for i, (fn, e) in enumerate(batch)]
+            try:
+                out = tr.chat(revisao.SYSTEM, revisao.build_user(items, gloss, src_name), 4096, 0.2)
+                answers = {}
+                for r in revisao.parse(out):
+                    try:
+                        answers[int(r.get("id"))] = r
+                    except (TypeError, ValueError):
+                        pass
+                if not answers:
+                    raise mt.MTError("a IA não devolveu nenhuma fala")
+            except mt.MTError as exc:
+                res["errors"].append(f"{batch[0][0]}: {exc}")
+                res["error_count"] += 1
+                in_a_row += 1
+                kind = getattr(exc, "kind", "")
+                no_answer = no_answer + 1 if kind == "conexao" else 0
+                if kind == "fatal":
+                    res["stopped"] = f"o serviço recusou o pedido: {exc}"
+                elif no_answer >= self.MT_MAX_SEM_RESPOSTA:
+                    res["stopped"] = f"o serviço não respondeu em {no_answer} pedidos seguidos: {exc}"
+                elif in_a_row >= self.MT_MAX_ERROS:
+                    res["stopped"] = f"{in_a_row} pedidos seguidos deram erro. O último: {exc}"
+                done += len(batch)
+                if res["stopped"]:
+                    break
+                continue
+            in_a_row = no_answer = 0
+            with self.lock:
+                for it, (fn, e) in zip(items, batch):
+                    r = answers.get(it.id)
+                    if r is None:
+                        continue                 # a IA pulou: fica para a proxima vez
+                    sug, tipo, motivo = revisao.check(it, r)
+                    if sug is not None:
+                        sug = self.fit(e, sug)
+                        if sug == it.t:
+                            sug = None
+                    gk = (self._skey(e), it.t, e.get("head") if e.get("br") else "")
+                    for of, ok in groups.get(gk, [(fn, e["k"])]):
+                        self._ia_store(of, ok, it.t, sug, tipo, motivo)
+                    res["reviewed"] += 1
+                    if sug is not None:
+                        res["suggested"] += 1
+                        if len(res["list"]) < 400:
+                            res["list"].append({"file": fn, "k": e["k"], "body": e["body"], "t": it.t,
+                                                "s": sug, "tp": tipo, "m": motivo})
+                self.touch()
+            done += len(batch)
+            if bi % 5 == 4:
+                self.save()
+        self.save()
+        res["cancelled"] = bool(cancelled())
+        res["errors"] = res["errors"][-10:]
+        return res
+
+    def review_decide(self, fname: str, key: str, accept: bool) -> dict:
+        """Aceita (troca a traducao pela sugestao) ou recusa a sugestao da IA. Vale para as falas
+        iguais que receberam a mesma sugestao."""
+        with self.lock:
+            f = self.by_name.get(fname)
+            if f is None or key not in f["_idx"]:
+                raise ProjectError("texto desconhecido")
+            t = self.tr.get(fname, {}).get(key) or {}
+            ia = self._ia_pending(t)
+            if not ia:
+                return {"changed": [], "filled": []}
+            base, sug = t["t"], ia["s"]
+            e = f["_idx"][key]
+            targets = [(fname, key)]
+            for of, ok in self.same.get(self._skey(e), ()):
+                o = self.tr.get(of, {}).get(ok) or {}
+                oi = self._ia_pending(o)
+                if (of, ok) != (fname, key) and oi and o.get("t") == base and oi.get("s") == sug:
+                    targets.append((of, ok))
+            changed, filled = [], []
+            for of, ok in targets:
+                if accept:
+                    r = self.set_translation(of, ok, sug)
+                    filled += r["filled"]
+                    self.tr[of][ok]["ia"] = {"b": sug, "s": "", "ok": "aceita"}
+                else:
+                    self.tr[of][ok]["ia"] = {"b": base, "s": "", "ok": "recusada"}
+                changed.append([of, ok])
+            self.touch()
+        self.save()
+        return {"changed": changed, "filled": filled, "t": sug if accept else base}
+
+    def review_accept_all(self, fname: str) -> dict:
+        n = 0
+        for key, t in list(self.tr.get(fname, {}).items()):
+            if self._ia_pending(t):
+                n += len(self.review_decide(fname, key, True)["changed"])
+        return {"accepted": n}
+
+    def review_list(self) -> List[dict]:
+        out = []
+        for f in self.files:
+            for e in f["entries"]:
+                t = self.tr.get(f["name"], {}).get(e["k"])
+                ia = self._ia_pending(t)
+                if ia and not t.get("auto"):
+                    out.append({"file": f["name"], "k": e["k"], "body": e["body"], "t": t["t"],
+                                "s": ia["s"], "tp": ia.get("tp", ""), "m": ia.get("m", "")})
+        return out
 
     # ------------------------------------------------------------ destinos
     def targets(self) -> List[dict]:
