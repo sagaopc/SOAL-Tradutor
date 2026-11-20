@@ -25,7 +25,7 @@ from . import dublagem, exportar, intro, iso, janela, mt, patch, recomp, text
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.14.1"
+VERSION = "0.14.2"
 
 
 class App:
