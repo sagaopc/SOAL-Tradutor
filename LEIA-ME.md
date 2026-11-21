@@ -428,6 +428,42 @@ O jogo inteiro leva de 15 a 30 minutos e ocupa alguns GB; dá para extrair só u
 cenários, efeitos…). Algumas imagens de menu que o jogo copia da tela mudam de nome a cada vez e
 não podem ser trocadas por pacote.
 
+## Trapaças para testar no recomp
+
+O botão **Trapaças** abre o jogo no recomp (o port de ogdanimal) num modo em que o SOAL Tradutor
+pode ler e mudar a memória dele enquanto você joga. Serve para conferir a tradução em qualquer ponto
+da história sem jogar até lá. O próprio recomp tem esse modo (`--automation-dir`, usado pelo autor
+nos testes); o jogo e os seus saves não ficam modificados, a não ser que você salve durante o teste.
+
+1. Feche o jogo, se estiver aberto pelo atalho normal.
+2. Em **Trapaças**, confira o programa do recomp (`skies-run.exe`, na pasta onde o recomp está
+   instalado) e escolha por onde começar: a tela título, um save do cartão de memória (carregado
+   direto, como o Continuar do recomp) ou um estado salvo.
+3. Clique **Abrir o jogo com trapaças**. O painel liga quando o jogo responde.
+
+O que dá para fazer:
+
+- **Viajar para um mapa**: os mapas estão na ordem da história, pelo nome do arquivo de falas
+  (`me002a`, `me109e`…). Use andando pelo mapa, fora de batalha, menu ou conversa. O jogo troca de
+  mapa do mesmo jeito que faz numa porta. O que aparece no mapa (quem está lá, que cena começa)
+  depende do ponto da história do save.
+- **Grupo**: nível 99, Pv 9999, Pm 99, status 999, todas as magias, os Super Movimentos de cada
+  personagem e os Cristais da Lua no nível máximo; ouro no máximo; título de Rei dos Piratas.
+- **Itens**: todas as armas, armaduras, acessórios, itens, itens do navio, canhões e peças do
+  navio (99 de cada) e os itens especiais que você marcar. Entram junto com o que já está no
+  estoque. Itens especiais de história (chaves, mapas, Cristais dos Gigas) podem confundir eventos
+  que conferem se você já tem o item.
+- **Opções do recomp**: Invencível (a do próprio recomp: Pv, Pm e Espírito sempre cheios, também
+  no navio) e sem batalhas aleatórias. Ficam gravadas nos ajustes do recomp; desmarque para voltar.
+- **Diário de bordo e descobertas**: liga todas as páginas e descobertas.
+- **Variáveis da história**: lê e grava as variáveis que os scripts dos mapas usam para decidir o
+  que mostrar (IntVar, BitVar, ByteVar, como no SALSA). Exemplo: a cena do Vigoro em `me116a` pede
+  IntVar 15 = 2300 e BitVar 301 desligado. Anote o valor antes de mudar.
+
+Os endereços são da versão americana e da europeia (a europeia guarda os dados 0x3680 bytes
+depois). Códigos Action Replay que mudam o código do jogo não funcionam no recomp, porque o código
+está compilado dentro dele; por isso o painel mexe só nos dados.
+
 ## Introdução
 
 A **Introdução** (“In a world shrouded in mystery…”) são 11 páginas que o jogo mostra como imagens.

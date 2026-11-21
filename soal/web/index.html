@@ -28,6 +28,22 @@ button.quiet:hover{color:var(--ink);background:var(--panel)}
 button.sug{border-style:dashed;border-color:var(--sea);color:var(--sea);background:none;padding:4px 10px}
 button.sug b{font-weight:650}
 dialog.wide{width:min(1100px,96vw)}
+.ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px}
+.ch-box{border:1px solid var(--line);border-radius:8px;padding:10px 14px;background:var(--panel);margin:10px 0}
+.ch-box h3{margin:0 0 6px;font-size:15px}
+.ch-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.ch-row select,.ch-row input[type=text],.ch-row input[type=number]{min-width:0}
+.ch-maps{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:4px 8px}
+.ch-maps details{margin:2px 0}
+.ch-maps summary{cursor:pointer;font-weight:600;padding:2px 0}
+.ch-maps button{margin:2px;padding:3px 8px;font-family:var(--mono);font-size:13px}
+.ch-maps button.on{border-color:var(--sea);background:var(--sea);color:var(--sea-ink)}
+.ch-items{max-height:200px;overflow:auto;columns:3;column-gap:18px;border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:6px 10px;font-size:13px}
+.ch-items label{display:block;break-inside:avoid}
+#chState.ok::before{content:"● ";color:var(--ok)}
+#chState.off::before{content:"● ";color:var(--muted)}
+@media (max-width:800px){.ch-grid{grid-template-columns:1fr}.ch-items{columns:1}}
+
 dialog.img{width:min(1500px,97vw);height:92vh;max-height:92vh}
 dialog.img[open]{display:flex;flex-direction:column}
 dialog.img .dh .note{margin-left:12px}
@@ -242,6 +258,7 @@ table.grid input{width:100%}
   <button id="btnImg" title="Logotipo, GAME OVER, comandos de batalha, lojas, mapa-múndi">Imagens</button>
   <button id="btnDub" title="Extrair as vozes e os sons do jogo e gravar a dublagem">Dublagem</button>
   <button id="btnRemaster" title="Extrair texturas e modelos 3D (personagens, objetos, cenários) para um remaster">Remaster</button>
+  <button id="btnCheat" title="Abrir o jogo no recomp com trapaças para testar a tradução: viajar para qualquer mapa, itens, magias, status e invencibilidade">Trapaças</button>
   <button id="btnSheet">Planilha</button>
   <button id="btnSettings">Ajustes</button>
   <button class="primary" id="btnBuild">Gravar no jogo</button>
@@ -501,6 +518,64 @@ table.grid input{width:100%}
     <p class="err" id="rmMsg"></p>
   </div>
   <div class="df"><button data-close>Fechar</button></div></dialog>
+
+<dialog id="dlgCheat" class="wide"><div class="dh"><h2>Trapaças no recomp</h2></div>
+  <div class="db">
+    <p>Abre o jogo no recomp num modo em que o SOAL Tradutor pode mexer na memória dele: viajar para qualquer mapa, ganhar itens, magias e status, para testar a tradução em qualquer ponto da história. O jogo não fica modificado: feche e abra pelo atalho normal para jogar sem trapaças. Um save feito durante o teste guarda o que as trapaças mudaram.</p>
+    <div class="ch-box">
+      <h3>Abrir o jogo</h3>
+      <div class="field"><label for="chRunner">Programa do recomp (skies-run)</label><input type="text" id="chRunner" spellcheck="false"></div>
+      <div class="field"><label for="chStart">Começar</label><select id="chStart"></select></div>
+      <div class="ch-row"><button type="button" class="primary" id="btnChLaunch">Abrir o jogo com trapaças</button>
+        <button type="button" id="btnChStop">Fechar o jogo</button>
+        <span id="chState" class="off">Fechado</span></div>
+      <p class="note">Se o jogo já estiver aberto pelo atalho normal, feche antes. As trapaças valem depois de carregar um save (na tela título ainda não há grupo nem estoque).</p>
+    </div>
+    <div class="ch-grid">
+      <div class="ch-box">
+        <h3>Viajar para um mapa</h3>
+        <div class="ch-maps" id="chMaps"></div>
+        <div class="ch-row"><input type="text" id="chMap" placeholder="me002a" size="10" spellcheck="false" aria-label="Arquivo do mapa"><button type="button" class="primary" id="btnChWarp">Ir</button><span class="note" id="chMapNow"></span></div>
+        <p class="note">Use andando pelo mapa (fora de batalha, menu ou conversa). Os nomes são os arquivos de falas do jogo, na ordem da história. O que acontece no mapa depende do ponto da história do save: veja as variáveis abaixo.</p>
+      </div>
+      <div class="ch-box">
+        <h3>Grupo</h3>
+        <div class="ch-row" id="chWho"></div>
+        <label><input type="checkbox" id="chStats" checked> Nível 99, Pv 9999, Pm 99 e status 999</label><br>
+        <label><input type="checkbox" id="chSpells" checked> Todas as magias, os Super Movimentos e os Cristais da Lua no nível máximo</label>
+        <div class="ch-row"><button type="button" class="primary" id="btnChParty">Aplicar ao grupo</button></div>
+        <div class="ch-row"><button type="button" id="btnChGold">Ouro no máximo</button><button type="button" id="btnChFame">Título de Rei dos Piratas</button></div>
+        <div id="chParty" class="note"></div>
+        <h3 style="margin-top:12px">Opções do recomp</h3>
+        <label><input type="checkbox" id="chInv"> Invencível (Pv, Pm e Espírito sempre cheios; também no navio)</label><br>
+        <label><input type="checkbox" id="chEnc"> Sem batalhas aleatórias</label>
+        <p class="note">Ficam gravadas nos ajustes do recomp: desmarque aqui ou no menu do jogo (Gameplay) para voltar ao normal.</p>
+      </div>
+    </div>
+    <div class="ch-box">
+      <h3>Itens</h3>
+      <div id="chSecs"></div>
+      <div class="ch-row"><button type="button" class="primary" id="btnChItems">Dar os itens marcados</button><button type="button" id="btnChAll">Marcar tudo</button><button type="button" id="btnChNone">Desmarcar tudo</button></div>
+      <p class="note">Os itens entram junto com os que já estão no estoque (99 de cada; itens especiais, 1). Itens especiais de história (chaves, mapas, Cristais dos Gigas) podem confundir eventos que conferem se você já tem o item: marque só os que quer testar.</p>
+    </div>
+    <div class="ch-grid">
+      <div class="ch-box">
+        <h3>Diário de bordo e descobertas</h3>
+        <div class="ch-row"><button type="button" id="btnChJournal">Liberar o diário de bordo</button><button type="button" id="btnChDisc">Liberar as descobertas</button></div>
+        <p class="note">Liga as marcas de todas as páginas do diário e de todas as descobertas (códigos da Codejunkies). Algumas dessas marcas também são usadas pela história.</p>
+      </div>
+      <div class="ch-box">
+        <h3>Variáveis da história</h3>
+        <div class="ch-row"><select id="chVarT" aria-label="Tipo"><option value="int">IntVar (número)</option><option value="bit">BitVar (liga/desliga)</option><option value="byte">ByteVar (0-255)</option></select>
+          <input type="number" id="chVarI" min="0" value="15" style="width:6em" aria-label="Índice">
+          <input type="number" id="chVarV" style="width:8em" aria-label="Valor">
+          <button type="button" id="btnChVarR">Ler</button><button type="button" id="btnChVarW">Gravar</button></div>
+        <p class="note">Os scripts dos mapas decidem o que mostrar por essas variáveis (veja os scripts no SALSA). Ex.: a cena do Vigoro em <code>me116a</code> pede IntVar 15 = 2300 e BitVar 301 desligado. Anote o valor antes de mudar.</p>
+      </div>
+    </div>
+    <p class="err" id="chMsg"></p>
+  </div>
+  <div class="df"><span class="note grow" id="chOk"></span><button data-close>Fechar</button></div></dialog>
 
 <dialog id="dlgIso"><div class="dh"><h2>Gerar ISO</h2></div>
   <div class="db">
@@ -2128,6 +2203,115 @@ $("#btnRmCheck").onclick = async () => {
     $("#rmMsg").append(el("span", r.match ? "ok" : "err", "O recomp despejou " + pl(r.dumped, "textura", "texturas") + "; " + pl(r.match, "tem", "têm") + " o mesmo nome de uma textura extraída (" + r.extracted + " extraídas)."));
   } catch (e) { $("#rmMsg").textContent = e.message; }
 };
+
+/* ----------------------------------------------------------------- trapacas */
+const CH = { info:null, timer:null };
+function chMsg(t, ok) { $("#chMsg").textContent = ok ? "" : (t || ""); $("#chOk").textContent = ok ? t : ""; }
+async function chDo(body, okText) {
+  chMsg("");
+  try { const r = await api("/api/cheat/do", body); if (okText) chMsg(typeof okText === "function" ? okText(r) : okText, true); return r; }
+  catch (e) { chMsg(e.message); return null; }
+}
+async function openCheat() {
+  chMsg("");
+  let r;
+  try { r = await api("/api/cheat/info", {}); } catch (e) { setSaved(e.message, true); return; }
+  CH.info = r;
+  $("#chRunner").value = r.runner || "";
+  const st = $("#chStart"); st.textContent = "";
+  const o0 = el("option", "", "Pela tela título (carregue o save pelo menu do jogo)"); o0.value = ""; st.append(o0);
+  for (const n of r.cards) { const o = el("option", "", "Carregando o save " + (n + 1) + " do cartão de memória"); o.value = "card:" + n; st.append(o); }
+  for (const x of r.states) { const o = el("option", "", "Pelo estado salvo " + x.name); o.value = "state:" + x.path; st.append(o); }
+  if (r.cards.length) st.value = "card:" + r.cards[0];
+  const mp = $("#chMaps"); mp.textContent = "";
+  for (const c of r.chapters) {
+    const d = el("details"), sm = el("summary", "", c.titulo); d.append(sm);
+    for (const m of c.mapas) { const b = el("button", "", m.replace(/\.sct$/i, "")); b.type = "button"; b.onclick = () => { $("#chMap").value = b.textContent; mp.querySelectorAll("button.on").forEach(x => x.classList.remove("on")); b.classList.add("on"); }; d.append(b); }
+    mp.append(d);
+  }
+  const who = $("#chWho"); who.textContent = "";
+  for (const n of r.chars) { const lb = el("label"), cb = el("input", "chWho"); cb.type = "checkbox"; cb.value = n; cb.checked = true; lb.append(cb, " " + n); who.append(lb); }
+  const secs = $("#chSecs"); secs.textContent = "";
+  for (const sc of r.sections) {
+    const d = el("details"), sm = el("summary"), all = el("input", "chSecAll"); all.type = "checkbox"; all.checked = sc.key !== "especiais"; all.dataset.key = sc.key;
+    sm.append(all, " " + sc.label + " (" + sc.items.length + ")"); d.append(sm);
+    const box = el("div", "ch-items");
+    for (const it of sc.items) {
+      const lb = el("label"), cb = el("input", "chItem"); cb.type = "checkbox"; cb.value = it.id; cb.dataset.key = sc.key;
+      cb.checked = sc.key === "especiais" ? (it.id >= 326 && it.id <= 331) : true;   /* os Cristais da Lua */
+      lb.append(cb, " " + it.nome); box.append(lb);
+    }
+    all.onchange = () => box.querySelectorAll("input").forEach(x => x.checked = all.checked);
+    all.onclick = e => e.stopPropagation();
+    d.append(box); secs.append(d);
+  }
+  $("#chInv").checked = (r.options.Invincible || "0") !== "0";
+  $("#chEnc").checked = (r.options.Encounters || "100") === "0";
+  chState(r.alive);
+  $("#dlgCheat").showModal();
+  clearInterval(CH.timer);
+  CH.timer = setInterval(chPoll, 2500);
+  chPoll(true);
+}
+function chState(alive, extra) {
+  const s = $("#chState");
+  s.className = alive ? "ok" : "off";
+  s.textContent = alive ? "Aberto no modo de trapaças" + (extra ? " · " + extra : "") : "Fechado";
+  $("#btnChLaunch").disabled = alive; $("#btnChStop").disabled = !alive;
+}
+async function chPoll(read) {
+  if (!$("#dlgCheat").open) { clearInterval(CH.timer); return; }
+  let r;
+  try { r = await api("/api/cheat/do", { acao:"status", ler: !!read }); } catch (e) { return; }
+  const st = r.status || {};
+  chState(r.alive, st.fps ? Math.round(+st.fps) + " fps" : "");
+  if (r.mapa != null) $("#chMapNow").textContent = r.mapa ? "Agora: " + r.mapa.replace(/\.sct$/i, "") : "";
+  if (r.grupo) chParty(r.grupo);
+}
+function chParty(g) {
+  const ouro = (g.find(x => x.ouro != null) || {}).ouro;
+  const p = g.filter(x => x.nome).map(x => x.nome + " Nv " + x.nivel + " (" + x.pv + "/" + x.pv_max + " Pv)").join(" · ");
+  $("#chParty").textContent = p + (ouro != null ? " · " + ouro.toLocaleString("pt-BR") + " de ouro" : "");
+}
+$("#btnCheat").onclick = () => openCheat();
+$("#btnChLaunch").onclick = async () => {
+  chMsg("");
+  const v = $("#chStart").value;
+  const body = { runner:$("#chRunner").value };
+  if (v.startsWith("card:")) body.card = +v.slice(5);
+  if (v.startsWith("state:")) body.state = v.slice(6);
+  try { await api("/api/cheat/launch", body); } catch (e) { chMsg(e.message); return; }
+  chMsg("Abrindo o jogo… o painel liga sozinho quando ele responder.", true);
+  for (let i = 0; i < 40; i++) { await sleep(1500); await chPoll(); if ($("#chState").className === "ok") { chMsg("Jogo aberto no modo de trapaças.", true); return; } }
+  chMsg("O jogo não respondeu. Veja o arquivo run.log na pasta SOAL Trapacas, dentro da pasta de dados do recomp.");
+};
+$("#btnChStop").onclick = () => chDo({ acao:"fechar" }, "Pedido para fechar enviado.");
+$("#btnChWarp").onclick = async () => {
+  const m = $("#chMap").value.trim();
+  if (!m) { chMsg("Escolha um mapa."); return; }
+  if (await chDo({ acao:"mapa", mapa:m }, "Indo para " + m + "…")) setTimeout(() => chPoll(true), 2500);
+};
+$("#btnChParty").onclick = async () => {
+  const quem = [...document.querySelectorAll(".chWho")].filter(x => x.checked).map(x => x.value);
+  if (!quem.length) { chMsg("Marque ao menos um personagem."); return; }
+  if (await chDo({ acao:"grupo", quem, status:$("#chStats").checked, magias:$("#chSpells").checked }, r => pl(r.n, "personagem atualizado", "personagens atualizados") + ". Abra o menu do jogo para ver.")) chPoll(true);
+};
+$("#btnChGold").onclick = async () => { if (await chDo({ acao:"ouro" }, "Ouro no máximo.")) chPoll(true); };
+$("#btnChFame").onclick = () => chDo({ acao:"fama" }, "Vyse agora tem a fama máxima.");
+$("#chInv").onchange = () => chDo({ acao:"opcao", chave:"Invincible", valor: $("#chInv").checked ? 1 : 0 }, $("#chInv").checked ? "Invencível ligado." : "Invencível desligado.");
+$("#chEnc").onchange = () => chDo({ acao:"opcao", chave:"Encounters", valor: $("#chEnc").checked ? 0 : 100 }, $("#chEnc").checked ? "Batalhas aleatórias desligadas." : "Batalhas aleatórias de volta ao normal (100%).");
+$("#btnChItems").onclick = () => {
+  const secoes = {};
+  for (const cb of document.querySelectorAll(".chItem")) if (cb.checked) (secoes[cb.dataset.key] ||= []).push(+cb.value);
+  if (!Object.keys(secoes).length) { chMsg("Marque algum item."); return; }
+  chDo({ acao:"itens", secoes }, r => pl(r.n, "item entregue", "itens entregues") + ". Abra o menu de itens para ver.");
+};
+$("#btnChAll").onclick = () => document.querySelectorAll("#chSecs input").forEach(x => x.checked = true);
+$("#btnChNone").onclick = () => document.querySelectorAll("#chSecs input").forEach(x => x.checked = false);
+$("#btnChJournal").onclick = () => chDo({ acao:"diario" }, "Diário de bordo liberado.");
+$("#btnChDisc").onclick = () => chDo({ acao:"descobertas" }, "Descobertas liberadas.");
+$("#btnChVarR").onclick = async () => { const r = await chDo({ acao:"var_ler", tipo:$("#chVarT").value, indice:+$("#chVarI").value }); if (r) { $("#chVarV").value = r.valor; chMsg("Valor atual: " + r.valor, true); } };
+$("#btnChVarW").onclick = () => chDo({ acao:"var_gravar", tipo:$("#chVarT").value, indice:+$("#chVarI").value, valor:+$("#chVarV").value }, "Gravado.");
 
 setInterval(() => { fetch("/api/ping").catch(() => {}); }, 10000);
 fetch("/api/ping").catch(() => {});

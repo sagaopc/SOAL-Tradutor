@@ -21,11 +21,11 @@ from typing import Optional
 
 from . import font as fontmod
 from . import project as pj
-from . import dublagem, exportar, intro, iso, janela, mt, patch, recomp, text
+from . import dublagem, exportar, intro, iso, janela, mt, patch, recomp, text, trapacas
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".soal_tradutor.json")
-VERSION = "0.14.2"
+VERSION = "0.15.0"
 
 
 class App:
@@ -270,6 +270,154 @@ class App:
         self.start_job("audio", lambda: p.dub_import(src, self._progress, lambda: self.cancel))
 
     # ----------------------------------------------------------------- patch
+    # ------------------------------------------------------------ trapacas
+    def _cheat_ctx(self):
+        """(pasta de dados do recomp, pasta do jogo, id do disco) do jogo do projeto no recomp."""
+        p = self.need()
+        want = "GEAP8P" if p.eu else "GEAE8P"
+        rc = p.meta.get("recomp_root")
+        if rc and recomp.is_recomp_game(rc) and recomp.game_id(rc) == want:
+            root = os.path.abspath(rc)
+        else:
+            found = recomp.find_region(want, self.config.get("recomp_hint"))
+            if not found:
+                raise pj.ProjectError("Não achei o jogo deste projeto no recomp. Marque o recomp em Gravar no jogo.")
+            root = found["game_root"]
+        return os.path.dirname(os.path.dirname(root)), root, want
+
+    def _cheat_session(self) -> trapacas.Session:
+        data_dir, _root, gid = self._cheat_ctx()
+        return trapacas.Session(data_dir, gid)
+
+    def cheat_names(self) -> dict:
+        """Nomes (traduzidos, se ja' houver) por tabela:indice."""
+        p = self.need()
+        out = {}
+        for f in p.files:
+            if f.get("virt") != "sistema":
+                continue
+            tr = p.tr.get(f["name"], {})
+            for e in f["entries"]:
+                t = (tr.get(e["k"]) or {}).get("t") or ""
+                out[e["tab"]] = (t or e["body"]).strip()
+        return out
+
+    def cheat_info(self) -> dict:
+        data_dir, root, gid = self._cheat_ctx()
+        names = self.cheat_names()
+        sections = []
+        for key, label, _off, slots, first, tab, count in trapacas.SECTIONS:
+            items = []
+            for i in range(slots):
+                n = names.get(f"{tab}:{i}")
+                if n and trapacas.valid_name(n):
+                    items.append({"id": first + i, "nome": n.replace("\n", " ")})
+            sections.append({"key": key, "label": label, "items": items, "count": count})
+        field = os.path.join(root, "files", "field")
+        maps = sorted({f.lower() for f in os.listdir(field) if f.lower().startswith("me") and f.lower().endswith(".sct")}) \
+            if os.path.isdir(field) else []
+        chapters, seen = [], set()
+        try:
+            with open(os.path.join(pj.DATA_DIR, "ordem_historia.json"), encoding="utf-8") as fh:
+                order = json.load(fh).get("capitulos", [])
+        except (OSError, ValueError):
+            order = []
+        have = set(maps)
+        for c in order:
+            fs = [f for f in c.get("arquivos", []) if f in have and f not in seen]
+            seen.update(fs)
+            if fs:
+                chapters.append({"titulo": c.get("titulo", ""), "mapas": fs})
+        rest = [f for f in maps if f not in seen]
+        if rest:
+            chapters.append({"titulo": "Outros", "mapas": rest})
+        runner = trapacas.find_runner(data_dir, self.config.get("recomp_runner"))
+        alive = trapacas.Automation(os.path.join(data_dir, "SOAL Trapacas")).alive()
+        return {"data_dir": data_dir, "game": root, "id": gid, "runner": runner or "", "alive": alive,
+                "states": [{"path": x["path"], "name": x["name"]} for x in trapacas.state_files(data_dir, gid)[:15]],
+                "cards": [x["n"] for x in trapacas.card_saves(data_dir, gid)],
+                "options": trapacas.options(data_dir), "chapters": chapters, "sections": sections,
+                "chars": trapacas.CHARS}
+
+    def cheat_launch(self, runner: str, state: str, card):
+        data_dir, root, gid = self._cheat_ctx()
+        exe = trapacas.find_runner(data_dir, runner or self.config.get("recomp_runner"))
+        if not exe:
+            raise pj.ProjectError("Não achei o skies-run.exe. Indique a pasta onde o recomp está instalado.")
+        if runner:
+            self.config["recomp_runner"] = exe
+            self._save_config()
+        if trapacas.Automation(os.path.join(data_dir, "SOAL Trapacas")).alive():
+            raise pj.ProjectError("O jogo já está aberto no modo de trapaças.")
+        if self.project is not None:
+            self.project.save()
+        trapacas.launch(exe, root, data_dir, state or None,
+                        int(card) if card not in (None, "") else None)
+        return {"ok": True, "runner": exe}
+
+    def cheat_do(self, data: dict) -> dict:
+        s = self._cheat_session()
+        a = data.get("acao")
+        if a == "status":
+            alive = s.auto.alive()
+            out = {"alive": alive, "status": s.auto.status() if alive else {}}
+            if alive and data.get("ler"):
+                try:
+                    out["grupo"] = s.party()
+                    out["mapa"] = s.current_map()
+                except trapacas.TrapacaError as exc:
+                    out["aviso"] = str(exc)
+            return out
+        if a == "grupo":
+            n = s.max_party(list(data.get("quem") or []), bool(data.get("magias")), bool(data.get("status")))
+            return {"ok": True, "n": n}
+        if a == "ouro":
+            s.gold(int(data.get("valor", trapacas.GOLD_MAX)))
+            return {"ok": True}
+        if a == "fama":
+            s.reputation()
+            return {"ok": True}
+        if a == "itens":
+            total = 0
+            for key, ids in (data.get("secoes") or {}).items():
+                if key in trapacas.SECTION and ids:
+                    total += s.give(key, [int(i) for i in ids])
+            return {"ok": True, "n": total}
+        if a == "diario":
+            s.bits(trapacas.JOURNAL)
+            return {"ok": True}
+        if a == "descobertas":
+            s.bits(trapacas.DISCOVERIES)
+            return {"ok": True}
+        if a == "mapa":
+            s.warp(data.get("mapa") or "")
+            return {"ok": True}
+        if a == "var_ler":
+            return {"valor": s.get_var(data.get("tipo") or "int", int(data.get("indice", 0)))}
+        if a == "var_gravar":
+            s.set_var(data.get("tipo") or "int", int(data.get("indice", 0)), int(data.get("valor", 0)))
+            return {"ok": True}
+        if a == "opcao":
+            key = data.get("chave")
+            if key not in ("Invincible", "Encounters"):
+                raise pj.ProjectError("Opção desconhecida.")
+            value = int(data.get("valor", 0))
+            if key == "Encounters":
+                cur = trapacas.options(s.data_dir).get("Encounters")
+                if value == 0:
+                    if cur not in (None, "", "0"):
+                        self.config["encounters_prev"] = cur
+                        self._save_config()
+                else:
+                    value = int(self.config.get("encounters_prev") or 100)
+            s.option(key, str(value))
+            return {"ok": True, "options": trapacas.options(s.data_dir)}
+        if a == "fechar":
+            if s.auto.alive():
+                s.auto.post(command="stop")
+            return {"ok": True}
+        raise pj.ProjectError("Ação desconhecida.")
+
     def patch_default(self, p: pj.Project) -> str:
         root = os.path.abspath(p.meta.get("game_root") or "").rstrip("\\/")
         return os.path.join(os.path.dirname(root), patch.default_name(p.meta.get("region", "us")))
@@ -846,6 +994,13 @@ def make_handler(app: App):
                     if d and os.path.isdir(d) and sys.platform.startswith("win"):
                         os.startfile(d)  # noqa: abre a pasta no Explorer
                     return self._json({"ok": bool(d and os.path.isdir(d))})
+                if u.path == "/api/cheat/info":
+                    return self._json(app.cheat_info())
+                if u.path == "/api/cheat/launch":
+                    return self._json(app.cheat_launch((data.get("runner") or "").strip().strip('"'),
+                                                       data.get("state") or "", data.get("card")))
+                if u.path == "/api/cheat/do":
+                    return self._json(app.cheat_do(data))
                 if u.path == "/api/dub/info":
                     return self._json(app.dub_info())
                 if u.path == "/api/dub/extract":
@@ -910,8 +1065,8 @@ def make_handler(app: App):
                     app.project = None
                     return self._json({"ok": True})
                 return self._send(404, b"not found", "text/plain")
-            except (pj.ProjectError, mt.MTError, KeyError, ValueError) as exc:
-                msg = str(exc) if isinstance(exc, (pj.ProjectError, mt.MTError)) else f"Pedido invalido ({exc})"
+            except (pj.ProjectError, mt.MTError, trapacas.TrapacaError, KeyError, ValueError) as exc:
+                msg = str(exc) if isinstance(exc, (pj.ProjectError, mt.MTError, trapacas.TrapacaError)) else f"Pedido invalido ({exc})"
                 return self._json({"error": msg}, 400)
             except Exception as exc:
                 traceback.print_exc()

@@ -76,6 +76,10 @@ O manual completo está em **[LEIA-ME.md](LEIA-ME.md)**.
   (melhore em qualquer resolução e instale pelo programa) e os modelos 3D em glTF (`.glb`, abre no
   Blender): personagens e inimigos com esqueleto e pesos, objetos, construções e cada cenário
   inteiro com os objetos no lugar.
+- **Trapaças no recomp**: abre o jogo no recomp num modo em que o programa mexe na memória dele,
+  para testar a tradução em qualquer ponto: viajar para qualquer mapa, todos os itens, armas e
+  peças do navio, status máximos, todas as magias e Super Movimentos, invencibilidade, diário e
+  descobertas, e as variáveis da história.
 - **Termos padronizados**: “Blue Rogues” é sempre “Piratas Azuis”. O programa aponta as falas fora
   do padrão, troca as variações conhecidas de uma vez (também no feminino), tira o ¡ e o ¿ do
   espanhol e passa os termos à tradução automática.
